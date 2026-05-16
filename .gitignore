@@ -1,0 +1,39 @@
+# Secrets
+.env
+*.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+dist/
+*.sqlite
+*.db
+
+# Node
+node_modules/
+.npm/
+portal/build/
+frontend/dist/
+build/
+
+# Docusaurus
+.docusaurus/
+
+# macOS
+.DS_Store
+
+# Uploaded documents (personal files — not committed)
+devops-knowledge-hub/documents/
+devops-knowledge-hub/uploads/
+
+# Study guides (auto-generated — committed via publish_portal.sh)
+# devops-knowledge-hub/study-guides/   ← keep these so portal has content offline
+
+# Chrome extension build artifacts
+devops-knowledge-hub/extension/dist/

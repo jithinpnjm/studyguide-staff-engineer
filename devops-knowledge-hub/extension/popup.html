@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DevOps Knowledge Hub</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 310px;
+      background: #f8f9fa;
+      color: #1a1a1a;
+      font-size: 13px;
+    }
+
+    /* Header */
+    header {
+      background: #0a66c2;
+      color: #fff;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header .logo { font-size: 20px; }
+    header h1 { font-size: 14px; font-weight: 700; line-height: 1.2; }
+    header p { font-size: 11px; opacity: 0.85; margin-top: 1px; }
+
+    /* Sections */
+    .section {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e4e4e4;
+      background: #fff;
+    }
+    .section-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #888;
+      margin-bottom: 8px;
+    }
+
+    /* Status row */
+    .status-row { display: flex; align-items: center; gap: 8px; }
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%; background: #ccc; flex-shrink: 0;
+    }
+    .dot.green  { background: #057642; }
+    .dot.red    { background: #cc1016; }
+    .dot.yellow { background: #e6a817; }
+    .status-label { font-weight: 600; color: #222; }
+    .status-sub   { font-size: 11px; color: #666; margin-top: 2px; padding-left: 18px; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-box {
+      background: #f4f8ff;
+      border: 1px solid #d9e8ff;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+    .stat-box .val { font-size: 22px; font-weight: 700; color: #0a66c2; }
+    .stat-box .lbl { font-size: 10px; color: #666; margin-top: 1px; }
+
+    /* Buttons */
+    .save-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #0a66c2;
+      background: #fff;
+      border: 1px solid #0a66c2;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+    .save-btn:hover:not(:disabled) { background: #0a66c2; color: #fff; }
+    .save-btn:disabled { opacity: 0.6; cursor: default; }
+    .save-btn.success { border-color: #057642; color: #fff; background: #057642; }
+    .save-btn.fail    { border-color: #cc1016; color: #fff; background: #cc1016; }
+
+    .save-note {
+      font-size: 11px;
+      color: #888;
+      text-align: center;
+      margin-top: 5px;
+    }
+
+    /* Open app link */
+    .open-btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      background: #0a66c2;
+      color: #fff;
+      text-align: center;
+      font-weight: 700;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.15s;
+    }
+    .open-btn:hover { background: #004182; }
+
+    /* Recent log */
+    .recent-list { list-style: none; }
+    .recent-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid #f2f2f2;
+    }
+    .recent-item:last-child { border-bottom: none; }
+    .recent-title { font-size: 12px; max-width: 185px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .recent-badge {
+      font-size: 10px; padding: 2px 6px; border-radius: 10px; flex-shrink: 0;
+      background: #e8f4fd; color: #0a66c2; font-weight: 600;
+    }
+    .recent-badge.dup      { background: #f0f0f0; color: #888; }
+    .recent-badge.capture  { background: #fff3e8; color: #b55a00; }
+    .recent-badge.error    { background: #fde8e8; color: #b00020; }
+    .empty { font-size: 12px; color: #aaa; text-align: center; padding: 10px 0; }
+
+    /* Debug section */
+    /* URL paste row */
+    .url-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .url-input {
+      flex: 1;
+      padding: 7px 10px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+      font-family: inherit;
+      color: #222;
+      background: #fff;
+      min-width: 0;
+    }
+    .url-input:focus { border-color: #0a66c2; }
+    .url-btn {
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      background: #0a66c2;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: inherit;
+      flex-shrink: 0;
+    }
+    .url-btn:hover:not(:disabled) { background: #004182; }
+    .url-btn:disabled { opacity: 0.6; cursor: default; }
+    .url-status {
+      margin-top: 6px;
+      font-size: 11px;
+      min-height: 14px;
+      color: #555;
+    }
+    .url-status.ok  { color: #057642; font-weight: 600; }
+    .url-status.err { color: #cc1016; }
+    .url-status.dup { color: #888; }
+
+    .debug-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 10px 14px;
+      background: #f8f9fa;
+      border: none;
+      border-top: 1px solid #e4e4e4;
+      font-size: 11px;
+      color: #888;
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+    }
+    .debug-toggle:hover { background: #efefef; }
+
+    #debugPanel {
+      display: none;
+      padding: 10px 14px;
+      background: #1e1e2e;
+      color: #cdd6f4;
+      font-family: 'Menlo', 'Consolas', monospace;
+      font-size: 11px;
+      line-height: 1.7;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+    #debugPanel .k { color: #89b4fa; }
+    #debugPanel .v { color: #a6e3a1; }
+    #debugPanel .e { color: #f38ba8; }
+    #debugPanel .s { color: #f9e2af; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="logo">📚</span>
+    <div>
+      <h1>DevOps Knowledge Hub</h1>
+      <p>LinkedIn Document Capture</p>
+    </div>
+  </header>
+
+  <!-- Backend status -->
+  <div class="section">
+    <div class="status-row">
+      <div class="dot" id="statusDot"></div>
+      <span class="status-label" id="statusLabel">Checking…</span>
+    </div>
+    <div class="status-sub" id="statusSub"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="section">
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="val" id="statTotal">—</div>
+        <div class="lbl">Total saved</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="statToday">—</div>
+        <div class="lbl">Saved today</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save from pasted URL -->
+  <div class="section">
+    <div class="section-title">Save from Post URL</div>
+    <div class="url-row">
+      <input
+        id="urlInput"
+        class="url-input"
+        type="text"
+        placeholder="Paste LinkedIn post URL…"
+        spellcheck="false"
+      />
+      <button class="url-btn" id="urlSaveBtn">Save</button>
+    </div>
+    <div class="url-status" id="urlStatus"></div>
+  </div>
+
+  <!-- Save current post -->
+  <div class="section">
+    <div class="section-title">Quick Save (current tab)</div>
+    <button class="save-btn" id="saveCurrentBtn">💾 Save Current Post</button>
+    <div class="save-note" id="saveNote">Saves the first document post visible on the active LinkedIn tab</div>
+  </div>
+
+  <!-- Recent saves -->
+  <div class="section">
+    <div class="section-title">Recent Saves</div>
+    <ul class="recent-list" id="recentList">
+      <li><div class="empty">No saves yet.</div></li>
+    </ul>
+  </div>
+
+  <!-- Open app -->
+  <button class="open-btn" id="openAppBtn">Open Knowledge Hub →</button>
+
+  <!-- Debug toggle + panel -->
+  <button class="debug-toggle" id="debugToggle">
+    <span>🔍 Debug info</span>
+    <span id="debugArrow">▼</span>
+  </button>
+  <div id="debugPanel"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

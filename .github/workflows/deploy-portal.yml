@@ -1,0 +1,73 @@
+name: Deploy Portal to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'devops-knowledge-hub/portal/docs/**'
+      - 'devops-knowledge-hub/portal/src/**'
+      - 'devops-knowledge-hub/portal/docusaurus.config.ts'
+      - 'devops-knowledge-hub/portal/sidebars.ts'
+      - 'devops-knowledge-hub/portal/package.json'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual deploy'
+        required: false
+        default: 'Manual refresh'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Docusaurus
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: devops-knowledge-hub/portal
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: devops-knowledge-hub/portal/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build portal
+        run: npm run build
+        env:
+          NODE_NO_WARNINGS: '1'
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: devops-knowledge-hub/portal/build
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
