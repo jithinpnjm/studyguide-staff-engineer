@@ -11,8 +11,8 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'http://localhost',
-  baseUrl: '/',
+  url: 'https://jithinpnjm.github.io',
+  baseUrl: '/studyguide-staff-engineer/',
 
   onBrokenLinks: 'warn',
   markdown: {
