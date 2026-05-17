@@ -15,9 +15,11 @@ const config: Config = {
   baseUrl: '/studyguide-staff-engineer/',
 
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
   markdown: {
     format: 'detect',
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
   },
 
   i18n: {

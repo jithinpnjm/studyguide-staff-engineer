@@ -1,5 +1,5 @@
 ---
-title: "Linux Lab 1: First 10 Minutes On A "Slow Host""
+title: "Linux Lab 1: First 10 Minutes On A Slow Host"
 sidebar_position: 99
 ---
 
