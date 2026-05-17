@@ -61,6 +61,18 @@ Host CPU usage:
 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
 ```
 
+Memory available percentage:
+
+```promql
+(node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+```
+
+Sum by service:
+
+```promql
+sum(rate(http_requests_total[5m])) by (service)
+```
+
 ---
 
 ## Metric Types
@@ -73,6 +85,52 @@ Host CPU usage:
 | Summary | Client-side quantile | direct quantile series |
 
 Use counters for requests and errors. Use histograms for latency. Use gauges for memory, queue depth, open connections, and capacity signals.
+
+Histograms for p95/p99 latency are the correct approach. Do not average percentiles — use bucket aggregation first, then quantiles. Tail latency often matters more than averages.
+
+---
+
+## SLI, SLO, SLA, and Error Budget
+
+| Term | Meaning |
+|---|---|
+| SLI | Measured reliability signal |
+| SLO | Target for that signal |
+| SLA | External commercial promise |
+| Error budget | Allowed unreliability |
+
+Example:
+
+```text
+SLI: successful HTTP requests / total HTTP requests
+SLO: 99.9% success over 30 days
+Error budget: 0.1% allowed failures
+```
+
+SLOs make alerting business-aware. Error budgets align product speed with operational reality:
+- healthy budget -> ship faster
+- budget exhausted -> prioritize reliability
+
+SLA is usually looser than SLO.
+
+---
+
+## Burn Rate Thinking
+
+Burn rate describes how quickly error budget is being consumed relative to the target consumption rate.
+
+- 14x burn rate = severe active issue requiring immediate response
+- 3x burn rate = meaningful degradation, needs attention
+- 1x burn rate = consuming budget at exactly the planned rate
+
+Burn-rate alerts tie signals to commitments rather than arbitrary thresholds. They map incidents to SLO risk, helping prioritize what truly threatens commitments.
+
+SLO alerts should detect fast and slow error-budget burn:
+
+```text
+fast burn: urgent, high-impact degradation
+slow burn: sustained degradation that will exhaust budget
+```
 
 ---
 
@@ -91,25 +149,78 @@ Alert on symptoms that need action. Avoid paging for every warning-level interna
 
 Good alerting is tied to user impact and SLOs.
 
+Good pages:
+- sustained error spike
+- severe burn rate
+- sustained latency breach
+- synthetic checkout failing
+
+Bad pages:
+- one pod restart
+- CPU briefly high
+- disk 70%
+- transient blips without impact
+
+Use `for:` in alert rules to avoid noisy short spikes.
+
 ---
 
-## SLI, SLO, Error Budget
+## Alertmanager Configuration
 
-| Term | Meaning |
-|---|---|
-| SLI | Measured reliability signal |
-| SLO | Target for that signal |
-| Error budget | Allowed unreliability |
+Alertmanager receives alerts from Prometheus, groups and deduplicates them, applies routing rules, and sends notifications.
 
-Example:
+Core Alertmanager capabilities:
+- **Grouping**: combine related alert instances into one notification
+- **Deduplication**: suppress repeated identical alerts
+- **Silences**: temporarily suppress alerts during maintenance
+- **Inhibition**: suppress child alerts when a parent alert fires
+- **Routing**: direct alerts to teams and channels by label
 
-```text
-SLI: successful HTTP requests / total HTTP requests
-SLO: 99.9% success over 30 days
-Error budget: 0.1% allowed failures
+Example routing configuration:
+
+```yaml
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  receiver: 'default-slack'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'pagerduty-critical'
+    - match:
+        severity: warning
+      receiver: 'slack-warnings'
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
 ```
 
-SLOs make alerting business-aware.
+---
+
+## Alert Rule Example
+
+```yaml
+groups:
+  - name: service-alerts
+    rules:
+      - alert: HighServiceErrorRate
+        expr: service:error_ratio:5m > 0.05
+        for: 10m
+        labels:
+          severity: page
+          team: payments
+        annotations:
+          summary: "High error rate for payments service"
+          runbook_url: "https://runbooks.example.com/payments-errors"
+```
+
+Good alerts include: severity, owner/team, summary, runbook link, and clear action.
 
 ---
 
@@ -127,10 +238,15 @@ Good dashboards answer questions:
 Recommended layout:
 
 ```text
-top: golden signals
-middle: dependencies and saturation
-bottom: logs, traces, and infrastructure detail
+top row: golden signals (request rate, error rate, p95/p99 latency, saturation)
+second row: resources, dependency latency, queue depth, deploy markers
+third row: dependencies, feature flags, version
+bottom: logs, traces, and runbook links
 ```
+
+Dashboard variables allow dynamic filtering by service, cluster, namespace, region, and environment.
+
+Use annotations to mark deploys and config changes on dashboards. A dashboard should answer a question in under 10 seconds.
 
 ---
 
@@ -156,6 +272,16 @@ API server latency
 persistent volume usage
 ```
 
+PromQL examples:
+
+```promql
+increase(kube_pod_container_status_restarts_total[15m])
+```
+
+```promql
+kube_deployment_status_replicas_unavailable
+```
+
 ---
 
 ## Loki And Logs
@@ -168,6 +294,16 @@ Loki query examples:
 
 ```logql
 {app="api"} | json | level="error"
+```
+
+```logql
+{namespace="payments"} |= "timeout"
+```
+
+Count timeout logs:
+
+```logql
+sum(rate({app="api"} |= "timeout" [5m]))
 ```
 
 Label guidance:
@@ -195,15 +331,21 @@ frontend
 
 Tracing helps answer where latency or failure happened in a distributed request path.
 
+OpenTelemetry is the vendor-neutral standard for collecting metrics, logs, and traces. Tools in the ecosystem include Jaeger and Tempo for trace storage and querying.
+
+Trace context propagation ensures a trace ID flows through all hops of a distributed request. Structured logs should include the trace_id field so logs and traces can be correlated.
+
 ---
 
 ## Intermediate Takeaways
 
 1. PromQL is the query language for Prometheus metrics.
 2. SLOs connect telemetry to business reliability.
-3. Dashboards should answer operational questions.
-4. Kubernetes requires node, container, object, control-plane, and app signals.
-5. Logs need low-cardinality labels.
-6. Traces show distributed request causality.
-7. Alert quality matters more than alert quantity.
-8. Cardinality control is part of platform reliability.
+3. Error budgets guide risk decisions — ship faster or stabilize.
+4. Burn-rate alerts are better than arbitrary CPU or error thresholds.
+5. Alertmanager groups, deduplicates, routes, inhibits, and silences alerts.
+6. Dashboards should answer operational questions in under 10 seconds.
+7. Kubernetes requires node, container, object, control-plane, and app signals.
+8. Logs need low-cardinality labels.
+9. Traces show distributed request causality.
+10. Alert quality matters more than alert quantity.

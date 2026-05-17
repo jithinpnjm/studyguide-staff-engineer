@@ -69,6 +69,7 @@ order_id
 pod_uid
 full_url
 error_message
+trace_id
 ```
 
 Better labels:
@@ -92,7 +93,12 @@ bounded dimensions belong in labels
 unbounded context belongs in logs or traces
 ```
 
-Cardinality must be reviewed like capacity planning.
+Cardinality must be reviewed like capacity planning. High cardinality causes:
+- high memory use
+- slow queries
+- large storage growth
+- expensive remote write
+- alert rule evaluation pressure
 
 ---
 
@@ -103,19 +109,25 @@ Scaling options:
 | Pattern | Use case |
 |---|---|
 | Recording rules | Precompute expensive queries |
-| Federation | Aggregate selected metrics |
+| Federation | Aggregate selected metrics across clusters |
 | Remote write | Send metrics to long-term storage |
-| Sharding | Split scrape load |
+| Sharding | Split scrape load across instances |
 | Thanos/Cortex/Mimir | Global query and long-term metrics |
 | Retention tuning | Reduce local disk pressure |
 
-Prometheus anti-patterns:
+Federation allows a parent Prometheus to scrape selected metrics from child instances. Use complexity only when simpler approaches fail.
 
+Prometheus anti-patterns:
 - Scraping too frequently without need
 - High-cardinality labels
 - Expensive dashboard queries
 - Alert rules over raw high-volume metrics
 - No ownership of noisy metrics
+
+Prometheus memory high — likely causes:
+- cardinality explosion
+- too many targets
+- expensive queries
 
 ---
 
@@ -129,16 +141,88 @@ groups:
     rules:
       - record: service:http_requests:rate5m
         expr: sum(rate(http_requests_total[5m])) by (service, environment)
+
+      - record: service:error_ratio:5m
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+          /
+          sum(rate(http_requests_total[5m])) by (service)
+
+      - record: job:http_request_duration_seconds:p99_5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job)
+          )
 ```
 
 Use recording rules for:
-
 - Expensive repeated dashboard queries
 - Common SLI calculations
 - Alert inputs
 - Aggregations over many series
 
 Do not create recording rules for every ad-hoc query.
+
+---
+
+## SLO-Based Alerting In Depth
+
+SLO alerts should detect fast and slow error-budget burn. Multi-window burn-rate alerting catches both fast spikes and slow drains.
+
+Burn rate formula:
+
+```text
+burn rate = actual error rate / (1 - SLO target)
+```
+
+For a 99.9% SLO (0.1% error budget):
+- 1x burn = consuming budget at expected rate
+- 3x burn = budget exhausted in ~10 days instead of 30
+- 14x burn = budget exhausted in ~2 hours
+
+Multi-window burn-rate alert example:
+
+```yaml
+groups:
+  - name: slo-alerts
+    rules:
+      # Fast burn: 2% budget consumed in 1 hour -> 14x burn rate
+      - alert: SLOFastBurn
+        expr: |
+          (
+            job:slo_errors:rate1h{job="checkout"} > (14.4 * 0.001)
+            and
+            job:slo_errors:rate5m{job="checkout"} > (14.4 * 0.001)
+          )
+        for: 2m
+        labels:
+          severity: critical
+          team: payments
+        annotations:
+          summary: "Checkout SLO fast burn: error budget draining rapidly"
+          runbook_url: "https://runbooks.example.com/checkout-slo"
+
+      # Slow burn: 5% budget consumed in 6 hours -> 3x burn rate
+      - alert: SLOSlowBurn
+        expr: |
+          (
+            job:slo_errors:rate6h{job="checkout"} > (6 * 0.001)
+            and
+            job:slo_errors:rate30m{job="checkout"} > (6 * 0.001)
+          )
+        for: 15m
+        labels:
+          severity: warning
+          team: payments
+        annotations:
+          summary: "Checkout SLO slow burn: sustained degradation"
+          runbook_url: "https://runbooks.example.com/checkout-slo"
+```
+
+Error budget policy:
+- full budget remaining: normal release velocity
+- 50% budget remaining: review release risk
+- budget exhausted: freeze non-critical changes, focus on reliability
 
 ---
 
@@ -158,7 +242,6 @@ clear threshold rationale
 ```
 
 Alert review questions:
-
 - Did this page someone who could act?
 - Did it fire before user impact or after?
 - Was the runbook enough?
@@ -170,26 +253,62 @@ Alert fatigue is a reliability risk. Noisy alerts train teams to ignore the syst
 
 ---
 
-## SLO-Based Alerting
+## Alertmanager Advanced Configuration
 
-SLO alerts should detect fast and slow error-budget burn.
+### Inhibit Rules
 
-Concept:
+Suppress lower-severity alerts when a high-severity alert is active for the same service:
+
+```yaml
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'cluster', 'service']
+
+  # Suppress individual service alerts during a cluster outage
+  - source_match:
+      alertname: 'ClusterDown'
+    target_match_re:
+      alertname: 'Service.*'
+    equal: ['cluster']
+```
+
+### Routing With Matchers
+
+```yaml
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  receiver: 'default'
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: 'pagerduty'
+      continue: false
+    - matchers:
+        - team="payments"
+      receiver: 'payments-slack'
+    - matchers:
+        - alertname=~"SLO.*"
+      receiver: 'sre-channel'
+```
+
+### Silences
+
+Silences suppress matching alerts for a defined time window. Use for planned maintenance.
 
 ```text
-fast burn: urgent, high-impact degradation
-slow burn: sustained degradation that will exhaust budget
+silence matchers:
+  alertname="DeploymentRollout"
+  cluster="prod-eu"
+duration: 2h
+created_by: jithin
+comment: "Planned maintenance window"
 ```
-
-Example error ratio query:
-
-```promql
-sum(rate(http_requests_total{status=~"5.."}[5m]))
-/
-sum(rate(http_requests_total[5m]))
-```
-
-SLO-based alerting reduces noise because it focuses on user-facing reliability objectives.
 
 ---
 
@@ -198,7 +317,6 @@ SLO-based alerting reduces noise because it focuses on user-facing reliability o
 Log platforms fail when teams treat logs as unlimited free storage.
 
 Design decisions:
-
 - What log levels are kept?
 - How long are logs retained?
 - Which logs need indexing?
@@ -211,11 +329,29 @@ Good practice:
 ```text
 structured logs
 stable field names
-correlation IDs
+correlation IDs (trace_id in every log line)
 low-cardinality labels
 clear retention classes
 redaction of sensitive values
 ```
+
+Loki advanced patterns:
+
+```logql
+# Parse and extract fields from JSON logs
+{namespace="payments"} | json | level="error" | latency > 500
+
+# Count errors by service over time
+sum by (app) (rate({namespace="prod"} |= "ERROR" [5m]))
+
+# Pipeline filter then metric extraction
+{app="api"} | json | unwrap duration_ms | p99 by (route)
+```
+
+Log ingestion lag symptoms:
+- Grafana shows no recent log data
+- `loki_ingester_blocks_per_chunk` metric elevated
+- tail queries returning stale results
 
 ---
 
@@ -234,6 +370,24 @@ Common sampling approaches:
 | Probabilistic sampling | Keep percentage of traffic |
 
 Tail sampling is powerful because it can keep traces that are slow or failed while dropping normal traffic.
+
+Jaeger/Tempo trace context propagation:
+
+```text
+W3C TraceContext headers (standard):
+  traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01
+
+OpenTelemetry SDK adds trace_id to:
+  - HTTP headers (for propagation)
+  - span attributes
+  - log fields (via trace context injection)
+```
+
+Sampling guidance:
+- always sample errors
+- always sample requests exceeding p99 threshold
+- probabilistically sample 1-10% of healthy traffic
+- increase sample rate during active investigations
 
 ---
 
@@ -255,13 +409,74 @@ The goal is consistency without blocking teams from adding domain-specific signa
 
 ---
 
+## Incident Response And Runbooks
+
+Senior priorities during incidents:
+1. Are users hurting?
+2. How many?
+3. Is it getting worse?
+4. What is the fastest safe mitigation?
+
+Incident lifecycle:
+
+| Phase | Actions |
+|---|---|
+| Detect | Alert, user report, synthetic probe |
+| Triage | Scope, user impact, trend, recent changes |
+| Mitigate | Rollback, disable feature, reroute, scale, shed load |
+| Communicate | Clear regular updates to stakeholders |
+| Resolve | Metrics normal and cause understood |
+| Learn | Postmortem with tracked actions |
+
+Incident roles:
+
+| Role | Responsibility |
+|---|---|
+| Incident Commander | Coordination |
+| Tech Lead | Debugging and mitigation |
+| Comms | Stakeholder updates |
+| SMEs | Focused expertise |
+
+Runbook quality standard:
+
+```text
+title: alert name
+severity: critical / warning
+impact: what users experience
+detection: which metric or signal fires
+triage steps: ordered list
+mitigation options: ranked by risk and speed
+escalation path: who to call next
+owner: team name
+last reviewed: date
+```
+
+---
+
+## Postmortems That Matter
+
+Include:
+- timeline
+- impact (users affected, duration, revenue)
+- detection quality (how fast was the alert?)
+- root cause chain
+- mitigation effectiveness
+- prevention actions
+- owners and due dates
+
+Blameless means focus on system improvement, not avoiding accountability.
+
+---
+
 ## Expert Takeaways
 
 1. Observability is a production platform, not only dashboards.
 2. Cardinality is a scalability and cost constraint.
 3. SLOs make alerts user-impact aware.
-4. Recording rules reduce repeated query cost.
-5. Logs need retention and label discipline.
-6. Traces need sampling strategy.
-7. Alert quality must be reviewed after incidents.
-8. Telemetry must have ownership, or it becomes noise.
+4. Multi-window burn-rate alerting catches both fast and slow budget drain.
+5. Recording rules reduce repeated query cost.
+6. Logs need retention and label discipline.
+7. Traces need sampling strategy with tail sampling preferred.
+8. Alert quality must be reviewed after incidents.
+9. Alertmanager inhibit rules prevent alert storms from noisy child alerts.
+10. Telemetry must have ownership, or it becomes noise.

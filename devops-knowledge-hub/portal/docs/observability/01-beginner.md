@@ -15,6 +15,18 @@ system emits signals -> platform collects signals -> humans and automation inter
 
 For SREs, observability is not a dashboard project. It is the foundation for incident response, capacity planning, reliability engineering, and SLO-based decision making.
 
+Memory palace — think of a hospital emergency room:
+
+| Concept | Analogy | Meaning |
+|---|---|---|
+| Metrics | Vital signs | Quantitative health signals |
+| Logs | Doctor notes | Event evidence |
+| Traces | Patient journey | Request path |
+| Alert | Emergency alarm | Needs action now |
+| SLO | Treatment target | Reliability objective |
+| Error Budget | Spare risk capacity | Allowed unreliability |
+| Runbook | Emergency procedure | Known response steps |
+
 ---
 
 ## Monitoring vs Observability
@@ -25,6 +37,8 @@ For SREs, observability is not a dashboard project. It is the foundation for inc
 | Observability | Helps debug unknown failure modes from emitted signals |
 | Alerting | Notifies humans or systems when action is required |
 | Telemetry | Metrics, logs, traces, and events emitted by systems |
+
+Monitoring asks: did a known bad thing happen? Observability asks: why is the system behaving this way?
 
 Example:
 
@@ -55,15 +69,13 @@ Metrics are efficient, aggregatable, and alert-friendly.
 
 ### Logs
 
-Logs are timestamped records of events.
-
-Example:
+Logs are timestamped records of events. Use structured logs:
 
 ```json
-{"level":"error","service":"payment","msg":"database timeout","order_id":"ord-123"}
+{"level":"error","service":"checkout","trace_id":"abc123","message":"payment timeout"}
 ```
 
-Logs are useful for context, sequence, and root-cause investigation.
+Include: timestamp UTC, level, service, trace or request ID, useful context. Never leak secrets. Logs are useful for context, sequence, and root-cause investigation.
 
 ### Traces
 
@@ -73,7 +85,12 @@ Traces show the journey of one request across services.
 frontend -> api-gateway -> payment-service -> database -> queue
 ```
 
-Traces are essential for distributed systems where latency may be spread across many services.
+Tracing helps answer where time is spent, which dependency failed, and which user path is degraded. Traces are essential for distributed systems where latency may be spread across many services.
+
+Sampling guidance:
+- keep errors
+- sample healthy traffic
+- increase during incidents when safe
 
 ---
 
@@ -89,9 +106,49 @@ A p99 latency alert is usually detected by metrics, investigated with traces, an
 
 ---
 
+## Golden Signals, RED, and USE
+
+### Golden Signals
+
+For user-facing services, start with:
+
+| Signal | Meaning |
+|---|---|
+| Latency | How long requests take |
+| Traffic | Request volume |
+| Errors | Failed requests |
+| Saturation | How full the system is |
+
+Example:
+
+```text
+latency: p95 and p99 request duration
+traffic: requests per second
+errors: 5xx rate
+saturation: CPU, memory, DB connections, queue depth
+```
+
+### RED (for services)
+
+- Rate
+- Errors
+- Duration
+
+### USE (for infrastructure)
+
+- Utilization
+- Saturation
+- Errors
+
+Use RED for services. Use USE for infrastructure.
+
+Important truth: average latency can look healthy while p99 is painful.
+
+---
+
 ## Prometheus Basics
 
-Prometheus is a time-series monitoring and alerting system.
+Prometheus is a time-series monitoring and alerting system that uses a pull model — scraping metrics from targets over HTTP.
 
 Core ideas:
 
@@ -105,10 +162,49 @@ Core ideas:
 | Rule | Recording or alerting expression |
 | Alertmanager | Alert routing and notification system |
 
+A metric is:
+
+```text
+name + labels + value + time
+```
+
+Example:
+
+```text
+http_requests_total{service="api",status="500"}
+```
+
 Prometheus usually pulls metrics from endpoints like:
 
 ```text
 http://service:9090/metrics
+```
+
+Benefits of the pull model:
+- central scheduling
+- target health visibility
+- easier service discovery
+
+---
+
+## Metric Types
+
+| Type | Meaning | Use |
+|---|---|---|
+| Counter | Only increases | requests, errors |
+| Gauge | Current value | memory, queue depth |
+| Histogram | Bucketed observations | latency |
+| Summary | Client-side quantiles | niche use |
+
+Important rule: use `rate()` with counters. Counters are cumulative; `rate()` converts the increase over time into a per-second rate.
+
+First useful queries:
+
+```promql
+up
+rate(http_requests_total[5m])
+process_resident_memory_bytes
+sum(rate(http_requests_total[5m])) by (service)
 ```
 
 ---
@@ -152,6 +248,7 @@ Common exporters:
 | Blackbox Exporter | Probe HTTP/TCP/ICMP endpoints |
 | PostgreSQL Exporter | Database metrics |
 | Redis Exporter | Redis metrics |
+| nginx exporter | Web server metrics |
 
 Example Node Exporter metric:
 
@@ -175,7 +272,22 @@ Grafana concepts:
 | Variable | Dynamic dashboard filter |
 | Alert | Notification rule from panel or query |
 
-Good dashboard panels answer operational questions, not just display random metrics.
+Good dashboard panels answer operational questions, not just display random metrics. A dashboard should answer a question in under 10 seconds.
+
+Alertmanager handles:
+- grouping
+- deduplication
+- silences
+- inhibition
+- routing
+- notification delivery
+
+Example routing:
+
+```text
+warning -> Slack
+critical -> PagerDuty
+```
 
 ---
 
@@ -209,8 +321,9 @@ Better metric:
 http_requests_total{service="orders",method="GET",route="/orders/:id",status="200"}
 ```
 
-High cardinality causes:
+Dangerous labels: user_id, request_id, trace_id, full URL with IDs, random GUIDs.
 
+High cardinality causes:
 - More storage
 - Slower queries
 - Higher memory usage
@@ -218,28 +331,6 @@ High cardinality causes:
 - Alert rule pressure
 
 Beginner rule: use bounded labels for metrics and use logs/traces for high-cardinality context.
-
----
-
-## Golden Signals
-
-For user-facing services, start with:
-
-| Signal | Meaning |
-|---|---|
-| Latency | How long requests take |
-| Traffic | Request volume |
-| Errors | Failed requests |
-| Saturation | How full the system is |
-
-Example:
-
-```text
-latency: p95 and p99 request duration
-traffic: requests per second
-errors: 5xx rate
-saturation: CPU, memory, DB connections, queue depth
-```
 
 ---
 
@@ -253,3 +344,5 @@ saturation: CPU, memory, DB connections, queue depth
 6. Loki stores logs with labels and LogQL.
 7. Cardinality must be controlled.
 8. Good observability starts from operational questions.
+9. Use RED for services, USE for infrastructure.
+10. Alert on symptoms; investigate causes.
