@@ -1,0 +1,56 @@
+DOMAIN: platform-engineering
+DOCS WITH TEXT: 1
+
+=== SOURCE: Design Patterns Microservices for H i n a A r o r a Designing and Implementing… ===
+Design Patterns
+Microservices
+for
+H i n a A r o r a
+Designing and Implementing 
+Microservices
+Gateway Pattern
+Use an API Gateway to handle client requests
+and route them to the appropriate
+microservices. This centralized authentication,
+load balancing, and routing logic.
+H i n a A r o r a
+Microservices
+Service Registry Pattern
+Implement a service registry to automatically
+locate and register microservices. This helps in
+dynamic discovery and communication
+between services.
+H i n a A r o r a
+Microservices
+Circuit Breaker Pattern
+Prevent cascading failures by using a
+circuit breaker that can temporarily stop
+requests to a failing service and provide
+fallback mechanisms.
+H i n a A r o r a
+Microservices
+Saga Pattern
+Manage long-lived transactions across
+multiple microservices by breaking them
+down into a sequence of smaller, local
+transactions.
+H i n a A r o r a
+Microservices
+CQRS Pattern
+Separate the read and write
+responsibilities of a system, allowing for
+optimized performance and scalability.
+H i n a A r o r a
+Microservices
+Bulkhead Pattern
+Isolate failures within separate sections
+to prevent them from affecting the
+entire system.
+H i n a A r o r a
+Microservices
+Sidecar Pattern
+Attach a separate microservice (sidecar)
+to handle specific tasks like monitoring,
+logging, or authentication.
+H i n a A r o r a
+Microservices

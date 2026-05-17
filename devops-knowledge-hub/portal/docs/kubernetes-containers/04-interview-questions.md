@@ -533,3 +533,271 @@ Exceeding memory limit: Pod is OOMKilled. Exceeding CPU limit: CPU is throttled 
 
 - **Labels** — Key-value metadata used for selection and grouping. Services, deployments, and network policies use labels to identify pods.
 - **Annotations** — Key-value metadata for storing non-identifying information (build version, contact, documentation URLs). Not used for selection.
+
+---
+
+## Staff-Level Mock Interview Questions (SRE Depth)
+
+These are diagnostic-structure questions. The interviewer is testing how you reason under uncertainty. Name commands. Explain what each result would mean. Do not jump to a conclusion without evidence.
+
+---
+
+**Q51: A service is timing out only from some nodes in a cluster. Walk me through your first ten minutes.**
+
+Strong answer:
+
+1. Establish scope. `kubectl get pods -o wide` to map affected pods to nodes. Is the pattern node-local, namespace-local, AZ-local, or service-local?
+2. Was there a recent rollout? `kubectl rollout history deploy/...`
+3. From an affected node, `curl -v <service-ip>:<port>` directly — bypass DNS.
+4. `ss -s` for socket exhaustion. `iptables -L KUBE-SERVICES -n -v` to validate proxy rules. `journalctl -u kube-proxy --since '10m ago'`.
+5. If retransmits show up in `ss -i`, drop down to the physical layer: `ethtool -S eth0`, MTU mismatch, BGP peer state.
+6. Separate DNS resolution failures from TCP connect failures from HTTP-level errors — different tests, different evidence.
+
+Red flag: "I would check the logs and see if there are errors" with no commands and no failure-domain reasoning.
+
+---
+
+**Q52: Explain how a packet reaches a Pod from a client outside the cluster.**
+
+```text
+Client -> Cloud LB -> Node NodePort/target -> kube-proxy (iptables/IPVS) DNAT
+       -> kernel conntrack records translation -> CNI veth -> Pod netns -> process
+Reply path reverses; conntrack un-NATs.
+```
+
+With Cilium eBPF: kube-proxy may be absent; eBPF programs in TC ingress/egress hooks handle DNAT; XDP can drop or load-balance at the earliest possible point.
+
+For overlay CNI (Flannel VXLAN): the packet is encapsulated in UDP between nodes, adding ~50 bytes. If pod MTU is not lowered below physical MTU, large packets silently fragment or drop.
+
+---
+
+**Q53: A Pod is Ready, but requests still fail. Give me five causes and how you would disprove each one.**
+
+| Cause | Disproof |
+|---|---|
+| Probe passes a shallow path but real handler is broken | `kubectl exec <pod> -- curl localhost:<port>/<real-path>` |
+| Service selector does not match pod labels | `kubectl get endpoints <svc>` — if pod IP is absent, selector mismatch |
+| kube-proxy iptables lag after pod replacement | Compare pod IP in `iptables -L KUBE-SEP-* -n` vs current pod IP |
+| NetworkPolicy block | `kubectl get netpol -A` in both source and destination namespaces |
+| App bound to 127.0.0.1 not 0.0.0.0 | `kubectl exec <pod> -- ss -tlnp` confirms bind address |
+
+---
+
+**Q54: Why can memory pressure hurt latency before any OOM kill occurs?**
+
+The most impactful mechanism is **direct reclaim**. When a cgroup is near its memory limit, any new allocation triggers synchronous page reclaim in the calling thread's context — that allocation now takes milliseconds instead of nanoseconds. P99 spikes without any OOM event.
+
+Supporting mechanisms:
+
+- **kswapd** competes for CPU asynchronously.
+- **Dirty page writeback throttling** when `dirty_ratio` is hit blocks writes in the app's path.
+- **Swap activity** even at small volumes causes microsecond-to-millisecond stalls.
+- **THP compaction** scans and pauses can introduce milliseconds of stall.
+
+Confirm with `sar -B`, `cat /proc/vmstat | grep pgmajfault`, `memory.stat` in the cgroup.
+
+---
+
+**Q55: What does the kubelet do that matters operationally during a bad rollout?**
+
+- Runs **readiness probes** — removes failing pods from the EndpointSlice (no restart).
+- Runs **liveness probes** — restarts containers that fail.
+- Garbage-collects dead containers and images — during crash loops this consumes ephemeral storage and can trigger `DiskPressure`.
+- Reports NodeConditions (MemoryPressure, DiskPressure, PIDPressure).
+- Enforces cgroup limits — OOM-kills containers exceeding memory limits.
+- During eviction, follows priority classes and QoS order.
+- Emits Events surfaced in `kubectl describe pod` — usually the first signal to on-call.
+
+---
+
+**Q56: A DNS issue is suspected, but application teams insist "the network is down." How do you arbitrate with evidence?**
+
+Run two tests in parallel from an affected pod:
+
+1. `curl -v http://<pod-ip>:<port>/` — bypasses DNS. If this succeeds, the network is up.
+2. `dig @<coredns-ip> <svc>.<ns>.svc.cluster.local` — if NXDOMAIN or timeout, CoreDNS is the failure.
+
+Then check CoreDNS health: `kubectl top pod -n kube-system -l k8s-app=kube-dns`, restart history, upstream resolution.
+
+Present the result as a timeline: "TCP to pod IP succeeds at 15:31; DNS lookup of the same service times out at 15:32; CoreDNS pod was at 98% CPU limit. Network is fine, DNS resolver is the bottleneck."
+
+---
+
+**Q57: You see retransmits, elevated tail latency, and partial rack impact. What layers do you test first and why?**
+
+Rack-partial pattern implies **physical**. Start at L1/L2:
+
+1. `ethtool -S <iface>` on nodes in the affected rack — `tx_errors`, `rx_missed_errors`, `rx_crc_errors`.
+2. `ip -s link` for drops.
+3. Compare error counts across nodes — asymmetric counts mean a single bad NIC.
+4. Check ToR switch port flapping (network team syslog / SNMP).
+5. Only after ruling out physical: conntrack overflow (`conntrack -S`), kernel ring buffer drops (`dmesg | grep -i drop`), ECMP routing asymmetry.
+
+Distinguish TCP retransmits (visible to app, jittery latency) from ethernet-level retransmits (L2, invisible to app, indicate physical degradation).
+
+---
+
+**Q58: What are requests, limits, and QoS really buying you in a multi-tenant platform?**
+
+- **Requests** determine scheduling. The scheduler will not place a pod unless the sum of requests fits the node's allocatable.
+- **Limits** are enforced at runtime by cgroups: CFS throttling for CPU, OOMKill for memory.
+- **QoS class** (Guaranteed, Burstable, BestEffort) determines eviction order under node pressure and OOM score.
+
+In multi-tenancy:
+
+- Guaranteed QoS for critical control-plane / inference workloads survives node memory pressure that evicts BestEffort first.
+- A single workload with no limits can cause noisy-neighbor CPU or memory issues even with requests set.
+- Add `LimitRange` (defaults), `ResourceQuota` (caps), and `PriorityClass` (eviction order) to make multi-tenancy operationally safe.
+
+---
+
+**Q59: A probe configuration caused cascading failure during peak load. Explain the mechanism.**
+
+Death-spiral mechanism:
+
+1. Liveness probe has `timeoutSeconds: 1`, `failureThreshold: 2`.
+2. Under peak load, app P99 is 800ms — two 1-second probe timeouts in a row trigger restart.
+3. Kubelet starts restarting pods serially.
+4. Each restart removes a pod from the EndpointSlice — remaining pods handle proportionally more traffic.
+5. Their latency rises further. They fail probes faster.
+6. Within minutes, most pods have been restarted during peak, connection pools are drained, caches are cold.
+
+Mitigation: generous probe timeouts, `failureThreshold: 3+`, `startupProbe` for slow boot, liveness probes that test only the process's liveness (not dependencies).
+
+---
+
+**Q60: Give me a production issue where Linux, networking, and Kubernetes all interacted.**
+
+Structured-story format: context, symptoms, hypothesis chain, diagnosis, fix, prevention.
+
+Example: Intermittent 503s in one region. Pods healthy, endpoints populated, logs clean. `tcpdump` on the affected node showed SYN packets arriving with no SYN-ACK reply. `sysctl net.netfilter.nf_conntrack_max` was at the default 65536; the cluster had scaled to 200+ pods per node during a load test, so the conntrack table was full. New connections silently dropped while established flows continued.
+
+Cross-layer: Linux kernel parameter (conntrack), triggered by a Kubernetes scaling event, on a network path that only used conntrack because kube-proxy was in iptables mode.
+
+Fix: raise `nf_conntrack_max` and `nf_conntrack_buckets`, deploy a DaemonSet that monitors conntrack fill rate and alerts before saturation. Long-term: move to Cilium kube-proxy replacement so conntrack is bypassed for Service traffic.
+
+---
+
+## Platform Engineering Questions
+
+**Q61: How do you isolate GPU capacity from accidental consumption by general workloads?**
+
+Layered controls:
+
+1. Dedicated GPU node pools.
+2. Taints on GPU nodes (`dedicated=gpu:NoSchedule`).
+3. Tolerations only on approved GPU workloads.
+4. Node labels (`nvidia.com/gpu.product`) + node affinity for accelerator-specific placement.
+5. `ResourceQuota` per non-GPU namespace setting `requests.nvidia.com/gpu: "0"`.
+6. Admission policy (Kyverno / OPA) rejecting GPU requests from non-approved namespaces.
+
+Goal: make accidental GPU consumption difficult by default.
+
+---
+
+**Q62: What is the "partial start" problem in distributed training and how do you prevent it?**
+
+If a 4-worker training job needs 4 GPUs and only 2 schedule, those 2 GPUs sit idle waiting for peers. The job burns expensive GPU hours with zero progress.
+
+Prevention: gang scheduling via Kueue or Volcano. The job waits in a queue until all required resources are available, then admits as a whole. Even if the underlying scheduler is still the default one, the queueing controller prevents partial admission.
+
+---
+
+**Q63: Your platform runs 11 operators. Categorize them by risk.**
+
+| Risk class | Examples | Failure impact |
+|---|---|---|
+| Low | Manages only its own CRDs, no cluster RBAC | The CR it manages stops reconciling; rest of cluster unaffected |
+| Medium | Cluster-wide controllers, ClusterRoleBinding | Affects multiple namespaces but does not block admission |
+| High | Mutating webhook on Pods, certificate manager with mutating webhook | Can block all pod admission cluster-wide |
+
+Detection: probe CRD reconciliation lag (operator-emitted metric) and webhook response time. A "broken" operator with no metric coverage is invisible until users complain.
+
+---
+
+**Q64: Kyverno policy is `failurePolicy: Fail`. Kyverno pod crashes. What happens?**
+
+The API server rejects every API request matching the webhook's rules until Kyverno recovers. Deployments fail, scaling fails, self-healing fails. The cluster appears frozen even though kube-apiserver, etcd, and kubelet are all healthy.
+
+Mitigations:
+
+- Run Kyverno with high replica count and PDB.
+- Use `failurePolicy: Ignore` for non-critical policies.
+- Use `failurePolicy: Fail` only with narrow `namespaceSelector` / `objectSelector` so kube-system and recovery namespaces are exempt.
+- Set short `timeoutSeconds` so a hung webhook fails fast.
+
+---
+
+**Q65: When would you recommend Istio sidecar mode vs ambient mode vs not adopting a mesh?**
+
+| Choice | When |
+|---|---|
+| No mesh | Problems solvable with NetworkPolicy + Ingress; team cannot own istiod |
+| Cilium (no sidecars) | Want mTLS and L4/L7 policy with one CNI, no sidecar overhead |
+| Istio ambient | Want mesh feature set with less per-pod overhead than sidecars; granular per-workload policy is not required |
+| Istio sidecar | Need fine-grained per-workload policy, mature traffic management, L7 routing |
+
+Cost of sidecars: 30-80ms additional startup per pod, 50-150MB sidecar memory, certificate rotation events, increased blast radius of mesh control plane.
+
+---
+
+**Q66: etcd is restored successfully but the cluster is still not functional. What are the three most likely causes?**
+
+1. **Certificates expired** — Kubernetes uses certs for kubelet → API server and API server → etcd. Restoring an old snapshot can revive expired certs that are no longer accepted.
+2. **Object state references missing resources** — Pods reference Nodes that no longer exist (scaled-down node group), PVCs reference PVs in another region, Secrets reference ServiceAccounts that have been deleted.
+3. **Controllers stuck on stale leases** — Lease objects from the previous etcd cluster mismatch the current leader. Controllers like kube-controller-manager wait until leases time out and are reacquired.
+
+Recovery: restart the control plane components after etcd restore; rotate certificates if needed; manually clean up stale resources.
+
+---
+
+**Q67: A DR drill reveals the restore procedure takes 4 hours but the SLA says 1 hour RTO. What do you do?**
+
+Three honest options:
+
+1. **Renegotiate the SLA** with the business based on real measurements.
+2. **Reduce the RTO** by precomputing recovery (warm-standby cluster, replicated etcd to a secondary region, active-passive cluster API).
+3. **Reduce the scope** of what RTO covers — control-plane recovery in 30 min, app data in 4 hours, and document this honestly.
+
+Do not declare 1-hour RTO and continue running 4-hour drills. False confidence is worse than honest measurement.
+
+---
+
+**Q68: What does "DR-ready" actually require beyond "we have backups"?**
+
+- Written runbook with named owners.
+- Tested restore drills (quarterly minimum).
+- Separate plans for etcd, cluster, and app data — these are three different problems.
+- RTO and RPO defined per workload class (control plane, stateless, stateful).
+- Distinction between passive DR (can you recover?) and active DR (can you fail over traffic?).
+- Recognition that multi-cluster does not solve DR without active data replication.
+- Validation that the recovered cluster is actually functional, not just etcd healthy.
+
+---
+
+**Q69: How do you debug a GPU pod stuck in Pending?**
+
+1. `kubectl describe pod <gpu-pod>` — scheduler events tell you exactly why no node fits.
+2. `kubectl get nodes -L nvidia.com/gpu.product --show-labels` — are there GPU nodes? Do their labels match the pod's `nodeSelector`?
+3. `kubectl describe node <gpu-node> | grep -A5 nvidia.com/gpu` — does kubelet advertise GPUs? If not, the device plugin failed.
+4. `kubectl get pods -n gpu-operator` — is the GPU operator healthy? Validator pods passing?
+5. Check tolerations on the pod and taints on the GPU node — taint without matching toleration repels the pod.
+6. Check `ResourceQuota` in the pod's namespace — does it allow GPU requests?
+
+---
+
+**Q70: Why is inference cold start a production problem?**
+
+Large language models take seconds-to-minutes to load weights into GPU memory. If inference scales to zero:
+
+- the next request triggers a model load
+- during the load (often 30s to 3min), requests time out or queue
+- HPA can scale up quickly, but the new pod also has to cold-start
+- caller SLOs are blown
+
+Mitigations:
+
+- **Warm capacity** — never scale critical inference to zero; maintain a minimum replica count.
+- **Model preload** — load weights in an init container before readiness.
+- **Faster model formats** — quantization, TensorRT-LLM, vLLM with FlashAttention.
+- **MIG / model multiplexing** — fit more models per GPU so warm capacity is cheaper.

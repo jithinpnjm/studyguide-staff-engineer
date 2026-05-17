@@ -1,0 +1,2897 @@
+DOMAIN: cloud-platforms
+DOCS WITH TEXT: 35
+
+=== SOURCE: AWS DevOps Cheat Sheet 1.System Administration & Scripting   Linux commands  … ===
+AWS DevOps Cheat Sheet 
+1.System Administration & Scripting 
+• Linux commands 
+• Shell scripting 
+• Python 
+2.Version Control 
+• Git 
+• GitHub – Cloud-based Git repository 
+hosting 
+• GitLab – Git repository with built-in CI/CD 
+pipelines 
+• Bitbucket – Git repository with Jira 
+integration 
+3.Continuous Integration & Continuous 
+Deployment (CI/CD) 
+• Jenkins (pipelines, declarative scripts) 
+• GitHub Actions (workflows, syntax) 
+• GitLab CI/CD (stages, jobs, runners) 
+• Tekton 
+• Circle CI 
+• ArgoCD (GitOps) 
+• Flux CD 
+4.Infrastructure as Code (IaC) 
+• Terraform 
+• CloudFormation (stacks, templates) 
+5.Containerization & Orchestration 
+• Docker (build, run, volumes, networks, 
+compose) 
+• Kubernetes (K8s) 
+6.Cloud Services 
+• AWS 
+• Azure 
+• GCP 
+7.Configuration Management 
+• Ansible (playbooks, roles, inventory) 
+• Chef (recipes, cookbooks) 
+• Puppet (manifests, modules) 
+• SaltStack (states, grains) 
+8.Monitoring & Logging 
+• Prometheus & Grafana (metrics, alerts, 
+visualization) 
+• ELK Stack (Elasticsearch, Logstash, 
+Kibana) 
+• Datadog 
+• New Relic 
+9.Security & Compliance 
+• SonarQube (code analysis) 
+• Trivy (container vulnerability scanning) 
+• OWASP Dependency-Check 
+10. Networking, Ports & Load Balancing 
+• Networking Basics 
+• Ports 
+• Nginx (Reverse Proxy & Load Balancing) 
+• Nginx (Reverse Proxy & Load Balancing) 
+• HAProxy (Load Balancing) 
+• Kubernetes Ingress Controller (For 
+Managing External Traffic) 
+• Practical Examples: Docker for Nginx, 
+Apache, HAProxy, and Kubernetes Ingress 
+11. Databases 
+• SQL Databases (MySQL, PostgreSQL, 
+MariaDB) 
+• NoSQL Databases 
+• Database Automation for DevOps 
+12. Storage 
+13. Helm
+
+1.System Administration & Scripting 
+Linux commands
+
+1. File Management 
+● ls - List directory contents. 
+● cd - Change directory. 
+● pwd - Print working directory. 
+● cp - Copy files or directories. 
+● mv - Move or rename files or directories. 
+● rm - Remove files or directories. 
+● touch - Create a new empty file. 
+● mkdir - Create a new directory. 
+● rmdir - Remove an empty directory. 
+● cat - Concatenate and display file contents. 
+● head - Display the first few lines of a file. 
+● tail - Display the last few lines of a file. 
+● chmod - Change file permissions. 
+● chown - Change file ownership. 
+● find - Search for files in a directory hierarchy. 
+● locate - Find files by name. 
+● grep - Search text using patterns. 
+● diff - Compare two files line by line. 
+● tar - Archive files. 
+● zip/unzip - Compress and extract files. 
+● scp - Securely copy files over SSH.
+
+● ls: List files and directories. 
+ls -l # Long listing with details
+
+● cd: Change directory. 
+cd /home/swapna # Move to /home/swapna directory
+
+● pwd: Show current directory. 
+pwd 
+● cp: Copy files. 
+cp file1.txt /tmp # Copy file1.txt to /tmp directory
+
+● mv: Move or rename files. 
+mv oldname.txt newname.txt # Rename file 
+mv file1.txt /tmp # Move to /tmp directory 
+● rm: Remove files or directories. 
+rm file1.txt # Remove a file 
+rm -rf /tmp/old_direct
+
+=== SOURCE: AWS Fundamentals AWS For The Real World Tobias Schmidt, Alessandro Volpicella… ===
+AWS Fundamentals
+AWS For The Real World
+Tobias Schmidt, Alessandro Volpicella
+Version v2.1, 2024-10-14
+Table of Contents
+1. Introduction . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  1
+1.1. Prologue V2. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  1
+1.2. About The Scope of This Book . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  2
+1.3. Why Did We Bother to Write This?. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  2
+1.4. Who Is This Book For? . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  3
+1.5. Who Is This Book Not For? . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  3
+2. Getting Started. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  5
+2.1. Creating Your Own AWS Account . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  5
+2.2. Account Security Key Concepts and Best Practices . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  6
+2.3. Avoiding Cost Surprises . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  9
+2.4. Understanding the Shared Responsibility Model . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  13
+2.5. About going Serverless and Cloud-Native . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  14
+3. AWS Core Building Blocks for all Applications . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  16
+4. Security . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  19
+4.1. AWS IAM for Controlling Access to Your Account and Its Resources . . . . . . . . . . . . . . . . . . . . . . . . . .  21
+5. Compute . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  39
+5.1. Launching Virtual Machines in the Cloud for Any Workload with EC2. . . . . . . . . . . . . . . . . . . . . . . . .  41
+5.2. Running and Orchestrating Containers with ECS and Fargate . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .  60
+5.3. Using Lambda to Run Code without Worrying about Infrastructure . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+=== SOURCE: AWS IAM Questions: AWS Identity and Access Management With AWS Identity and… ===
+AWS IAM Questions:
+
+AWS Identity and Access Management With AWS Identity and Access Management (IAM), you can specify who or what can access services 
+and resources in AWS, centrally manage fine-grained permissions, and analyze access to refine permissions across AWS.
+
+What does AWS IAM service do? 
+AWS Identity and Access Management (IAM) is an AWS service that helps an administrator securely control access to AWS 
+resources. IAM administrators control who can be authenticated (signed in) and authorized (have permissions) to use Account 
+Management resources. 
+What are the top 5 IAM tools? 
+The top IAM tools for 2024, including IBM Security Identity and Access Assurance, Microsoft Azure Active Directory, Ping 
+Identity, Google Cloud IAM, and ManageEngine ADManager Plus, offer unique strengths to address the evolving security 
+landsca. 
+Which IAM tool is best? 
+Best Identity and Access Management (IAM) Software At A Glance 
+Best for Small Businesses: JumpCloud. 
+Microsoft Entra ID. 
+Best for Enterprise: Microsoft Entra ID. 
+Highest User Satisfaction: JumpCloud. 
+Best Free Software: JumpCloud. 
+How many IAM users can I create? 
+IAM user limit is 5000 per AWS account. 
+What is the main goal of IAM? 
+The purpose of IAM is to stop hackers while allowing authorized users to easily do everything they need to do, but not more 
+than they're allowed to do. IAM implementations use a variety of tools and strategies to achieve this goal, but they all tend to 
+follow the same basic structure. 
+What is an example of IAM? 
+Examples of IAM 
+User Authentication with Multi-Factor Authentication (MFA) Tools. After a user signs in using their login credentials, an MFA tool 
+requests a second form of validation to confirm the user's identity. ... 
+Access Provisioning and Deprovisioning. ... 
+User Monitoring to Ensure Appropriate Access.
+
+What is the difference between cloud IAM and IAM? 
+their differences/where they overlap etc? Cloud Identity: Used to create access control groups and attach groups to users 
+under Organization node. (See service accounts for advanced information.) IAM: Provide Cloud Identity group access to project 
+resources and authorization to modify or use them. 
+Can a user have multiple IAM roles? 
+IAM roles are a key concept in AWS IAM that allow users to delegate access to AWS resources to other AWS accounts, AWS 
+services, and external identities. Using multiple AWS IAM roles in combination with Terraform allows you to manage access to 
+resources in a more secure and scalable manner. 
+What is the difference between an AWS account and an IAM user? 
+An identity within your AWS account that's granted specific custom permissions. You're an IAM user if you didn't create the 
+AWS account and your administrator or help desk employee provided you your sign-in credentials that include an AWS account 
+ID or account alias, an IAM user name, and password. 
+How to connect AWS IAM? 
+Open the AWS Management Console at https://console.aws.amazon.com/ . 
+The 
+
+=== SOURCE: AWS Interview Questions & Answers Q1: List the components required to build… ===
+AWS Interview Questions & Answers 
+Q1: List the components required to build Amazon VPC? 
+Ans: Subnet, Internet Gateway, NAT Gateway, HW VPN Connection, Virtual Private 
+Gateway, Customer Gateway, Router, Peering Connection, VPC Endpoint for S3, Egress-
+only Internet Gateway. 
+Q2: How do you safeguard your EC2 instances running in a VPC? 
+Ans: Security Groups can be used to protect your EC2 instances in a VPC. We can configure 
+both INBOUND and OUTBOUND traffic in a Security Group which enables secured access 
+to your EC2 instances. Security Group automatically denies any unauthorized access to your 
+EC2 instances. 
+Q3: In a VPC how many EC2 instances can you use? 
+Ans: Initially you are limited to launch 20 EC2 Instances at one time. Maximum VPC size is 
+65,536 instances. 
+Q4: Can you establish a peering connection to a VPC in a different 
+REGION? 
+Ans: Not possible. Peering Connection are available only between VPC in the same region. 
+Q5: Can you connect your VPC with a VPC owned by another AWS 
+account? 
+Ans: Yes, Possible. Provided the owner of other VPCs accepts your connection. 
+Q6: What are all the different connectivity options available for your 
+VPC? 
+Ans: Internet Gateway, Virtual Private Gateway, NAT, EndPoints, Peering Connections. 
+Q7: Can a EC2 instance inside your VPC connect with the EC2 instance 
+belonging to other VPCs? 
+Ans: Yes, Possible. Provided an Internet Gateway is configured in such a way that traffic 
+bounded for EC2 instances running in other VPCs. 
+Q8: How can you monitor network traffic in your VPC? 
+Ans: It is possible using Amazon VPC Flow-Logs feature. 
+Q9: Difference between Security Groups and ACLs in a VPC? 
+Ans: A Security Group defines which traffic is allowed TO or FROM EC2 instance. Whereas 
+ACL, controls at the SUBNET level, scrutinize the traffic TO or FROM a Subnet. 
+Q10: Hon an EC2 instance in a VPC establish the connection with the 
+internet? 
+Ans: Using either a Public IP or an Elastic IP. 
+Q11: Different types of Cloud Computing as per services? 
+Ans: PAAS (Platform As A Service), IAAS (Infrastructure As A Service), SAAS (Software 
+As A Service) 
+Q12: What is Auto Scaling? 
+Ans: Creating duplicate instances during heavy business hours. Scale-IN and Scale-OUT are 
+two different statues of Scaling. Scale-IN: Reducing the instances. Scale-OUT: Increasing the 
+instances by duplicating. 
+Q13: What is AMI? 
+Ans: AMI is defined as Amazon Machine Image. Basically it’s a template comprising 
+software configuration part. For example, Operating System, DB Server, Application Server, 
+etc., 
+Q14: Difference between Stopping and Terminating the Instances? 
+Ans: When you STOP an instance it is a normal shutdown. The corresponding EBS volume 
+attached to that instance remains attached and you can restart the instance later. When you 
+TERMINATE an instance it gets deleted and you cannot restart that instance again later. 
+And any EBS volume attached with that instance also deleted. 
+Q15: When you launch a standby 
+
+=== SOURCE: AWS Projects 1. Web Hosting & Deployment Traditional & Scalable Hosting Project ===
+AWS Projects
+
+1. Web Hosting & Deployment 
+Traditional & Scalable Hosting 
+Project 1: Static Website Hosting – Host a website on S3 with Route 53 & CloudFront.
+
+Project 2: WordPress on AWS Lightsail – Deploy a WordPress blog on AWS Lightsail.
+
+Project 3: EC2-based Web Server – Configure Apache/Nginx on an EC2 instance.
+
+Project 4: Scalable Web App with ALB & Auto Scaling – Use EC2, ALB, and Auto Scaling for high availability.
+
+Project 5: Scalable Web App with NLB & Auto Scaling – Use EC2, ALB, and Auto Scaling for high availability.
+
+Project 6: Multi-Tier Web App Deployment – Deploy an application with VPC, ALB, EC2, and RDS.
+
+2. Serverless Application & Modern Web Hosting 
+Project 1: Serverless Static Website – Use S3, CloudFront, and Lambda@Edge for global performance.
+
+Project 2: Multi-Tenant SaaS Application – Use Cognito, API Gateway, and RDS for a multi-tenant SaaS solution.
+
+Project 3: Progressive Web App (PWA) Hosting – Deploy a React or Vue.js PWA on AWS Amplify.
+
+Project 4: Jamstack Site with AWS – Use AWS Amplify, Headless CMS, and S3 for a Jamstack website.
+
+Project 5: AWS App Runner Deployment – Deploy a containerized web application with AWS App Runner.
+
+Project 6: Serverless API with Lambda & API Gateway – Build a RESTful API using Lambda.
+
+Project 7: GraphQL API with AWS AppSync – Deploy a GraphQL backend using DynamoDB.
+
+Project 8: Serverless Chatbot – Build an AI-powered chatbot with AWS Lex & Lambda.
+
+Project 9: Event-Driven Microservices – Use SNS & SQS for asynchronous microservices communication.
+
+Project 10: URL Shortener – Implement a Lambda-based URL shortener with DynamoDB.
+
+Project 11: Serverless Expense Tracker – Use Lambda, DynamoDB, and API Gateway to build an expense management app.
+
+Project 12: Serverless Image Resizer – Automatically resize images uploaded to an S3 bucket using Lambda.
+
+Project 13: Real-time Polling App – Use WebSockets with API Gateway and DynamoDB for a real-time polling system.
+
+Project 14: Serverless Sentiment Analysis – Analyze tweets using AWS Comprehend and store results in DynamoDB.
+
+3. Infrastructure as Code (IaC) & Automation 
+Project 1: Terraform for AWS – Deploy VPC, EC2, and RDS using Terraform.
+
+Project 2: CloudFormation for Infrastructure as Code – Automate AWS resource provisioning.
+
+Project 3: AWS CDK Deployment – Use AWS Cloud Development Kit (CDK) to manage cloud infrastructure.
+
+Project 4: Automate AWS Resource Tagging – Use AWS Lambda and Config Rules for enforcing tagging policies.
+
+Project 5: AWS Systems Manager for Automated Patching – Manage EC2 instance patching automatically.
+
+Project 6: Automated Cost Optimization – Use AWS Lambda to detect and stop unused EC2 instances.
+
+Project 7: Self-Healing Infrastructure – Use Terraform to create auto-healing EC2 instances with AWS Auto Scaling.
+
+Project 8: Event-Driven Infrastructure Provisioning – Use AWS EventBridge and CloudFormation to automate infrastructure deployment.
+
+Project 9: Automated EC2 Scaling Based on Load – Use A
+
+=== SOURCE: AWS Solutions Architect role, the interview will likely test your architecture… ===
+AWS Solutions Architect role, the interview will likely test your architecture thinking, hands-on experience, 
+cost optimization, security best practices, and ability to design scalable and resilient systems. 
+Here’s a list of essential AWS interview Q&A with examples, tailored for a senior-level Solution Architect role.
+
+1. Q: How do you design a highly available and fault-tolerant architecture in AWS? 
+A: 
+• Use Multi-AZ and Multi-Region deployments. 
+• Auto Scaling Groups for EC2 instances. 
+• Use Elastic Load Balancers (ALB/NLB) across multiple Availability Zones. 
+• Store data in S3 or RDS with Multi-AZ or Aurora Global Database. 
+• Use Route 53 for DNS-based routing and health checks. 
+Example: 
+For a global web application, we used ALB in front of EC2 Auto Scaling groups in two AZs. The DB layer was 
+Aurora Global DB for cross-region replication, and S3 for static content. Route 53 did latency -based routing 
+across regions for resilience.
+
+2. Q: How would you design a secure and scalable API using AWS services?
+
+A: 
+• Use Amazon API Gateway to expose REST/HTTP APIs. 
+• Lambda for backend logic (serverless). 
+• Use Cognito for user authentication or IAM roles for service access. 
+• Apply rate limiting and throttling at API Gateway. 
+• Enable WAF and CloudFront for additional security and caching. 
+Example: 
+For a mobile backend, designed an API using API Gateway + Lambda + DynamoDB. We used Cognito for user 
+pools, encrypted all data at rest and in transit, and integrated with CloudWatch for monitoring.
+
+3. Q: What is the difference between scalability and elasticity in AWS?
+
+A: 
+• Scalability: Ability to increase resources to meet demand (vertical or horizontal scaling).
+
+• Elasticity: Ability to automatically provision and de-provision resources based on demand. 
+Example:
+
+An EC2 Auto Scaling Group with a target tracking policy scales based on CPU utilization — that's elasticity. 
+Migrating to a microservices architecture to independently scale services — that's scalability.
+
+4. Q: How would you secure an application running on EC2? 
+A: 
+• Use Security Groups to restrict inbound/outbound traffic. 
+• Use NACLs for subnet-level control. 
+• Keep EC2 instances in private subnets, use bastion host or Session Manager. 
+• Enable IAM roles for permissions (never use hardcoded credentials). 
+• Patch OS regularly and use SSM Patch Manager. 
+• Enable CloudTrail, VPC Flow Logs, and GuardDuty. 
+Example: 
+We used EC2 in private subnets with no public IPs, accessed via SSM. Security groups allowed only ALB traffic. 
+IAM roles restricted access to S3. CloudTrail and GuardDuty were used for continuous mon itoring.
+
+5. Q: How do you reduce AWS costs in an enterprise architecture?
+
+A: 
+• Right-size instances using Cost Explorer and Compute Optimizer. 
+• Use Savings Plans or Reserved Instances for predictable workloads. 
+• Use S3 Intelligent-Tiering or lifecycle policies for storage. 
+• Leverage Lambda or Fargate for short-lived compute. 
+• Monitor using Cl
+
+=== SOURCE: AWS — Apr 2025 ===
+© 2025 | Omar Frikha omar.frikha96@gmail.com 
+Terraform AWS EKS Cluster Setup 
+This project provides an Amazon Elastic Kubernetes Service (EKS) cluster using 
+Terraform and the official AWS EKS module. The configuration follows best 
+practices, including networking, security, and cost-effective node groups. 
+Features 
+● EKS Cluster (v1.31) with public access enabled
+● VPC Configuration with private, public, and intra subnets
+● Managed Node Group with a SPOT + ON_DEMAND instance 
+strategy
+● IAM Role for Node Groups to ensure proper permissions
+● Essential Cluster Add-ons (VPC CNI, CoreDNS, Kube Proxy)
+● Custom AWS Security Group
+Prerequisites 
+Ensure you have the following installed: 
+● Terraform (>=1.3.0)
+● AWS CLI configured with appropriate permissions
+● IAM permissions to create VPCs, EKS clusters, and IAM roles
+Folder Structure 
+├── main.tf # Main Terraform configuration 
+├── vpc.tf # VPC configuration 
+├── eks.tf # EKS Cluster setup 
+├── variables.tf # Variables for Terraform modules 
+├── iam.tf
+
+# IAM roles and policies for worker nodes 
+├── outputs.tf # Outputs for Terraform modules 
+├── outputs.tf # Outputs for Terraform modules 
+├── security_group.tf
+
+# Custom security group for node access(HTTP, SSH, etc.) 
+└── README.md # Project Documentation
+
+© 2025 | Omar Frikha omar.frikha96@gmail.com 
+Configuration 
+1- Main.tf
+terraform {
+
+required_version = ">= 1.3.0"
+
+required_providers {
+
+aws = {
+
+source = "hashicorp/aws"
+
+version = "~> 5.92.0"
+
+}
+
+} 
+} 
+2- Variables.tf
+variable "region" {
+
+description = "AWS region"
+
+type = string
+
+default = "eu-north-1" 
+} 
+variable "name" {
+
+description = "EKS cluster name"
+
+type = string
+
+default = "tes-dev-eks-cluster" 
+} 
+variable "vpc_cidr" {
+
+description = "CIDR block for the VPC"
+
+type = string
+
+default = "10.0.0.0/16" 
+} 
+variable "azs" {
+
+description = "List of availability zones"
+
+type = list(string)
+
+default = ["eu-north-1a", "eu-north-1b"] 
+} 
+variable "private_subnets" {
+
+type = list(string)
+
+default = ["10.0.1.0/24", "10.0.2.0/24"] 
+} 
+variable "public_subnets" {
+
+type = list(string)
+
+default = ["10.0.101.0/24", "10.0.102.0/24"] 
+} 
+variable "intra_subnets" {
+
+type = list(string)
+
+default = ["10.0.5.0/24", "10.0.6.0/24"] 
+} 
+variable "env" {
+
+description = "Environment (dev, staging, prod)"
+
+type = string
+
+default = "dev" 
+} 
+© 2025 | Omar Frikha omar.frikha96@gmail.com 
+variable "eks_cluster_version" {
+
+default = "1.31" 
+} 
+variable "vpc_cni_version" {
+
+default = "v1.14.1-eksbuild.1" 
+} 
+variable "coredns_version" {
+
+default = "v1.10.1-eksbuild.1" 
+} 
+3- Vpc.tf
+module "vpc" {
+
+source = "terraform-aws-modules/vpc/aws"
+
+name = "${var.name}-vpc"
+
+cidr = var.vpc_cidr
+
+azs = var.azs
+
+private_subnets = var.private_subnets
+
+public_subnets = var.public_subnets
+
+intra_subnets = var.intra_subnets
+
+enable_nat_gateway = true
+
+enable_vpn_gateway = true
+
+tags = {
+
+Terraform = "true"
+
+Environment = var.env
+
+} 
+} 
+4- Eks.tf
+ module "eks" {
+
+source = "terraform-aws-modules/eks/aws"
+
+version = "~> 20.31"
+
+cluste
+
+=== SOURCE: AWS — Apr 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+Deploying Scalable EKS Infrastructure with 
+Terraform 
+In today’s cloud-native landscape, Kubernetes has emerged as the de facto 
+standard for container orchestration. Amazon Elastic Kubernetes Service (EKS) 
+offers a fully managed Kubernetes solution that simplifies cluster operations, 
+scalability, and integration with the AWS ecosystem. However, manually 
+provisioning EKS and its underlying infrastructure can be time-consuming and 
+error-prone. 
+This is where Terraform, an open-source Infrastructure as Code (IaC) tool by 
+HashiCorp, becomes a game-changer. By defining your infrastructure in 
+declarative configuration files, Terraform allows you to automate, version, and 
+manage your entire EKS environment with ease and consistency. 
+In this guide, we'll walk through a step-by-step process to create an EKS cluster 
+on AWS using Terraform. Whether you're a DevOps engineer looking to 
+streamline deployments or a developer exploring Kubernetes at scale, this 
+tutorial will equip you with the foundational skills to provision a production-
+ready EKS setup—all through code.
+
+Elastic Kubernetes Service (EKS) 
+Kubernetes (often abbreviated as K8s) is an open-source container 
+orchestration platform designed to automate the deployment, scaling, and 
+management of containerized applications. Setting up and self managing 
+kubernetes clustera is a tedious job. AWS decided to simplify deployment, 
+scaling, and operation of Kubernetes clusters by creating their own kubernetes 
+cluster known as Elastic Kubernetes Service(EKS) managed by their team. All 
+the customer need is to setup EKS and deploy their application. 
+Terraform 
+Terraform is an open-source Infrastructure as Code (IaC) tool developed 
+by HashiCorp. It allows you to define, provision, and manage cloud
+
+3
+
+infrastructure using a declarative configuration language called HCL 
+(HashiCorp Configuration Language). Every cloud provider has their own IaC 
+like aws has Cloud Formation but terraform is open source and can interact 
+with different cloud providers 
+Prerequisite 
+• AWS account 
+• AWS cli 
+• Terraform 
+• Visual studio Code 
+• eksctl 
+Objective 
+• Setup aws credentials 
+• Create EKS with terraform 
+• Create Remote backend 
+• Modularize our terraform code 
+• Create State Locking using Dynamo DB 
+• Clean up 
+We will start with creating aws credentials. 
+The next stage is to configure aws credentials on our command line. Before you 
+configure your credentials ensure that you have installed aws cli. you can refer 
+to this article AWS CLI to install aws cli depending on your operating system. 
+To configure aws credentials
+
+Important extensions that can improve productivity 
+• HashiCorp Terraform
+
+4
+
+• GitHub Copilot 
+Most companies modularize their terraform code. The reason is to 
+• Avoid Redundancy – Prevent repetitive code and improve efficiency 
+• Enhance Reusability – Allow easy reuse of infrastructure components. 
+• Improve 
+
+=== SOURCE: AWS — Mar 2025 ===
+1
+
+Mail ID: vishalmachan15@gmail.com 
+Authored by: VISHAL MACHAN
+
+AWS DEVOPS TROUBLESHOOTING
+
+2
+
+AWS DEVOPS TROUBLESHOOTING 
+SOLUTIONS 
+This document provides a comprehensive guide to identifying, diagnosing, and 
+resolving common issues encountered in AWS DevOps environments
+
+IT covers troubleshooting strategies for infrastructure provisioning, CI/CD pipelines, 
+security configurations, application deployment, and monitoring.
+
+AWS DevOps troubleshooting involves diagnosing and resolving issues that arise in 
+cloud-based infrastructure, CI/CD pipelines, security configurations, and application 
+deployments. Effective troubleshooting requires a deep understanding of AWS 
+services like EC2, S3, Lambda, and EKS, as well as monitoring tools like CloudWatch 
+and CloudTrail. Common challenges include failed deployments, misconfigured IAM 
+roles, network connectivity issues, and resource limitations. By leveraging 
+automation, logging, and rea l-time monitoring, DevOps teams can quickly identify 
+root causes, implement fixes, and optimize performance. A proactive approach to 
+troubleshooting ensures system reliability, security, and seamless application delivery 
+in AWS environments.
+
+AWS DevOps Troubleshooting Guide
+
+"In DevOps, troubleshooting isn’t just about fixing issues —
+it’s about continuously improving systems to be more 
+resilient, automated, and scalable." 🚀 
+4o
+
+3
+
+Table of Contents
+
+1-10: EC2 & Load Balancer Issues
+
+1. EC2 Instance Not Starting
+
+2. EC2 Instance Stuck in “Initializing” State
+
+3. EC2 Instance High CPU Utilization
+
+4. EC2 Instance Unable to Reach the Internet
+
+5. EC2 Instance Connection Timeout (SSH Issues)
+
+6. Elastic Load Balancer (ELB) Not Routing Traffic
+
+7. Target Group in ELB Showing Unhealthy Instances
+
+8. SSL Certificate Not Working on ELB
+
+9. EC2 Auto Scaling Not Launching New Instances
+
+10. EC2 Spot Instance Interrupted Unexpectedly 11-20: S3, IAM, and 
+Permissions Issues
+
+11. S3 Bucket Access Denied (403 Error)
+
+12. S3 Public Access Block Preventing Access
+
+13. S3 Lifecycle Policy Not Deleting Objects
+
+14. S3 Cross-Region Replication Not Working
+
+15. S3 File Upload Extremely Slow
+
+16. IAM Policy Not Granting Expected Access
+
+17. IAM Role Not Attaching to EC2 Instance
+
+18. AWS STS Token Expired Error
+
+19. MFA Authentication Failing for IAM User
+
+20.AWS Access Key Leaked Warning
+
+21-30: RDS, DynamoDB & Database Issues
+
+4
+
+21.RDS Instance Not Connecting
+
+22.RDS High CPU Utilization
+
+23.RDS Automatic Backup Not Working
+
+24.RDS Connection Timeout from Lambda
+
+25.RDS Read Replica Lagging Behind Primary
+
+26.DynamoDB Query Performance Slower Than Expected
+
+27.DynamoDB Throttling Errors (ProvisionedThroughputExceededException)
+
+28.DynamoDB Streams Not Triggering Lambda
+
+29.DynamoDB Backup Failing
+
+30.RDS Storage Full Error
+
+31-40: AWS Lambda, API Gateway, and CloudFront Issues
+
+31.AWS Lambda Timeout Error
+
+32.Lambda Function Exceeds Memory Limit
+
+33.API Gateway Returning 500 Internal Server Error
+
+34.API Gateway CORS Issues
+
+
+=== SOURCE: AWS — Mar 2025 ===
+🔔 Follow me SHAIK HARI SADIA ANJUM for more AWS content!  🚀
+
+AWS CodeBuild
+AWS CodeBuild is a fully managed continuous integration (CI) service that compiles source 
+code, runs unit tests, and produces deployable software artifacts. It eliminates the need to 
+set up, manage, and scale your own build servers.
+Key Features of AWS CodeBuild
+ ✅ Fully Managed – No need to provision or manage build servers.
+ ✅ Scalability – Scales automatically to meet build demand.
+ ✅ Pay-As-You-Go Pricing – Charges are based on build minutes used.
+ ✅ Security – Integrated with AWS IAM for ﬁne-grained access control.
+ ✅ Multi-Language Support – Supports Java, Python, Node.js, Go, .NET, and more.
+ ✅ Integration – Works with AWS CodePipeline, GitHub, GitLab, Bitbucket, Jenkins, etc.
+ ✅ Custom Build Environments – Allows use of custom Docker containers.
+
+1. 
+How AWS CodeBuild Works
+Step 1: Deﬁne a Build Speciﬁcation (buildspec.yml)
+A buildspec.yml ﬁle is used to deﬁne build commands, environment variables, and build 
+steps.
+Step 2: Create a Build Project
+Go to AWS CodeBuild Console → Click Create Build Project.
+Choose a source provider (CodeCommit, GitHub, S3, or Bitbucket).
+Deﬁne the environment (managed image or custom Docker image).
+Specify the buildspec ﬁle or deﬁne commands manually.
+Conﬁgure artifacts storage (S3 or no artifacts).
+Start the build.
+Step 3: Monitor and Debug Builds
+View real-time logs in the CodeBuild Console.
+Use Amazon CloudWatch Logs for detailed build logs.
+AWS CodeBuild Integration with AWS CodePipeline
+AWS CodePipeline automates the CI/CD pipeline. CodeBuild can be integrated into the 
+pipeline as the build step.
+How it Works
+Source Stage → CodeCommit, GitHub, or S3 triggers a build.
+2. 
+3. 
+Build Stage → AWS CodeBuild compiles and tests the code.
+Deploy Stage → AWS CodeDeploy or Lambda deploys the application.
+Example CodePipeline with CodeBuild:
+AWS CodeBuild vs Other Build Services
+AWS CodeBuild Pricing
+AWS CodeBuild is charged based on the compute minutes used per build.
+Build Duration = Time taken to execute buildspec.yml.
+Pricing Examples:
+Small Instance (3GB RAM, 2 vCPUs) → $0.005/min
+Medium Instance (7GB RAM, 4 vCPUs) → $0.01/min
+Large Instance (15GB RAM, 8 vCPUs) → $0.02/min
+Example:
+A build that runs for 10 minutes on a medium instance costs:
+ 10 × $0.01 = $0.10
+Best Practices for AWS CodeBuild
+✅ Use IAM Roles – Grant least privilege permissions for security.
+ ✅ Optimize Build Time – Cache dependencies to speed up builds.
+ ✅ Use Parallel Builds – Run multiple builds to reduce deployment time.
+ ✅ Monitor Build Logs – Use AWS CloudWatch for detailed insights.
+ ✅ Secure Build Artifacts – Store artifacts in Amazon S3 with encryption.
+ ✅ Use VPC Conﬁguration – Run builds in a private VPC for security.
+Common Use Cases
+📌 Continuous Integration (CI) → Automate code compilation and unit testing.
+ 📌 Container Image Builds → Build Docker images and push them to Amazon ECR.
+ 📌 Serverless Application Deployment → Deploy Lambda functions and APIs.
+
+=== SOURCE: AWS — Mar 2025 ===
+@ C l o u d y N e e r s
+
+KEY SERVICES OVERVIEW
+
+AWS Key Services
+We’re following this structure to
+define key services:
+What is it?
+How to use/configure?
+How much?
+CloudyNeers REPOST
+CloudyNeers REPOST
+What:
+Automatically adjusts AWS resources to match
+demand and maintain performance.
+How: 
+Configure scaling policies for supported
+services like EC2, ECS, DynamoDB, and Aurora.
+How Much:
+Free to use; you pay only for the resources
+provisioned.
+AWS Auto Scaling
+CloudyNeers REPOST
+What: 
+Object storage service for storing and retrieving
+data with high scalability and durability.
+How: 
+Create a bucket, upload objects, and set
+permissions or lifecycle policies via the console,
+CLI, or SDK.
+How Much: 
+Pay for storage used, requests made, and data
+transferred (e.g., $0.023 per GB for the first 50
+TB in the S3 Standard tier).
+Amazon S3
+CloudyNeers REPOST
+A m a z o n R D S
+What: 
+Managed relational database service supporting
+MySQL, PostgreSQL, MariaDB, Oracle, and SQL Server.
+How: 
+Launch a database instance, configure storage and
+compute capacity, and automate backups and
+updates.
+How Much:
+Pricing depends on database type, instance class, and
+storage (e.g., db.t4g.micro starts in the free tier).
+
+CloudyNeers REPOST
+What: 
+Content Delivery Network (CDN) that delivers
+content with low latency and high transfer
+speeds.
+How: 
+Distribute content by creating a CloudFront
+distribution and linking it to S3 buckets or other
+origins.
+How Much: 
+Pricing is based on data transfer and HTTP/HTTPS
+requests. Includes a free tier for up to 1 TB/month
+of data transfer.
+Amazon CloudFront
+CloudyNeers REPOST
+What: 
+Identity and Access Management service to
+securely control access to AWS resources.
+How: 
+Create users, groups, roles, and policies to grant
+permissions based on the principle of least
+privilege.
+How Much:
+ Free to use; no additional costs for IAM.
+AWS IAM
+CloudyNeers REPOST
+What: 
+Virtual Private Cloud allows you to define an
+isolated network for your AWS resources.
+How:
+ Configure subnets, route tables, internet
+gateways, and security groups for networking.
+How Much: 
+Free to use, but charges apply for NAT
+gateways, VPNs, and traffic between regions.
+Amazon VPC
+
+=== SOURCE: AWS — May 2024 ===
+PAGE 1 
+RDS Proxy Overview 
+What is RDS Proxy?
+
+• AWS RDS proxy is a fully managed database that serves as a proxy layer 
+between the application and the database. 
+• Client/application is pointed to RDS proxy endpoint, RDS Proxy sits between 
+the database and RDS to manage the DB connection. 
+• RDS Proxy works by pooling and sharing DB connections and thus makes 
+applications more scalable as well as resilient to database failures 
+• If you are running applications with unpredictable workloads, which require 
+frequently open and close database connections, and you want to maintain 
+high availability during transient database failure, the Amazon RDS proxy is 
+the solution 
+Challenges in connecting to RDS
+
+PAGE 2 
+• Many applications can create more connections to the databases which 
+exhausts CPU and memory and also too many connections. 
+• For each database connection, the DB server consumes memory and CPU that 
+cannot allocate enough resources for query execution. 
+• AWS Lambda-based serverless applications make thousands of database 
+connections in a short period of time. 
+How does it work? 
+• RDS proxy works by pooling and sharing DB connections that enable 
+applications to share and re-use database connections thus reducing the load 
+on the database and improve application performance. 
+• We are no longer need code that handles cleaning up idle connections and 
+managing connection pools.
+
+PAGE 3 
+• Opening and closing a new database connection is CPU-intensive whereas 
+additional memory is needed for each open connection. 
+• Each database transaction uses one underlying database connection which can 
+be reused once the transaction has finished. This transaction-level reuse is 
+called connection multiplexing (or connection reuse). 
+• In connection multiplexing, database connections are shared between 
+client connections which helps minimize the resource overhead on the 
+database server. 
+• RDS proxy helps improve application availability during failure scenarios such 
+as a database failover. 
+• RDS Proxy gives you the choice to use IAM authentication for connecting to 
+the database, thus removing the need for database credentials in the 
+application code. 
+• RDS proxy helps to reduce the failover times for Aurora and RDS DB 
+instances by 66%. 
+• Database access can be controlled through integration with AWS Secrets 
+Manager and IAM Role. 
+• It is compatible with various database engines like Aurora MySQL, RDS 
+MySQL, Aurora DB Cluster, PostgreSQL. 
+• DB credentials are managed by AWS Secrets Manager and are not hard-coded 
+into the application for improved security 
+Use Cases of RDS Proxy 
+• RDS proxy can be used for the applications hosted using AWS Lambda 
+(Serverless)
+
+PAGE 4
+
+• RDS proxy can be used for the applications hosted on EC2 Instances.
+
+• Unpredictable workloads 
+• Frequently open and close database connections 
+• Higher availability during transient database failures
+
+GTGY
+
+PAGE 5 
+What are the limitations? 
+• RDS proxy must be 
+
+=== SOURCE: Advantages of Using S3: - Benefits of using S3 1. Budget -friendly As we… ===
+Advantages of Using S3: - 
+Benefits of using S3
+
+1. Budget -friendly
+
+As we discussed earlier, Amazon provides services based on a pay-as-you-go model. This allows us to pay only for the 
+amount of storage and the time that we use on S3. 
+Compare this with the example of a hotel room, where the cost depends on the number of rooms booked (similar to the 
+amount of storage) and the time for which one stays (similar to the time for which one uses S3).
+
+2. High scalability
+
+Scalability is the measure to increase or decrease the resource as per need.For example, you went 
+to buy 2 chocolates from a shop, one for yourself and one for your brother. Now, when you reach 
+home, you see that five more of your cousins have arrived. What do you do now? Obviously, 
+sharing 2 chocolates among 7 people would not be a good idea. A better option is to buy more 
+chocolates. Scalability in this context will mean how easily you can get more chocolates in an 
+acceptable time. 
+In the age of social media, applications can get viral anytime, leading to an increase in demand for 
+storage. But since we’re using Amazon S3, we don’t need to worry. S3 allows for implementation 
+within minutes. 
+Moreover, it allows for auto-scaling as well. Be it an increase or decrease in demand, everything is 
+perfectly managed by S3.
+
+3. Durability
+
+Durability is the measurement of the likelihood of data loss. 
+All the services provided by Amazon, including Amazon S3, are highly durable. 
+Example 
+For example, you have an important document saved on your phone. You have some work and you 
+need that document. Unluckily, you forgot your phone at your friend’s house. Nothing to worry 
+about, as you have previously saved a copy of it on your PC. 
+You search your computer for the file but you find out that your sibling has deleted the file! Even 
+then, you shouldn’t worry because you stored it in a cloud service as a backup. You can easily 
+retrieve your document from there. 
+The S3 Standard Tier is designed for “99.999999999% durability”. What does that actually mean? 
+It means that if we store one hundred billion objects in S3, at most we’ll lose 1 object. Isn’t that 
+amazing? 
+4. High availability
+
+Availability is the measure of how readily a service can be used. 
+For example, we want to eat a pizza from a chain of pizza restaurants. In order to proceed with the 
+pizza order, one of the pizza chain’s restaurants must be available somewhere nearby. To ensure 
+the high availability of its products, Dominos has set up its shops in innumerable numbers across 
+various cities, states, and countries. 
+Similarly, AWS has availability zones or regions (we’ll discuss these terms later in detail) across 
+multiple countries to ensure high availability.
+
+5. Security
+
+When it comes to storage, the security of our data becomes the first priority. S3 relieves us by 
+enabling automatic encryption of data as soon as the data uploading process is finished. 
+Various security options are available such as IAM, w
+
+=== SOURCE: Are you Ready for the AWS Certi ed Solutions Architect Associate exam?… ===
+Are you Ready for the AWS Certiﬁed
+Solutions Architect Associate
+exam?
+Self-assess yourself with “
+Whizlabs FREE TEST
+”
+AWS Certified Solutions ArchitectAssociate
+Quick Bytes for you before the exam!
+Theinformationprovidedin WhizCardsis for educationalpurposesonly. Thesoleobjectivehereis to helpaspirants preparefortheAWS CertifiedSolutionsArchitectAssociate certificationexam. Thoughreferences havebeentaken fromAWSdocumentation,it’s notintendedasasubstitutefortheofficialdocs.Thedocumentcanbereused,reproduced,andprintedinany form;ensurethatappropriate sourcesarecredited and required permissions are received.
+https://www.demystify.cloud/
+Sourav Banerjee
+Index
+ComputeAmazon EC2 ........................3AWS Batch ...........................5AWS Elastic Beanstalk .........7AWS Lambda ......................10AWS SAR ............................ 12AWS Fargate ....................... 13ContainersAmazon EKS........................ 14Amazon ECS ....................... 16Amazon ECR .......................18StorageAmazon S3.......................... 19AWS Backup ....................... 21Amazon EBS ....................... 22Amazon EFS ....................... 24Amazon FSx for WindowsFile Server ...........................26Amazon FSx for Lustre .......27Amazon S3 Glacier .............28AWS Snowball ....................29AWS Storage Gateway ....... 30DatabaseAmazon Aurora ................... 33Amazon DocumentDB ........35Amazon DynamoDB ...........36Amazon ElastiCache ..........39Amazon Keyspaces ............41Amazon Neptune ................42Amazon RDS ......................43Amazon Redshift ................ 46Security, Identity, & ComplianceAWS IAM ............................48Amazon Cognito .................50AWS Directory Service .......52Amazon RAM .....................54AWS Secrets Managers......55AWS Security Hub ..............57Cryptography & PKIAWS KMS ...........................58AWS Certificate Manager ... 60Management & GovernanceAWS Auto Scaling …….….. 62AWS CloudFormation ......... 63
+AWS CloudTrail ...................65Amazon CloudWatch ...........67AWS Config .........................69AWS License Manager ........71AWS Organizations .............72AWS Systems Manager ......74Developer ToolsAWS CodeBuild ...................76AWS CodeCommit ...............77AWS CodeDeploy ................78AWS X-Ray ..........................79Migration & TransferAWS DMS ............................80Networking & Content DeliveryAmazon API Gateway …....... 81AWS Cloud Map ...................83Amazon CloudFront ..............85AWS PrivateLink ...................87AWS Transit Gateway ........... 88AWS Direct Connect ............. 90AWS ELB .............................. 92Amazon Route 53 ................. 94Amazon VPC ........................ 96Front End Web & MobileAWS AppSync ..................... 100Application IntegrationAmazon EventBridge ........... 102Amazon SNS ....................... 104Amazon SQS ....................... 106AWS Step Functions ............ 
+
+=== SOURCE: Basic AWS Interview Questions 1. Define and explain the three basic types of… ===
+Basic AWS Interview Questions 
+1. Define and explain the three basic types of cloud services and the AWS products 
+that are built based on them? 
+The three basic types of cloud services are: 
+• Computing 
+• Storage 
+• Networking 
+Here are some of the AWS products that are built based on the three cloud service 
+types: 
+Computing - These include EC2, Elastic Beanstalk, Lambda, Auto-Scaling, and Lightsat. 
+Storage - These include S3, Glacier, Elastic Block Storage, Elastic File System. 
+Networking - These include VPC, Amazon CloudFront, Route53 
+2. What is the relation between the Availability Zone and Region? 
+AWS regions are separate geographical areas, like the US-West 1 (North California) and 
+Asia South (Mumbai). On the other hand, availability zones are the areas that are 
+present inside the regions. These are generally isolated zones that can replicate 
+themselves whenever required.
+
+3. What is auto-scaling? 
+Auto-scaling is a function that allows you to provision and launch new instances 
+whenever there is a demand. It allows you to automatically increase or decrease 
+resource capacity in relation to the demand. 
+4. What is geo-targeting in CloudFront? 
+Geo-Targeting is a concept where businesses can show personalized content to their 
+audience based on their geographic location without changing the URL. This helps you 
+create customized content for the audience of a specific geographical area, keeping 
+their needs in the forefront. 
+5. What are the steps involved in a CloudFormation Solution? 
+Here are the steps involved in a CloudFormation solution:
+
+1. Create or use an existing CloudFormation template using JSON or YAML 
+format. 
+2. Save the code in an S3 bucket, which serves as a repository for the code. 
+3. Use AWS CloudFormation to call the bucket and create a stack on your 
+template.
+
+4. CloudFormation reads the file and understands the services that are called, 
+their order, the relationship between the services, and provisions the services 
+one after the other. 
+6. How do you upgrade or downgrade a system with near-zero downtime? 
+You can upgrade or downgrade a system with near-zero downtime using the following 
+steps of migration: 
+• Open EC2 console 
+• Choose Operating System AMI 
+• Launch an instance with the new instance type 
+• Install all the updates 
+• Install applications 
+• Test the instance to see if it’s working 
+• If working, deploy the new instance and replace the older instance 
+• Once it’s deployed, you can upgrade or downgrade the system with near-zero 
+downtime. 
+7. What are the tools and techniques that you can use in AWS to identify if you are 
+paying more than you should be, and how to correct it? 
+You can know that you are paying the correct amount for the resources that you are 
+using by employing the following resources: 
+• Check the Top Services Table 
+It is a dashboard in the cost management console that shows you the top five 
+most used services. This will let you know how much money you are spending 
+on t
+
+=== SOURCE: CI/CD Pipeline for Uptime-Kuma | Get Real-Time Call Alerts for Server Downtime… ===
+CI/CD Pipeline for Uptime-Kuma | Get Real-Time Call Alerts for Server Downtime | Open Source 
+Monitoring
+
+Uptime-Kuma is an open-source self-hosted monitoring tool that provides a sleek interface to track 
+the uptime of websites, services, and APIs. When integrated into a CI/CD pipeline for a blog, it helps 
+ensure continuous availability and performance monitoring. Here’s a detailed explanation of how 
+Uptime-Kuma can be utilized effectively in this context: 
+What is Uptime-Kuma? 
+• Overview: Uptime-Kuma is a self-hosted monitoring tool designed to track the uptime and 
+performance of websites, services, and APIs. 
+• Features: 
+o Real-time monitoring with customizable intervals. 
+o Alerts via multiple channels (email, Slack, Telegram, etc.). 
+o Historical data and uptime statistics. 
+o Sleek, user-friendly interface. 
+Now, let’s get started and dig deeper into each of these steps:- 
+1. AWS Account and Login 
+• If you don’t have an AWS account, sign up at AWS Sign Up. 
+• Log in to the AWS Management Console. 
+2. Launch an EC2 Instance 
+A. Navigate to EC2 Dashboard:
+
+• Go to the EC2 Dashboard. 
+B. Choose an Amazon Machine Image (AMI): 
+• Click “Launch Instance.” 
+• In the AMI selection screen, search for “Ubuntu 24.04”. 
+C. Choose an Instance Type: 
+• Select the t2.large instance type. 
+• Click “Next: Configure Instance Details.” 
+D. Configure Instance Details: 
+• Use the default settings. 
+• Ensure you have selected the correct VPC and subnet. 
+• Click “Next: Add Storage.” 
+E. Add Storage: 
+• Modify the root volume size to 30 GB. 
+• Click “Next: Add Tags.” 
+F. Add Tags: 
+• (Optional) Add tags for better management. 
+• Click “Next: Configure Security Group.” 
+G. Configure Security Group: 
+• Create a new security group. 
+• Set the security group name and description. 
+• Add a rule to allow all traffic (not recommended for production environments): 
+o Type: All Traffic 
+o Protocol: All 
+o Port Range: All 
+o Port Range : 22, 80, 443, 8080, 9000, 3001, 5000 
+o Source: 0.0.0.0/0 (for IPv4) and ::/0 (for IPv6) 
+• Warning: Opening all ports is insecure and should only be done for learning purposes in a 
+controlled environment. 
+• Click “Review and Launch.” 
+H. Review Instance Launch: 
+• Review all configurations. 
+• Click “Launch.” 
+I. Select/Create a Key Pair: 
+• Select “Create a new key pair.” 
+• Name the key pair. 
+• Download the key pair file (.pem) and store it securely. 
+• Click “Launch Instances.”
+
+Install Jenkins, Docker and Trivy 
+To Install Jenkins 
+Connect to your console, and enter these commands to Install Jenkins 
+vi jenkins.sh 
+#!/bin/bash 
+sudo apt update -y 
+wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | sudo tee 
+/etc/apt/keyrings/adoptium.asc 
+echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] 
+https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' 
+/etc/os-release) main" | sudo tee /etc/apt/sources.list.d/adoptium.list 
+sudo apt update -y 
+sudo apt install temurin-17-jdk -y 
+
+
+=== SOURCE: Deep  Vasanthkuma  AWSDataEngineeringInterviewQuestions DeepaVasanthkumar Deep ===
+Deep  Vasanthkuma 
+AWSDataEngineeringInterviewQuestions
+DeepaVasanthkumar
+
+Deep  Vasanthkuma 
+AWSDataEngineeringInterviewQuestions - 2-
+AWSGeneralTopics 3AmazonS3 7AWSVirtualPrivateCloud(VPC) 10AmazonEC2(ElasticComputeCloud) 13AmazonEMR(ElasticMapReduce) 16AWSGlue 20Glue&EMRComparison 23GlueDataCatalog 24GlueStreamingETL 27AWSLambda 31AmazonKinesis 35AmazonAthena 39AmazonRedshift 43AmazonRDSforPostgreSQL 47AmazonDynamoDB 49AWSStepfunctions 53AWSIdentityandAccessManagement(IAM) 58AmazonSimpleNotiﬁcationService(SNS) 61AmazonSimpleQueueService(SQS) 64
+DeepaVasanthkumar–MediumDeepaVasanthkumar-|LinkedIn
+Deep  Vasanthkuma 
+AWSDataEngineeringInterviewQuestions - 3-
+AWSGeneralTopics
+AWS(AmazonWebServices)isacomprehensive,evolvingcloudcomputingplatformprovidedbyAmazon.Itprovidesamixofinfrastructureasaservice(IaaS),platformasaservice(PaaS),andpackagedsoftwareasaservice(SaaS)offerings.AWSservicescanofferorganizationstoolssuchascomputepower, databasestorage,andcontentdeliveryservices.
+HerearesomecommonAWSinterviewquestionsalongwithdetailedanswerstohelpyouprepareforyourinterview.
+Q.ExplainthedifferencebetweenAmazonS3andEBS.
+DeepaVasanthkumar–MediumDeepaVasanthkumar-|LinkedIn
+Deep  Vasanthkuma 
+AWSDataEngineeringInterviewQuestions - 4-
+AmazonS3(SimpleStorageService)isanobjectstorageservicethatoffersindustry-leadingscalability, dataavailability, security, andperformance.Thismeanscustomersofallsizesandindustriescanuseittostoreandprotectanyamountofdataforarangeofusecases,suchaswebsites,mobileapplications,backupandrestore,archive,enterpriseapplications,IoTdevices,andbigdataanalytics.
+AmazonElasticBlockStore(EBS)providesblocklevelstoragevolumesforusewithEC2instances.EBSvolumesarehighlyavailableandreliablestoragevolumesthatcanbeattachedtoanyrunninginstancethatisinthesameAvailabilityZone.EBSisparticularlysuitedforapplicationsthatrequireadatabase,ﬁlesystem,oraccesstorawblocklevelstorage.
+Q.WhatisIAMinAWS?
+IAM(IdentityandAccessManagement)isawebservicethathelpsyousecurelycontrolaccesstoAWSresources.YouuseIAMtocontrolwhoisauthenticated(signedin)andauthorized(haspermissions)touseresources.IAMprovidestheabilitytocontrolusers,securitycredentialssuchasaccesskeys,andpermissionsthatcontrolwhichAWSresourcesusersandapplicationscanaccess.
+Q.DescribeaVPCanditscomponents.
+AVPC(VirtualPrivateCloud)allowsyoutoprovisionalogicallyisolatedsectionoftheAWSCloudwhereyoucanlaunchAWSresourcesinavirtualnetworkthatyoudeﬁne.ThemaincomponentsofVPCare:
+DeepaVasanthkumar–MediumDeepaVasanthkumar-|LinkedIn
+Deep  Vasanthkuma 
+AWSDataEngineeringInterviewQuestions - 5-
+- Subnets:ArangeofIPaddressesinyourVPC.
+- RouteTables:Theydeterminewherenetworktraﬃcisdirected.
+- InternetGateways:Connectsanetworktotheinternet.
+- NATGateways:AllowprivatesubnetstoconnecttotheinternetorotherAWSservicesbutpreventtheinternetfrominitiatingaconnectionwiththoseinstances.
+- SecurityGroups:Actasavirtualﬁrewallforyourinstancetocontrolinboundandoutboundtraﬃc.
+- NetworkACLs:AlayerofsecurityforyourVPCthatactsasaﬁrewallforcontroll
+
+=== SOURCE: Handling Manual Changes to Terraform-Managed Resources in AWS (End-to-End) If… ===
+Handling Manual Changes to Terraform-Managed
+Resources in AWS (End-to-End)
+If someone has manually changed AWS resources that are managed by Terraform, you must carefully handle this situation to
+avoid accidental deletions, downtimes, or inconsistencies. Below is a step-by-step guide to identify, validate, revert, or
+incorporate manual changes.
+Step 1: Identify What Has Changed
+The first thing to do is detect what manual changes have been made.
+1️⃣ Run terraform plan to Compare State with Actual AWS Resources
+Execute:
+terraform plan -refresh=true
+What happens?
+🚨 Example Output:
+# aws_security_group.example
+~ inbound_rule {
+from_port = 22 → 80
+to_port = 22 → 80
+}
+📌 This means someone changed the security group rule from port 22 to port 80 manually.
+Step 2: Decide What to Do Next
+Now, you have two choices depending on whether the manual changes are valid or incorrect.
+🔴 Scenario 1: The Manual Changes are Incorrect (You Want to Revert Them)
+✅ Option 1: Enforce Terraform State (Revert AWS to Match Terraform)
+If the manual changes are unwanted and should be removed, run:
+terraform apply
+What happens?
+📌 Example:
+🚨 Important Warning: Before applying, verify that no valid changes are being overwritten.
+✅ Option 2: Use terraform refresh to Sync Local State First
+If you want to preview the changes before applying, first update the state:
+terraform refresh
+terraform apply
+What it does:
+This command compares the current state file (which reflects your last applied configuration) with the actual state of the
+resources on AWS. It will highlight any differences—this is your drift report.
+•
+Terraform will compare the current state in AWS with the last known Terraform state.•
+If Terraform detects drift (unexpected changes in AWS), it will show differences.•
+Terraform will override the manual changes and revert AWS back to match Terraform.•
+If someone opened SSH (port 22) to the world, running terraform apply will restore the correct security rules.•
+This updates Terraform’s local state file to match AWS, but does not modify infrastructure.•
+Then run:•
+🟢 Scenario 2: The Manual Changes Are Valid (You Want to Keep Them)
+If the manual changes are correct and you want to permanently incorporate them into Terraform, follow these steps:
+✅ Option 1: Import Changes into Terraform State
+If the resource already exists but Terraform is unaware of manual changes, import it:
+terraform import aws_instance.example i-0abcd1234efgh5678
+✅ Option 2: Update Terraform Code to Match AWS
+Modify the Terraform .tf files to reflect the manual changes:
+resource "aws_security_group" "example" {
+name = "example"
+ingress {
+from_port = 80 # Updated from 22
+to_port = 80
+protocol = "tcp"
+cidr_blocks = ["0.0.0.0/0"]
+}
+}
+Then, run:
+terraform apply
+This ensures Terraform knows about the changes and does not override them in future runs.
+Step 3: Prevent Future Manual Changes
+After resolving the issue, prevent manual modifications in the future by:
+✅ 1. Enable AWS IAM Restrictions (Least Privilege Acc
+
+=== SOURCE: How IAM works IAM provides the infrastructure necessary to control… ===
+How IAM works 
+IAM provides the infrastructure necessary to control authentication and authorization for your AWS account. The IAM 
+infrastructure is illustrated by the following diagram: 
+First, a human user or an application uses their sign-in credentials to authenticate with AWS. Authentication is 
+provided by matching the sign-in credentials to a principal (an IAM user, federated user, IAM role, or application) 
+trusted by the AWS account. Next, a request is made to grant the principal access to resources. Access is granted in 
+response to an authorization request. For example, when you first sign in to the console and are on the console Home 
+page, you are not accessing a specific service. When you select a service, the request for authorization is sent to that 
+service and it looks to see if your identity is on the list of authorized users, what policies are being enforced to control 
+the level of access granted, and any other policies that might be in effect. Authorization requests can be made by 
+principals within your AWS account or from another AWS account that you trust.
+
+Principals 
+A person or application that uses the AWS account root user, an IAM user, or an IAM role to sign 
+in and make requests to AWS. Principals include federated users and assumed roles. 
+Human users 
+Also known as human identities; the people, administrators, developers, operators, and 
+consumers of your applications. 
+Workload 
+A collection of resources and code that delivers business value, such as an application or 
+backend process. Can include applications, operational tools, and components.
+
+A principal is a human user or workload that can make a request for an action or operation on an AWS resource. 
+After authentication, the principal can be granted either permanent or temporary credentials to make requests to 
+AWS, depending on the principal type. IAM users and root user are granted permanent credentials, while roles are 
+granted temporary credentials. As a best practice, we recommend that you require human users and workloads to 
+access AWS resources using temporary credentials. 
+Request 
+When a principal tries to use the AWS Management Console, the AWS API, or the AWS CLI, that principal 
+sends a request to AWS. The request includes the following information: 
+• Actions or operations – The actions or operations that the principal wants to perform. This can be 
+an action in the AWS Management Console, or an operation in the AWS CLI or AWS API. 
+• Resources – The AWS resource object upon which the actions or operations are performed. 
+• Principal – The person or application that used an entity (user or role) to send the request. 
+Information about the principal includes the policies that are associated with the entity that the 
+principal used to sign in. 
+• Environment data – Information about the IP address, user agent, SSL enabled status, or the time 
+of day. 
+• Resource data – Data related to the resource that is being requested. This can include inf
+
+=== SOURCE: Interview Ouestions > AWS — Mar 2025 ===
+1. What do you know about AWS Region?
+Answer: An AWS Region is a completely independent entity in a geographical area.There are two more Availability Zones in an AWS Region.
+Within a region, Availability Zones are connected through low-latency links.
+Since each AWS Region is isolated from another Region, it provides very high faulttolerance and stability.
+For launching an EC2 instance, we have to select an AMI within the same region.
+2. What are the important components of IAM?
+Answer: The important components of IAM are as follows:
+IAM User: An IAM user is a person or service that will interact with AWS. User can signin to AWS Management Console for performing tasks in AWS.
+IAM Group: An IAM Group is a collection of IAM users. We can specify permission toan IAM Group. This helps in managing a large number of IAM users. We can simplyadd or remove an IAM User to an IAM Group to manage the permissions.
+IAM Role: An IAM Role is an identity to which we give permissions. A Role does nothave any credentials (password or access keys). We can temporarily give an IAM Roleto an IAM User to perform certain tasks in AWS.
+IAM Permission: In IAM we can create two types of Permissions. Identity-based andResource-based. We can create a Permission to access or perform an action on anAWS Resource and assign it to a User, Role or Group. We can also create Permissionson resources like S3 bucket, Glacier vault etc and specify who has access to theresource.
+IAM Policy: An IAM Policy is a document in which we list permissions to specifyActions, Resources, and Effects. This document is in JSON format. We can attach apolicy to an IAM User or Group.
+3. What are the important features of Amazon S3?
+Answer: Some of the important features of Amazon S3 are as follows:
+⦁
+ Amazon S3 provides unlimited storage for ﬁles.
+⦁
+ File size in Amazon S3 can vary from 0 Bytes to 5 Terabytes.
+⦁
+ We have store ﬁles in Buckets in Amazon S3.
+⦁
+ In Amazon S3, names of buckets have to be unique globally.
+⦁
+ Amazon S3 is Object-Based storage.
+4. What is the scale of durability in Amazon S3 ?
+Answer: Amazon S3 supports durability at the scale of 99.999999999% of the time.This is 9 nines after the decimal.
+5. What are the Consistency levels supported by Amazon S3?
+Answer: Amazon S3 supports Read after Write consistency when we create a newobject by PUT. It means as soon as we Write a new object, we can access it.
+Amazon S3 supports Eventual Consistency when we overwrite an existing object byPUT. Eventual Consistency means that the effect of overwriting will not be immediatebut will happen after some time.
+For deletion of an object, Amazon S3 supports Eventual Consistency after DELETE.
+6. What are the different tiers in Amazon S3 storage?
+Answer: Different Storage tiers in Amazon S3 are as follows:
+S3 Standard: In this tier, S3 supports durable storage of ﬁles that become immediatelyavailable. This is used for frequently used ﬁles.
+S3 Standard -Infrequent Access (IA): In this tier, S3 provides dur
+
+=== SOURCE: Interview Ouestions > AWS — Mar 2025 ===
+1 | www.simplilearn.com
+Interview Guide
+Interview Guide
+2 | www.simplilearn.com
+We can see a significant change in 
+how businesses and organizations 
+work, and the introduction of cloud 
+and cloud computing platforms have 
+been a major driving force behind 
+this growth. Most businesses today 
+are using or are planning to use 
+cloud computing for many of their 
+operations, which consequently has 
+led to a massive surge in the need for 
+cloud professionals. 
+While the opportunities are ample, 
+there is a huge skills gap in the cloud 
+industry which has led to IT businesses 
+losing almost $258 million a year. To 
+fill these skill gaps, businesses are 
+continuously looking to find the right 
+Ace Your
+
+AWS Interview
+cloud professionals. This shortage 
+has created great opportunities for 
+individuals who are familiar with cloud 
+and how it works. 
+AWS is attracting a lot of attention 
+these days, which means anything 
+associated with it also gets the 
+spotlight, inviting increased interest 
+and scrutiny. And in order to get your 
+AWS career started, you need to set 
+up some interviews and ace them. 
+We have clubbed the most frequently 
+asked and expected AWS interview 
+questions and answers that will help 
+you with the interview process.
+3 | www.simplilearn.com
+Interview Guide
+Topics 
+Covered
+Amazon EC2
+
+4
+Amazon Route 53
+
+6
+AWS CloudFormation
+
+7
+AWS Config
+
+9
+Database
+
+10
+Elastic Load Balancing 11
+Amazon Security
+
+11
+General Questions
+
+13
+AWS S3
+
+21
+Amazon VPC
+
+22
+Elastic Block Storage
+
+23
+20 MCQs
+
+24
+4 | www.simplilearn.com
+Interview Guide
+Amazon 
+EC2
+Q: What is the difference between 
+stopping and terminating an EC2 
+instance? 
+A: While you may think that both 
+stopping and terminating are 
+the same, there is a difference. 
+When you stop an EC2 instance, 
+it performs a normal shutdown 
+on the instance and moves to a 
+stopped state. However, when you 
+terminate the instance, it is moved 
+to a stopped state and the EBS 
+volumes attached to it are deleted 
+and can never be recovered. 
+Q: What are the different types of 
+EC2 instances based on their 
+costs?
+A: The three types of EC2 instances 
+are:
+ On-demand instance - It is cheap 
+for a short time but not when 
+taken for the long term
+ Spot instance - It is cheaper than 
+the on-demand instance and can 
+be bought through bidding.
+
+Reserved instance - If you are 
+planning to use an instance for a 
+year or more, then this is the right 
+one for you.
+Q: How do you set up SSH agent 
+forwarding so that you do not 
+have to copy the key every time 
+you login?
+A: Here’s how you accomplish this:
+1. Go to your PuTTY Configuration
+2. Go to the category SSH -> Auth
+3. Enable SSH agent forwarding to 
+your instance
+Q: What are Solaris and AIX 
+operating systems? Are they 
+available with AWS?
+A: Solaris is an operating system 
+that uses SPARC processor 
+architecture, which is not 
+supported by public cloud 
+currently.
+
+AIX is an operating system that 
+runs only on Power CPU and not 
+on Intel, which means that you 
+can
+
+=== SOURCE: Introduction to DevOps on AWS David Chapman December 2014 Amazon Web Services ===
+Introduction to DevOps on AWS
+
+David Chapman
+
+December 2014
+
+Amazon Web Services – Introduction to DevOps on AWS December 2014 
+Page 2 of 20
+
+Contents 
+Contents 2 
+Abstract 3 
+Introduction 3 
+Agile Evolution to DevOps 4 
+Infrastructure as Code 5 
+AWS CloudFormation 6 
+AWS AMI 9 
+Continuous Deployment 10 
+AWS CodeDeploy 10 
+AWS CodePipeline 12 
+AWS CodeCommit 12 
+AWS Elastic Beanstalk and AWS OpsWorks 13 
+Blue–Green Deployment 13 
+Automation 14 
+AWS Elastic Beanstalk 15 
+AWS OpsWorks 16 
+Monitoring 17 
+Amazon CloudWatch 18 
+AWS CloudTrail 19 
+Security 19 
+Identity Access Management (IAM) 19 
+Conclusion 20 
+Amazon Web Services – Introduction to DevOps on AWS December 2014 
+Page 3 of 20
+
+Abstract 
+As innovation accelerates and customer needs rapidly evolve, businesses must become 
+increasingly agile. Time to market is key, and to facilitate overall business goals, IT 
+departments need to be agile. Over the years software development lifecycles moved 
+from waterfall to agile models of development. These improvements are moving 
+downstream toward IT operations with the evolution of DevOps.
+
+In order to meet the demands of an agile business, IT operations need to deploy 
+applications in a consistent, repeatable, and reliable manner. This can only be fully 
+achieved with the adoption of automation.
+
+Amazon Web Services (AWS) supports numerous DevOps principles and practices that 
+IT departments can capitalize on to improve business agility.
+
+This paper focuses on DevOps principles and practices supported on the AWS platform. 
+A brief introduction to the origins of DevOps sets the scene and explains how and why 
+DevOps has evolved.
+
+Introduction 
+DevOps is a new term that primarily focuses on improved collaboration, communication, 
+and integration between software developers and IT operations. It’s an umbrella term 
+that some describe as a philosophy, cultural change, and paradigm shift.
+
+Developer
+
+Code
+
+Operator
+
+Figure 1: Developer throwing code "over the wall"
+
+Historically many organizations have been vertically structured with poor integration 
+among development, infrastructure, security and support teams. Frequently the groups 
+report into different organizational structures with different corporate goals and 
+philosophies.
+
+Amazon Web Services – Introduction to DevOps on AWS December 2014 
+Page 4 of 20
+
+Deploying software has predominately been the role of the IT operations group. 
+Fundamentally developers like to build software and change things quickly, whereas IT 
+operations focus on stability and reliability. This mismatch of goals can lead to conflict, 
+and ultimately the business may suffer.
+
+Today, these old divisions are breaking down, with the IT and developer roles merging 
+and following a series of systematic principles:
+
+• Infrastructure as code 
+• Continuous deployment 
+• Automation 
+• Monitoring 
+• Security 
+An examination of each of these principles reveals a close connection to the offerings 
+available from Amazon Web Services.
+
+A
+
+=== SOURCE: PROJECT-6 DEPLOYING A PRODUCTION GRADE HIGHLY A V AILABLE & SCALABLE 3 TIER… ===
+PROJECT-6 
+DEPLOYING A PRODUCTION GRADE HIGHLY A V AILABLE & 
+SCALABLE 3 TIER ARCHITECTURE IN AWS 
+AWS: 
+AWS (Amazon Web Services) is a cloud computing platform provided by Amazon. It offers a wide 
+range of cloud -based services, including computing power, storage, databases, machine learning, 
+analytics, and more. These services are designed to help businesses and individuals build, deploy, and 
+scale applications or services without needing to maintain physical hardware. 
+KEY FEATURES OF AWS: 
+1. Scalability: AWS allows you to scale resources up or down based on demand. 
+2. Pay-as-You-Go: You pay only for the services you use, which helps manage costs effectively. 
+3. Global Reach: AWS has data centers in various regions worldwide, allowing users to deploy 
+applications closer to their end-users. 
+4. Security: AWS provides robust security features like encryption, access control, and 
+compliance with various regulations. 
+5. Wide Range of Services: Services include: 
+Compute: EC2 (Elastic Compute Cloud), Lambda 
+Storage: S3 (Simple Storage Service), EBS (Elastic Block Store) 
+Databases: RDS (Relational Database Service), DynamoDB 
+Networking: VPC (Virtual Private Cloud), Route 53 
+AI/ML: SageMaker, Rekognition 
+Developer Tools: CodeBuild, CodePipeline 
+Deploying a production -grade, highly available, and scalable 3 -tier architecture in AWS involves 
+setting up three distinct layers: 
+1. Presentation Layer (Front-End) 
+2. Application Layer (Back-End) 
+3. Data Layer (Database) 
+This architecture ensures scalability, fault tolerance, and high availability. Here's how you can design 
+and deploy this architecture:
+
+➢ This diagram represents a production -grade, highly available, and scalable 3 -tier architecture 
+in AWS. 
+➢ The pink cloud symbol labeled as Route 53. 
+➢ Purple hexagonal icon labeled as a load balancer. 
+➢ Orange square icons with a server symbol (representing EC2 instances). 
+➢ Green icons with a lock (representing private subnets). 
+➢ Blue database icons labeled MySQL (representing relational databases). 
+➢ Green private subnet icons indicating these databases are isolated in private subnets. 
+➢ The architecture is spread across multiple AZs (Availability Zones) to ensure fault tolerance 
+and minimize downtime. 
+➢ Green lock icons indicate that resources are in private subnets for enhanced security. 
+ROUTE 53: 
+Amazon Route 53 is a highly scalable and reliable Domain Name System (DNS) web service offered 
+by AWS. Its primary purpose is to route end-user requests to the appropriate resources based on domain 
+names (like example.com, devopsbhargavi.xyz). 
+Translates human-readable domain names (e.g., www.example.com) into IP addresses that computers 
+use to communicate (e.g., 192.168.1.1). 
+Routes end-user traffic to resources like web servers, load balancers, or S3 buckets using a variety of 
+routing policies: 
+• Simple Routing: Maps one domain name to a single resource. 
+• Weighted Routing: Distributes traffic among multiple resou
+
+=== SOURCE: RICHARD FRISBYJIMMY MCGIBNEY Amazon Web Services Virtual Private Cloud (VPC)… ===
+RICHARD FRISBYJIMMY MCGIBNEY
+Amazon Web Services–Virtual Private Cloud (VPC)
+Amazon Virtual PrivateCloud(VPC)An Amazon VPC is an isolated portion of the AWS cloud. You use Amazon VPC to create a virtual network topology for your Amazon EC2 resources.You have complete control over your virtual networking environment, including selection of your own IP address range, creation of subnets, and configuration of route tables and network gateways.Youcan create a public-facing subnet for your webserversthat has access to the Internet, and place your backend systems such as databases or application servers in a private-facing subnet with no Internet access
+Amazon Virtual PrivateCloud(VPC)
+§Provision a private, isolated virtual network on the AWS cloud.§Have complete control over your virtual networking environment.
+AmazonVPC
+
+VPCs and subnets§A subnetdefines a range of IP addresses in your VPC.§You can launch AWS resources into a subnet that you select.§A private subnet should be used for resources that won’t be accessible over the Internet.§A public subnet should be used for resources that will be accessed over the Internet.§Each subnet must reside entirely within one Availability Zone and cannot span zones.
+VPC example
+Virtual Private Cloud
+AWS Cloud
+Public Subnet
+Private Subnet
+VPN Only Subnet
+DB Server
+Web Server
+Customer Network
+R
+Internet
+App Server
+VPC NAT Gateway
+Internet Gateway
+Web Server
+App Server
+DB Server
+Virtual Private Gateway
+Security in your VPC
+•Security groups•Network access control lists (ACLs) •Key Pairs
+Subnet10.0.1.0/24
+Internet Gateway
+VPN Gateway
+VPC Router10.0.0.0/16
+Security Group
+Security Group
+Network ACL
+Network ACL
+Routing Table
+Routing Table
+instance
+instance
+instance
+instance
+Subnet10.0.0.0/24
+Security Group
+Security Group
+
+VPN connectionsVPN Connectivity optionDescriptionAWS HardwareVPNYou can create an IPsechardware VPN connection betweenyour VPC and your remote network.AWS Direct ConnectAWS Direct Connect provides a dedicated private connection from a remotenetwork to your VPC.AWS VPN CloudHubYou can create multiple AWS hardware VPN connections via your VPC to enable communications between various remote networks.SoftwareVPNYou can create a VPN connection to your remote network by using an Amazon EC2 instance in your VPC that’s running a software VPN appliance.
+Using One VPCThere are limiteduse cases where one VPC could be appropriate:§High-performance computing§Identity management§Small, single applications managed by one person or very small team
+For mostuse cases, there are two primary patterns for organizing your infrastructure:Multi-VPCand Multi-Account
+
+=== SOURCE: T E C H W O R L D W I T H M U R A L I Tech World with Murali Moole Muralidhara… ===
+T
+E
+C
+H
+ W
+O
+R
+L
+D
+ W
+I T
+H
+ M
+U
+R
+A
+L
+I
+Tech World with Murali
+
+Moole Muralidhara Reddy
+
+1
+
+TECH WORLD WITH MURALI
+
+Courses Offered: ● DevOps ● AWS ● Kubernetes ● Terraform ● Helm ● Logging and Monitoring, etc.
+
+Mail: techworldwithmurali@gmail.com
+
+MOOLE MURALIDHARA REDDY
+
+DevOps Consultant and a Solution Architect
+
+Website: techworldwithmurali.com
+
+https://www.linkedin.com/in/moole-muralidhara-reddy/
+
+Mobile: +91 7893121036
+
+T
+E
+C
+H
+ W
+O
+R
+L
+D
+ W
+I T
+H
+ M
+U
+R
+A
+L
+I
+Tech World with Murali
+
+Moole Muralidhara Reddy
+
+2
+
+● This plan outlines a comprehensive enterprise cloud migration strategy led by cross-functional collaboration across Dev, QA, DevOps, and Architecture teams.
+
+● The objective is to migrate a mix of microservices , monolithic applications , and databases from on-premises infrastructure to the AWS cloud using industry best practices, automation tools, and a phased execution approach.
+
+Example Scenario:
+
+Your organization has multiple environments in an on-premises setup, and now, we are planning
+
+to migrate some applications and databases from on-premises to AWS.
+
+Existing On-Premises Environments:
+
+● Dev
+
+● Test
+
+● QA
+
+● UAT
+
+● Pre-PROD
+
+● Prod
+
+Applications & Databases to be Migrated:
+
+● 10 microservices
+
+● 4 monolithic applications
+
+● 5 MySQL databases
+
+https://www.linkedin.com/in/moole-muralidhara-reddy/
+
+Mobile: +91 7893121036
+
+T
+E
+C
+H
+ W
+O
+R
+L
+D
+ W
+I T
+H
+ M
+U
+R
+A
+L
+I
+Tech World with Murali
+
+Moole Muralidhara Reddy
+
+3
+
+Phase 1: Planning & Preparation
+
+Step 1: Initial Discussion
+
+● The Development (Dev) team, DevOps team, and QA VP/Director discuss the migration
+
+strategy.
+
+Step 2: Informing Managers
+
+● The respective VP/Director informs managers about the new project to migrate from
+
+on-premises to AWS.
+
+Step 3: Manager/Architect Level Planning
+
+● Managers and Architects discuss and plan the necessary actions required for the migration.
+
+Step 4: Communicating the Plan to Teams
+
+● The respective managers inform their teams about the migration project.
+
+● Managers determine which team members will be involved in the migration.
+
+Step 5: Scrum Master’s Role
+
+● The Scrum Master is responsible for:
+
+○ Scheduling migration meetings
+
+https://www.linkedin.com/in/moole-muralidhara-reddy/
+
+Mobile: +91 7893121036
+
+T
+E
+C
+H
+ W
+O
+R
+L
+D
+ W
+I T
+H
+ M
+U
+R
+A
+L
+I
+Tech World with Murali
+
+Moole Muralidhara Reddy
+
+4
+
+○ Tracking status updates
+
+○ Managing migration-related activities
+
+○ Coordinating with other teams by reaching out or scheduling meetings when
+
+additional information is needed.
+
+Step 6: Dev, DevOps & QA Collaboration
+
+● The Development, DevOps, and QA teams meet to discuss the migration process in detail.
+
+Step 7: Application Inventory Preparation
+
+● Prepare an Excel sheet listing all applications and databases that need to be migrated, along
+
+with any dependencies.
+
+Example:
+
+● 10 microservices
+
+● 4 monolithic applications
+
+● 5 MySQL databases
+
+● Other dependencies, if applicable
+
+Step 8: Review & Task Assignment
+
+● The Excel sheet is r
+
+=== SOURCE: TOP 250+ Interviews Questions on AWS Q1) What is AWS? Answer:AWS stands for… ===
+TOP 250+ Interviews Questions on AWS
+
+Q1) What is AWS?
+
+Answer:AWS stands for Amazon Web Services. AWS is a platform that provides on -demand 
+resources for hosting web services, storage, networking, databases and other resources over the 
+internet with a pay-as-you-go pricing.
+
+Q2) What are the components of AWS?
+
+Answer:EC2 – Elastic Compute Cloud, S3 – Simple Storage Service, Route53, EBS – Elastic Block 
+Store, Cloudwatch, Key-Paris are few of the components of AWS.
+
+Q3) What are key-pairs?
+
+Answer:Key-pairs are secure login information for your instances/virtual machines. To connect to the 
+instances we use key-pairs that contain a public-key and private-key.
+
+Q4) What is S3?
+
+Answer:S3 stands for Simple Storage Service. It is a storage service that provides an interface that 
+you can use to store any amount of data, at an y time, from anywhere in the world. With S3 you pay 
+only for what you use and the payment model is pay-as-you-go.
+
+Q5) What are the pricing models for EC2instances?
+
+Answer:The different pricing model for EC2 instances are as below,
+
+• On-demand
+
+• Reserved
+
+• Spot
+
+• Scheduled
+
+• Dedicated
+
+Q6) What are the types of volumes for EC2 instances?
+
+Answer:
+
+• There are two types of volumes,
+
+• Instance store volumes
+
+• EBS – Elastic Block Stores
+
+Q7) What are EBS volumes?
+
+Answer:EBS stands for Elastic Block Stores. They are persistent volumes that you can attach to the 
+instances. With EBS volumes, your data will be preserved even when you stop your instances, unlike 
+your instance store volumes where the data is deleted when you stop the instances.
+
+Q8) What are the types of volumes in EBS?
+
+Answer:Following are the types of volumes in EBS,
+
+• General purpose
+
+• Provisioned IOPS
+
+• Magnetic
+
+• Cold HDD
+
+• Throughput optimized
+
+Q9) What are the different types of instances?
+
+Answer: Following are the types of instances,
+
+• General purpose
+
+• Computer Optimized
+
+• Storage Optimized
+
+• Memory Optimized
+
+• Accelerated Computing
+
+Q10) What is an auto-scaling and what are the components?
+
+Answer: Auto scaling allows you to automatically scale-up and scale-down the number of instances 
+depending on the CPU utilization or memory utilization. There are 2 components in Auto scaling, they 
+are Auto-scaling groups and Launch Configuration.
+
+Q11) What are reserved instances?
+
+Answer: Reserved instances are the instance that you can reserve a fixed capacity of EC2 instances. In 
+reserved instances you will have to get into a contract of 1 year or 3 years.
+
+Q12)What is an AMI?
+
+Answer: AMI stands for Amazon Machine Image. AMI is a template that contains the software 
+configurations, launch permission and a block device mapping that specifies the volume to attach to 
+the instance when it is launched.
+
+Q13) What is an EIP?
+
+Answer: EIP stands for Elastic IP address. It is designed for dynamic cloud computing. When you 
+want to have a static IP address for your instances when you stop and restart your instances, you will 
+be using EIP addres
+
+=== SOURCE: Terraform AWS EKS Cluster Setup This project provisions an Amazon Elastic… ===
+Terraform AWS EKS Cluster Setup
+
+This project provisions an Amazon Elastic Kubernetes Service (EKS) cluster
+
+using
+
+Terraform
+
+and
+
+the
+
+official
+
+AWS
+
+EKS
+
+module.
+
+The
+
+configuration
+
+follows
+
+best
+
+practices,
+
+including
+
+networking,
+
+security,
+
+and
+
+cost-effective
+
+node
+
+groups.
+
+🚀 Features
+
+● EKS Cluster (v1.29) with public access enabled ● VPC Configuration with private, public, and intra subnets ● Managed Node Group with a SPOT + ON_DEMAND instance strategy ● IAM Role for Node Groups to ensure proper permissions ● Essential Cluster Add-ons (VPC CNI, CoreDNS, Kube Proxy)
+
+● Security Features (Encryption for secrets)
+
+📌 Prerequisites
+
+Ensure you have the following installed:
+
+● Terraform (>=1.3.0) ● AWS CLI configured with appropriate permissions ● IAM permissions to create VPCs, EKS clusters, and IAM roles
+
+📂 Folder Structure ├── main.tf
+
+# Main Terraform configuration ├── vpc.tf
+
+# VPC configuration ├── eks.tf
+
+# EKS Cluster setup ├── variables.tf
+
+# Variables for Terraform modules ├── outputs.tf
+
+# Outputs for Terraform modules └── README.md
+
+# Project Documentation
+
+⚙ Configuration
+
+1 ⃣ Terraform Provider
+
+terraform {
+
+required_version = ">= 1.3.0"
+
+required_providers {
+
+aws = {
+
+source = "hashicorp/aws"
+
+version = "~> 5.92.0"
+
+}
+
+} }
+
+2 ⃣ Local Variables
+
+locals {
+
+region
+
+= "us-east-2"
+
+name
+
+= "tes-dev-eks-cluster"
+
+vpc_cidr
+
+= "10.0.0.0/16"
+
+azs
+
+= ["us-east-2a", "us-east-2b"]
+
+private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+
+public_subnets
+
+= ["10.0.101.0/24", "10.0.102.0/24"]
+
+intra_subnets
+
+= ["10.0.5.0/24", "10.0.6.0/24"]
+
+env
+
+= "dev" }
+
+3 ⃣ VPC Module
+
+module "vpc" {
+
+source = "terraform-aws-modules/vpc/aws"
+
+name
+
+= "${local.name}-vpc"
+
+cidr
+
+= local.vpc_cidr
+
+azs
+
+= local.azs
+
+private_subnets = local.private_subnets
+
+public_subnets
+
+= local.public_subnets
+
+intra_subnets
+
+= local.intra_subnets
+
+enable_nat_gateway = true
+
+enable_vpn_gateway = true
+
+tags = {
+
+Terraform
+
+= "true"
+
+Environment = local.env
+
+} }
+
+4 ⃣ EKS Module
+
+module "eks" {
+
+source = "terraform-aws-modules/eks/aws"
+
+version = "~> 20.31"
+
+cluster_name
+
+= local.name
+
+cluster_version
+
+= "1.29"
+
+cluster_endpoint_public_access = true
+
+vpc_id
+
+= module.vpc.vpc_id
+
+subnet_ids = module.vpc.private_subnets
+
+cluster_addons = {
+
+vpc-cni = {
+
+most_recent = true
+
+addon_version = "v1.14.1-eksbuild.1"
+
+}
+
+kube-proxy = {
+
+most_recent = true
+
+}
+
+coredns = {
+
+most_recent = true
+
+addon_version = "v1.10.1-eksbuild.1"
+
+}
+
+}
+
+eks_managed_node_group_defaults = {
+
+instance_types = ["t2.micro"]
+
+attach_cluster_primary_security_group = true
+
+iam_role_name = "eks-node-group-role"
+
+}
+
+eks_managed_node_groups = {
+
+tws-cluster-ng = {
+
+instance_types = ["t2.micro"]
+
+min_size
+
+= 2
+
+max_size
+
+= 3
+
+desired_size = 2
+
+capacity_type
+
+= "SPOT"
+
+on_demand_percentage_above_base_capacity = 50
+
+}
+
+}
+
+tags = {
+
+Environment = local.env
+
+Terraform
+
+= "true"
+
+} }
+
+🛠 Deployment Steps
+
+1 ⃣ Initialize Terraform
+
+terraform init
+
+2 ⃣ Plan Deployment
+
+terraform plan
+
+3 ⃣ Apply Changes
+
+terraform apply -auto-approv
+
+=== SOURCE: Transit Routing from AWS to Multiple Regions in OCI Architecture 1. Create AWS… ===
+Transit Routing from AWS to Multiple Regions in OCI
+
+Architecture
+
+1. Create AWS Transit Gateway and Attach to VPC Go to AWS Console VPC > Transit Gateway > Create Transit Gateway
+
+Attach Your existing AWS VPC to the Transit Gateway
+
+2. Create AWS Customer Gateway Create a temporary AWS customer gateway with a mock ip 1.1.1.1, this will eventually be replaced with a permanent CustomerGateway once we know the Public IP of OCI VPN Tunnel BGP ASN: Enter the OCI BGP ASN. Oracle's BGP ASN for the commercial cloud is 31898, except the Serbia Central (Jovanovac) region which is 14544.
+
+3. Create Site-to-Site VPN from AWS Console AWS Console > VPC > Virtual Private Network > Site-to-Site VPN > Create VPN Connection
+
+Use the Options in the Screenshot and remove the other ones as per below
+
+Leave out Tunnel 2, as we will be only doing this for one tunnel
+
+Once the VPN connection is completed, download the profile, by selecting the VPN connection and clicking Download configuration
+
+Download Configuration
+
+You can now check the Tunnel 1 IP. This is the IP we will use in our connectivity with OCI
+
+=== SOURCE: Velero Backup & Restore on AWS EKS Velero Backup & Restore on AWS EKS What is… ===
+Velero Backup & Restore on AWS EKS Velero Backup & Restore on AWS EKS
+What is Velero?
+What is Velero?
+Velero is an open-source tool designed for 
+backing up, restoring, and migrating Kubernetes clusters and persistent volumes
+backing up, restoring, and migrating Kubernetes clusters and persistent volumes
+. It helps ensure 
+disaster recovery, data
+disaster recovery, data
+protection, and cluster portability
+protection, and cluster portability
+ across cloud environments.
+Why Use Velero?
+Why Use Velero?
+  
+Disaster Recovery
+Disaster Recovery
+ – Quickly restore your Kubernetes workloads in case of failure.
+  
+Cluster Migration
+Cluster Migration
+ – Move applications across clusters or cloud providers seamlessly.
+  
+Scheduled Backups
+Scheduled Backups
+ – Automate regular backups for better data resilience.
+  
+Persistent Volume Snapshots
+Persistent Volume Snapshots
+ – Ensure your storage remains protected.
+With Velero, you can 
+safeguard your Kubernetes workloads
+safeguard your Kubernetes workloads
+ while keeping backup and restore processes efficient and scalable.  
+Velero Backup & Restore on AWS EKS
+Velero Backup & Restore on AWS EKS
+Step 1: Install AWS CLI & Configure IAM User
+Step 1: Install AWS CLI & Configure IAM User
+aws configure
+aws sts get-caller-identity
+Step 2: Create an S3 Bucket for Velero Backups
+Step 2: Create an S3 Bucket for Velero Backups
+aws s3api create-bucket --bucket eks-velero-backup-devops --region ap-south-1 --create-bucket-configuration LocationConstraint=ap-south-1
+# Enable versioning for the bucket
+aws s3api put-bucket-versioning --bucket eks-velero-backup-devops --versioning-configuration Status=Enabled
+Step 3: Create an IAM Role for Velero
+Step 3: Create an IAM Role for Velero
+Create a 
+Create a 
+velero-policy.json
+velero-policy.json
+ file for IAM permissions:
+ file for IAM permissions:
+{
+
+"Version": "2012-10-17",
+
+"Statement": [
+
+{
+
+"Effect": "Allow",
+
+"Action": [
+
+"s3:ListAllMyBuckets"
+
+],
+
+"Resource": "*"
+
+},
+
+{
+
+"Effect": "Allow",
+
+"Action": [
+
+"s3:PutObject",
+
+"s3:GetObject",
+
+"s3:DeleteObject",
+
+"s3:ListBucket"
+
+],
+
+"Resource": [
+
+"arn:aws:s3:::eks-velero-backup-devops",
+
+"arn:aws:s3:::eks-velero-backup-devops/*"
+
+]
+
+}
+
+]
+}
+Create an IAM Policy:
+Create an IAM Policy:
+aws iam create-policy --policy-name VeleroBackupPolicyEKS --policy-document file://velero-policy.json
+Create an IAM Role for Velero:
+Create an IAM Role for Velero:
+eksctl create iamserviceaccount \
+
+--cluster blue-green-cluster \
+
+--namespace velero \
+
+--name velero \
+
+--attach-policy-arn arn:aws:iam::<account-id>:policy/VeleroBackupPolicyEKS \
+
+--approve
+Verify the Service Account:
+Verify the Service Account:
+kubectl get sa -n velero
+Step 4: Install Velero on EKS
+Step 4: Install Velero on EKS
+Install Velero CLI (if not already installed):
+Install Velero CLI (if not already installed):
+curl -LO https://github.com/vmware-tanzu/velero/releases/latest/download/velero-linux-amd64.tar.gz
+tar -xvf velero-linux-amd64.tar.gz
+sudo mv velero-linux-amd64/velero /usr
+
+=== SOURCE: What is the difference between S3 and S3 bucket? Amazon S3 is an object storage ===
+What is the difference between S3 and S3 bucket?
+
+Amazon S3 is an object storage service that stores data as objects within buckets. An object is a file and 
+any metadata that describes the file. A bucket is a container for objects. To store your data in Amazon S3, 
+you first create a bucket and specify a bucket name and AWS Region.
+
+What is the alternative of S3 bucket? 
+Brief Overview of AWS S3 Alternatives
+
+Google Cloud Storage. Azure Blob Storage. DigitalOcean Spaces. MinIO
+
+What are the types of S3 buckets in AWS? 
+The S3 storage classes include S3 Intelligent-Tiering for automatic cost savings for data with unknown or changing access 
+patterns, S3 Standard for frequently accessed data, S3 Express One Zone for your most frequently accessed data, S3 Standard-
+Infrequent Access (S3 Standard-IA) and S3 One Zone-Infrequent Access (S3 ... 
+What is the difference between S3 ACL and bucket policy? 
+ACLs were the first authorization mechanism in S3. Bucket policies are the newer method, and the method used for almost all 
+AWS services. Policies can implement very complex rules and permissions, ACLs are simplistic (they have ALLOW but no DENY). 
+To manage S3 you need a solid understanding of both. 
+Why use S3 ACL? 
+Amazon S3 access control lists (ACLs) enable you to manage access to buckets and objects. Each bucket and object has an ACL 
+attached to it as a subresource. It defines which AWS accounts or groups are granted access and the type of access. 
+Why have multiple S3 buckets? 
+Using multiple buckets per SVM can reduce the need to repeat the same configuration steps (defining a particular S3 access 
+group / bucket policy / policy statement, 
+Are S3 buckets part of VPC? 
+VPC endpoints for S3 are secured through VPC endpoint access policies, which allows you to set which S3 buckets the endpoints 
+should and should not have access to. By default, any user or service within the VPC, using credentials from any AWS account, 
+has access to any Amazon S3 resource. 
+What are the biggest risks with open S3 buckets? 
+Unsecured S3 buckets allow anyone to access, modify, or delete data. This can lead to data breaches, compliance violations, 
+data loss, and reputational damage. Proactively securing S3 buckets is essential to avoid these consequences and ensure data 
+security. 
+Can S3 buckets be private? 
+By default, all S3 buckets are private and can be accessed only by users who are explicitly granted access. Do the following to 
+restrict access to your S3 buckets or objects: Write IAM user policies that specify the users that can access specific buckets and 
+objects.
+
+S3 Lifecycle Rules 
+Amazon S3 allows its users the freedom of transitioning objects stored in S3 buckets between different storage classes 
+based on the usage or access pattern of these objects. Moving objects between storage classes helps in optimizing 
+storage costs and you can transition objects manually but for more operational efficiency, Lifecycle Rules are used to 
+transition S3 objects
+
+=== SOURCE: Writing Your First Terraform Script for AWS Prerequisites Before we begin,… ===
+Writing Your First Terraform Script for AWS
+
+Prerequisites 
+Before we begin, ensure you have: 
+1. AWS account with IAM credentials 
+2. Terraform installed on your local machine 
+3. AWS CLI configured with proper credentials 
+4. Basic understanding of AWS services
+
+Terraform Basics Recap 
+Key Concepts: 
+1. HCL Syntax: HashiCorp Configuration Language used by Terraform 
+2. Providers: Plugins that interact with APIs (AWS, Azure, GCP, etc.) 
+3. Resources: Infrastructure components you want to create 
+4. Variables: Parameters to make your configurations reusable 
+5. State: Terraform's record of your infrastructure
+
+Setting Up Your First Terraform Script 
+1. Create a Project Directory 
+mkdir terraform-aws-demo 
+cd terraform-aws-demo
+
+2. Create Your Main Configuration File 
+Create a file named main.tf: 
+# Configure the AWS Provider 
+provider "aws" {
+
+region = "us-east-1" # Change to your preferred region 
+}
+
+# Create a VPC 
+resource "aws_vpc" "main" {
+
+cidr_block = "10.0.0.0/16"
+
+tags = {
+
+Name = "MyFirstVPC"
+
+} 
+}
+
+# Create a Subnet 
+resource "aws_subnet" "main" {
+
+vpc_id
+
+= aws_vpc.main.id
+
+cidr_block = "10.0.1.0/24"
+
+tags = {
+
+Name = "MyFirstSubnet"
+
+} 
+}
+
+# Create an Internet Gateway 
+resource "aws_internet_gateway" "gw" {
+
+vpc_id = aws_vpc.main.id
+
+tags = {
+
+Name = "MyFirstIGW"
+
+} 
+}
+
+# Create a Route Table 
+resource "aws_route_table" "example" {
+
+vpc_id = aws_vpc.main.id
+
+route {
+
+cidr_block = "0.0.0.0/0"
+
+gateway_id = aws_internet_gateway.gw.id
+
+}
+
+tags = {
+
+Name = "MyFirstRouteTable"
+
+} 
+}
+
+# Associate Route Table with Subnet 
+resource "aws_route_table_association" "a" {
+
+subnet_id
+
+= aws_subnet.main.id
+
+route_table_id = aws_route_table.example.id 
+}
+
+# Create a Security Group 
+resource "aws_security_group" "allow_ssh" {
+
+name
+
+= "allow_ssh"
+
+description = "Allow SSH inbound traffic"
+
+vpc_id
+
+= aws_vpc.main.id
+
+ingress {
+
+description = "SSH from anywhere"
+
+from_port
+
+= 22
+
+to_port
+
+= 22
+
+protocol
+
+= "tcp"
+
+cidr_blocks = ["0.0.0.0/0"]
+
+}
+
+egress {
+
+from_port
+
+= 0
+
+to_port
+
+= 0
+
+protocol
+
+= "-1"
+
+cidr_blocks = ["0.0.0.0/0"]
+
+}
+
+tags = {
+
+Name = "allow_ssh"
+
+} 
+}
+
+# Create an EC2 Instance 
+resource "aws_instance" "web" {
+
+ami
+
+= "ami-0c55b159cbfafe1f0" # Amazon Linux 2 AMI (us-
+east-1)
+
+instance_type = "t2.micro"
+
+subnet_id
+
+= aws_subnet.main.id
+
+vpc_security_group_ids = [aws_security_group.allow_ssh.id]
+
+tags = {
+
+Name = "MyFirstEC2Instance"
+
+} 
+}
+
+Understanding the Configuration 
+1. Provider Block 
+provider "aws" {
+
+region = "us-east-1" 
+} 
+• Specifies the cloud provider (AWS) and the region 
+• Terraform will use your AWS credentials from the default AWS CLI 
+configuration
+
+2. Resource Blocks 
+Each resource block defines an infrastructure component: 
+• aws_vpc: Creates a Virtual Private Cloud 
+• aws_subnet: Creates a subnet within the VPC 
+• aws_internet_gateway: Enables internet access for the VPC 
+• aws_route_table: Defines routing rules 
+• aws_security_group: Acts as a virtual firewall 
+• aws_instance: Creates an EC2 instance
+
+3. Resource Depe
+
+=== SOURCE: burhankhan503 CloudFormation   burhankhan503NOTES AWS Cloud Practitioner… ===
+© burhankhan503
+CloudFormation
+© burhankhan503NOTES AWS Cloud Practitioner CLF-C02
+Job.khanburhan503@gmail.com
+1
+Introduction to CloudFormation
+CloudFormation is like a blueprint for creating and managing AWS resources. Instead of
+manually setting up each service (like EC2, S3, etc.), you define what you want in a
+template file, and CloudFormation automatically builds everything for you, exactly as
+you describe.
+Example: Imagine you need a website that has a load balancer, a couple of web servers,
+and storage for files. Instead of setting up each part manually, you create a
+CloudFormation template that says:
+"I need a load balancer."1.
+"I need two EC2 instances (virtual servers)."2.
+"I need an S3 bucket to store images and files."3.
+CloudFormation reads your template, figures out what needs to be created, and does it
+all in the correct order:
+First, it creates the load balancer.
+Then, it launches the two EC2 instances.
+Finally, it creates the S3 bucket for storage.
+CloudFormation saves you time by doing all this automatically, ensuring everything is
+set up with the exact configurations you need.
+Benefits of AWS CloudFormation
+Infrastructure as Code: CloudFormation lets you define your entire infrastructure using
+code. This means instead of clicking buttons and filling out forms, you can write a
+template that tells CloudFormation exactly what resources you need.
+Example: If you need a load balancer, an EC2 instance, and an S3 bucket, you can define
+them all in a CloudFormation template instead of creating them one by one manually.
+No Manual Resource Creation: Since CloudFormation creates the resources for you
+based on the code, there's no chance of mistakes from doing things manually. It gives
+you more control and consistency.
+Example: If you're setting up multiple environments (like development and production),
+CloudFormation ensures that each environment is set up the same way every time,
+without human error.
+© burhankhan503
+CloudFormation
+© burhankhan503NOTES AWS Cloud Practitioner CLF-C02
+Job.khanburhan503@gmail.com
+2
+Change Review Through Code: When you need to make changes to your infrastructure, you
+update the template, and everyone can review those changes in the code before anything
+happens. This makes the process more transparent and predictable.
+Example: If you want to add another EC2 instance, you just update the template. The change
+is clear, and everyone can see what’s being changed before CloudFormation applies it
+Cost Management: CloudFormation tags each resource with an identifier so you can easily
+see how much each resource is costing. You can also estimate costs before creating
+resources.
+Example: If you want to know how much your EC2 instance and S3 bucket will cost, you can
+check the CloudFormation template’s estimated cost before you launch them.
+Savings Strategy: CloudFormation can help with cost-saving by automating resource
+creation and deletion. For example, in a development environment, you could automatically
+delete res
+
+=== SOURCE: nextwork.org Deploy a WebApp withCodeDeploy ismail Kovvuru ismail Kovvuru… ===
+nextwork.org
+Deploy a WebApp withCodeDeploy
+ismail Kovvuru
+
+ismail Kovvuru
+NextWork Student NextWork.org
+Introducing Today's Project!
+'In this project, I will demonstrate Launch of a deployment environment using AWS
+CloudFormation. Write deployment scripts to automate deployment command.
+Deploying our web app with CodeDeploy and see it live.
+Key tools and concepts
+Services I used were EC2,CodeDeploy,build,IAM,S3. Key concepts I learned
+include infrastructure as code with CloudFormation,settingup automated
+deployments,managing permissions with IAM roles,using deployment
+configurations to control rollout instace
+Project reflection
+This project took me approximately 2 hrs 50 min. The most challenging part was
+CodeDeploy,codebuild. It was most rewarding to see the automated deployment
+process work smoothly and efficiently.I had successfully set up a fully automated
+pipeline.
+This project is part five of a series of DevOps projects where I'm building a CI/CD
+pipeline! I'll be working on the next project in 2 days.
+ismail Kovvuru
+NextWork Student NextWork.org
+Deployment Environment
+To set up for CodeDeploy, I launched an EC2 instance and VPC because
+CodeDeploy needs an EC2 instance to deploy applications, and the VPC ensures
+secure networking for the instance.
+Instead of launching these resources manually, I used CloudFormation. When I
+need to delete these resources, I can simply delete the CloudFormation stack, and
+it will automatically remove all the associated resources.
+Other resources created in this template include security groups, IAM roles,load
+balancers. They're also in template because they are necessary for securely
+managing access to the EC2 instance, enabling communication,supporting
+deployment process.
+ismail Kovvuru
+NextWork Student NextWork.org
+
+ismail Kovvuru
+NextWork Student NextWork.org
+Deployment Scripts
+Scripts are sets of instructions that automate tasks on a server, like installing
+software or managing services. To set up CodeDeploy, I also wrote scripts to install
+dependencies, start, and stop the server automatically during deployment process.
+install_dependencies.sh will install the necessary software and packages required
+for the application to run on the server. It ensures that all dependencies are set up
+before the application starts.
+start_server.sh will start the application server by launching the necessary services
+or processes that run the application, ensuring it's up and running after
+deployment.
+stop_server.sh will safely stops web server services by first checking if they're
+running. It uses pgrep to check for running processes of Apache
+(httpd),Tomcat,only attempts to stop the services if they are actually active.
+ismail Kovvuru
+NextWork Student NextWork.org
+appspec.yml
+Then, I wrote an appspec.yml file to the instruction manual for CodeDeploy. The
+key sections in appspec.yml are Before,after install and application start.
+I also updated buildspec.yml because It contains step-by-step instructions that tell
+CodeBu
+
+=== SOURCE: nextwork.org VPC Peering zubair Hashmat zubair Hashmat NextWork Student… ===
+nextwork.org
+VPC Peering
+zubair Hashmat
+
+zubair Hashmat
+NextWork Student NextWork.org
+Introducing Today's Project!
+What is Amazon VPC?
+AWS's foundational networking service that lets me create my own
+networks,control traffic flow and security and organize my resources into
+public/private subnets.
+How I used Amazon VPC in this project
+I used Amazon VPC to set up a multi-VPC architecture (I set up two VPCs), create
+peering connection between them and update security group rules to run a
+successful connectivity test to validate my VPC peering set up.
+One thing I didn't expect in this project was...
+I didn't expect to need a public IPv4 address for EC2 Instance Connect to work.
+Also I didn't expect that Elastic IPs can assign static public IPv4 addresses to
+resources.
+This project took me...
+The project took me 2 hours to complete.
+
+zubair Hashmat
+NextWork Student NextWork.org
+In the first part of my project...
+Step 1 - Set up my VPC
+In this step, we are using the VPC resource map/launch wizard to create two VPCs
+and their components in just minutes.
+Step 2 - Create a Peering Connection
+I am setting up a VPC Peering Connection, which is a VPC component designed to
+directly connect two VPCs together.
+Step 3 - Update Route Tables
+I am editing route tables for VPC1 and VPC2, so that traffic can be directed to the
+peering connection set up.
+Step 4 - Launch EC2 Instances
+I am launching an EC2 instance in each of the VPCs(VPC1 and VPC2), so that I can
+directly connect with my instances later and test my VPC peering connection.
+
+zubair Hashmat
+NextWork Student NextWork.org
+Multi-VPC Architecture
+I started my project by launching two VPCs - They have unique CIDR blocks and
+they each have one public subnet.
+The CIDR blocks for VPCs 1 and 2 are 10.1.0.0/16 and 10.2.0.0/16 respectively.They
+have to be unique because once you set up a VPC peering connection, route
+tables need unique addresses for correct routing across VPCs.
+I also launched 2 EC2 instances
+I did not set up key pairs for these EC2 instances as I am using EC2 instance
+Connect to directly connect with my EC2 instance later in this project, which
+handles key pair creation and management for us.
+
+zubair Hashmat
+NextWork Student NextWork.org
+VPC Peering
+A VPC peering connection is a direct connection between two VPCs.A peering
+connection lets VPCs and their resources route traffic between them using their
+private IP addresses. This means data can now be transferred between VPCs.
+VPCs would use peering connections to establish a secure and private network
+link between two VPCs, enabling seamless communication between resources in
+both.
+In VPC peering, the Requester is the VPC that initiates a peering connection. The
+Accepter is the VPC that receives a peering connection request! The Accepter can
+either accept or decline the invitation.
+
+zubair Hashmat
+NextWork Student NextWork.org
+Updating route tables
+My VPCs' route tables need to be updated because the default route table does
+not have a route using 
+
+=== SOURCE: what is RDS IN AWS? Amazon Relational Database Service (Amazon RDS) is a… ===
+what is RDS IN AWS? 
+Amazon Relational Database Service (Amazon RDS) is a collection of managed services that makes it 
+simple to set up, operate, and scale databases in the cloud. 
+What is the difference between AWS and RDS? 
+What Is RDS?
+
+RDS is a database service offered by AWS that allows users to quickly set up, manage and scale 
+relational databases in the cloud. It offers six different types of database engines—MySQL, Postgre 
+SQL, SQL Server, MariaDB, Amazon Aurora, and Oracle—so you can pick one that's right for your 
+needs. 
+Why use RDS instead of EC2? 
+Both Amazon RDS and Amazon EC2 offer different advantages for running Oracle Database. Amazon 
+RDS is easier to set up, manage, and maintain than running Oracle Database on Amazon EC2, and 
+lets you focus on other important tasks, rather than the day-to-day administration of Oracle 
+Database. 
+Is AWS RDS serverless? 
+Amazon Aurora vs. RDS - The Database Services Showdown 
+It supports six database engines: Amazon Aurora, MySQL, PostgreSQL, MariaDB, Microsoft SQL 
+Server, and Oracle. But, please note that RDS is not serverless suggesting that one has to manually 
+provision a computer instance for a database. 
+How many types of RDS are there in AWS? 
+Amazon Relational Database Service (Amazon RDS) is a managed relational database service that 
+offers the choice of eight popular database engines Amazon Aurora PostgreSQL-Compatible Edition, 
+Amazon Aurora MySQL-Compatible Edition, RDS for PostgreSQL, RDS for MySQL, RDS for MariaDB, 
+RDS for SQL Server, RDS for Oracle, ... 
+Is AWS RDS fully managed? 
+Managed SQL Database - Amazon Relational Database Service ... 
+Amazon Relational Database Service (Amazon RDS) is a collection of managed services that makes it 
+simple to set up, operate, and scale databases in the cloud. 
+Can RDS have multiple databases? 
+In RDS you can run multiple databases on 1 instance, so far so good. But if you create a database in 
+RDS the minimum storage to allocate is 20GB per database.
+
+Is AWS RDS SaaS or PaaS? 
+PaaS 
+AWS is an IaaS (Infrastructure as a Service), but AWS's RDS service is PaaS (Platform as a Service) 
+Where is RDS backup stored? 
+Amazon S3 
+By default, Amazon RDS creates and saves automated backups of your DB instance securely in Amazon S3 for a user-specified 
+retention period. 
+What type of DB is RDS? 
+Amazon Relational Database Service (RDS) is an Amazon Web Services managed SQL database service (AWS). To store and 
+organize data, Amazon RDS supports a variety of database engines. It also aids in relational database administration tasks like 
+data migration, backup, recovery, and patching. 
+Can you store files in RDS? 
+Most RDS DB instances offer a maximum storage size of 64 TiB for RDS for MariaDB, MySQL, and PostgreSQL databases. 
+However, some older 32-bit file systems have lower storage capacities. To determine the storage capacity of your DB instance, 
+you can use the describe-valid-db-instance-modifications AWS CLI command. 
+Is MongoDB a RDS? 

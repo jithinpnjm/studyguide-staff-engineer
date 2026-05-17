@@ -1,0 +1,2536 @@
+DOMAIN: cicd-gitops
+DOCS WITH TEXT: 26
+
+=== SOURCE: "The Fast Track to Azure DevOps Jobs: 205 Short & Sharp Interview Answers!" 1.… ===
+"The Fast Track to Azure DevOps Jobs: 205 
+Short & Sharp Interview Answers!" 
+1. Azure DevOps Basics 
+1. What is Azure DevOps? 
+A cloud-based DevOps service for CI/CD, version control, and project management. 
+2. Key components of Azure DevOps? 
+Azure Repos, Pipelines, Boards, Test Plans, and Artifacts. 
+3. Difference between Azure DevOps and GitHub? 
+Azure DevOps is enterprise-focused, GitHub is open-source and community-driven. 
+4. What is Azure Repos? 
+A version control system supporting Git and TFVC. 
+5. What is Azure Pipelines? 
+A CI/CD service for building, testing, and deploying applications. 
+6. What is YAML in Azure DevOps? 
+A declarative language for defining CI/CD pipelines as code. 
+7. Difference between Build and Release pipelines? 
+Build pipeline compiles and tests code; Release pipeline deploys artifacts. 
+8. What is Azure Artifacts? 
+A package management service for storing and sharing dependencies. 
+9. How to secure Azure DevOps repositories? 
+Use branch policies, role-based access control (RBAC), and service connections. 
+10. What is a Service Connection? 
+A secure authentication method for external services like Azure or GitHub. 
+2. CI/CD and Pipelines 
+11. How to create a CI/CD pipeline in Azure DevOps? 
+Use YAML or Classic Editor to define build and release steps. 
+12. What is an agent in Azure DevOps? 
+A VM or container that runs pipeline jobs. 
+13. Difference between Microsoft-hosted and self-hosted agents? 
+Microsoft-hosted is managed by Azure; self-hosted gives full control. 
+14. How to trigger a pipeline automatically? 
+Use triggers like trigger: in YAML (e.g., trigger: [main]). 
+15. What is a Multi-stage Pipeline? 
+A YAML-based pipeline with multiple sequential or parallel stages. 
+3. Version Control (Azure Repos & Git) 
+16. What are Git branching strategies? 
+Feature branching, GitFlow, trunk-based, and release branching. 
+17. How to enforce branch policies in Azure Repos? 
+Use branch policies to require reviews, build validation, and approvals. 
+18. What is a Pull Request (PR)? 
+A request to merge code changes from one branch to another. 
+19. How to squash commits in Azure DevOps? 
+Use git rebase -i HEAD~n before pushing, or enable "Squash merge" in PRs. 
+20. How to revert a commit in Azure Repos? 
+Use git revert <commit-id> to create a new commit undoing changes. 
+21. Difference between rebase and merge? 
+Rebase rewrites history; merge preserves commit history. 
+22. What is Git LFS (Large File Storage)? 
+A Git extension for managing large binary files. 
+23. How to tag a commit in Azure DevOps? 
+Use git tag <tagname> and push with git push origin --tags. 
+24. What is TFVC (Team Foundation Version Control)? 
+A centralized version control system, now deprecated in favor of Git. 
+25. How to enable code scanning in Azure Repos? 
+Use GitHub Advanced Security or third-party scanning tools like SonarQube. 
+4. Build & Release Management 
+26. What is a pipeline artifact? 
+A package or file set produced during the CI/CD pipelin
+
+=== SOURCE: A Beginners Guide How to use GitHub Actions for CI/CD A Beginners Guide GitHub… ===
+A Beginners Guide
+How to use 
+GitHub Actions 
+for CI/CD
+
+A Beginners Guide
+GitHub Actions is a powerful
+tool that allows you to automate
+your software development
+workflow.
+A Beginners Guide
+Step 1: Create or choose a
+repository, and pick a project.
+A Beginners Guide
+Step 2: Open GitHub Actions in
+your repository to start
+building your CI/CD workflow.
+A Beginners Guide
+Step 3: Define your workflow
+steps and triggers.
+A Beginners Guide
+Step 4: Run your workflow and
+monitor the results.
+A Beginners Guide
+That's it! You have successfully
+created a CI/CD pipeline with
+GitHub Actions.
+Follow Us: 
+@CloudSpikes MultiCloud Solutions Inc.
+
+=== SOURCE: Advanced DevOps   Security, Automation & Multi-Cloud CI/CD Using GitHub Actions ===
+Advanced DevOps – Security, Automation & Multi-Cloud CI/CD 
+Using GitHub Actions And Azure DevOps
+
+What is GitHub Actions?
+• GitHub Actions is a CI/CD (Continuous Integration and Continuous Deployment) automation tool
+that allows developers to automate workflows directly in their GitHub repositories. 
+• It enables tasks such as building, testing, deploying applications, running security scans, and 
+managing infrastructure—all triggered by events like a code push or a pull request.
+Key Features of GitHub Actions
+Event-Driven Workflows – Automatically run actions when code is pushed, PRs are created, or 
+issues are opened.
+YAML-based Configuration – Define automation workflows using simple YAML files.
+Multi-Cloud Support – Deploy applications to AWS, Azure, GCP , Kubernetes, or on-prem servers.
+Parallel and Sequential Jobs – Run jobs in parallel for faster execution or sequentially for 
+dependencies.
+Security & Compliance – Integrate security scanning tools like Trivy, Snyk, or SonarQube in CI/CD.
+Self-Hosted Runners – Run workflows on your own custom VMs or Kubernetes clusters.
+How GitHub Actions Work 
+A GitHub Actions workflow consists of:
+1️⃣ Events:
+Events trigger workflows. Examples:
+ push → Runs when code is pushed.
+ pull_request → Runs on PR creation.
+ schedule → Runs on a CRON schedule.
+ workflow_dispatch → Manual trigger.
+2️⃣ Jobs:
+A job is a set of steps executed on a runner. Jobs can run in parallel or depend on each other.
+3️⃣ Steps:
+A step is a single task inside a job (e.g., checkout code, build, test, deploy).
+4️⃣ Actions:
+Reusable units in workflows (e.g., checkout code, set up dependencies, run tests).
+Step 1: Multi-Cloud CI/CD with GitHub Actions + Azure DevOps
+• Many organizations use multi-cloud (Azure, AWS, GCP) for reliability and flexibility. 
+• Integrating GitHub Actions with Azure DevOps allows teams to build, test, and deploy applications 
+across different cloud providers efficiently.
+ Implementation Steps:
+ Step 1.1: Create a GitHub Repository
+1.Go to GitHub → Click New Repository 
+2.Name it (e.g., multi-cloud-cicd) → Set it to Public/Private 
+3.Initialize with a README and clone it locally.
+
+Step 1.2: Create a GitHub Actions Workflow for CI
+1.In your GitHub repo, go to Actions → Click New Workflow 
+2.Click Set up a Workflow yourself 
+3.Add the following YAML file (.github/workflows/ci.yml):
+4.Commit and push the file → The workflow will automatically trigger on a push to main.
+
+Step 1.3: Integrate GitHub Actions with Azure DevOps for Deployment
+1.In Azure DevOps, go to Project Settings → Service Connections
+2.Click New Service Connection → Select GitHub
+3.Authenticate and authorize access to your repository.
+4.In Azure Pipelines, create a new release pipeline and select GitHub as the source.
+5.Deploy the app using Azure DevOps release pipelines.
+Step 2: Container Security with Trivy & Microsoft Defender
+Containers may contain vulnerabilities in base images or dependencies. Trivy (by Aqua Security) 
+scans Docker images fo
+
+=== SOURCE: Azure-Devops — Mar 2025 ===
+1. What is Azure DevOps? 
+Answer: 
+Azure DevOps is a cloud-based DevOps platform providing CI/CD pipelines, version control, 
+testing, and deployment automation.
+
+2. What is CI/CD in Azure DevOps? 
+Answer: 
+Continuous Integration (CI): Automates building and testing code changes. 
+Continuous Deployment (CD): Automates deploying the application to environments.
+
+3. What are the core components of Azure DevOps? 
+Answer: 
+Azure Repos – Version control 
+Azure Pipelines – CI/CD automation 
+Azure Artifacts – Package management 
+Azure Test Plans – Testing framework 
+Azure Boards – Agile project tracking
+
+4. What is an Azure Pipeline? 
+Answer: 
+Azure Pipelines is a CI/CD service that automates software build, test, and deployment.
+
+5. What is the difference between and Classic Pipelines? 
+Answer:
+
+Pipelines: Code-based, version-controlled. 
+Classic Pipelines: GUI-based, easier setup.
+
+6. How do you define a pipeline using ?
+
+Answer: 
+trigger:
+
+branches:
+
+include:
+
+- main 
+stages:
+
+- stage: Build
+
+jobs:
+
+- job: BuildJob
+
+steps:
+
+- script: echo "Building the project"
+
+7. What are triggers in Azure Pipelines? 
+Answer: 
+Manual Trigger 
+Commit Trigger 
+Scheduled Trigger 
+Pipeline Trigger 
+Pull Request (PR) Trigger
+
+8. What is an Agent in Azure DevOps? 
+Answer: 
+An agent is a virtual machine (VM) that runs pipeline jobs. 
+Microsoft-hosted agents: Managed by Azure. 
+Self-hosted agents: Installed by users for custom configurations.
+
+9. How do you store secrets securely in Azure Pipelines? 
+Answer: 
+Use Azure Key Vault. 
+Use Pipeline Variables with "secret" option.
+
+10. What are Service Connections in Azure DevOps? 
+Answer: 
+Service Connections allow pipelines to securely connect to external services like Azure, AWS, 
+or Kubernetes.
+
+11. How do you restrict a pipeline to run on specific branches? 
+Answer: 
+trigger:
+
+branches:
+
+include:
+
+- main
+
+exclude:
+
+- feature/*
+
+12. What are Artifacts in Azure Pipelines? 
+Answer: 
+Artifacts are build outputs (binaries, packages, Docker images) stored and shared between 
+pipeline stages.
+
+13. What is a Multi-Stage Pipeline? 
+Answer: 
+A multi-stage pipeline has separate stages for build, test, and deployment.
+
+14. How do you implement pipeline approvals in Azure DevOps? 
+Answer: 
+Use pre-deployment approvals in Environments.
+
+15. What is a Deployment Group? 
+Answer: 
+A Deployment Group is a collection of servers or VMs used for on-premises deployments.
+
+16. How do you monitor pipeline execution in Azure DevOps? 
+Answer: 
+Use Logs, Azure Monitor, and Application Insights.
+
+17. How do you implement CI/CD for Docker containers? 
+Answer: 
+Use Azure Container Registry (ACR) with Azure Kubernetes Service (AKS).
+
+18. How do you enforce code quality in Azure Pipelines? 
+Answer: 
+Use SonarQube for static analysis. 
+Enable code coverage reports in tests.
+
+19. How do you implement rollback in Azure Pipelines? 
+Answer: 
+Re-deploy the previous successful artifact. 
+Use App Service Slots to swap environments.
+
+20. How do you cache dependenc
+
+=== SOURCE: DEVOPS INTERVIEWS QUESTION AND ANSWER DevOps General Q&A Version Control (Git,… ===
+DEVOPS INTERVIEWS QUESTION AND ANSWER
+
+DevOps General Q&A
+
+Version Control (Git, Github)
+
+Git 
+GitHub
+
+CI/CD Pipeline(Jenkins, Github Actions, Argocd, Gitlab)
+
+General Q&A 
+Jenkins 
+Github Actions 
+Argocd 
+Gitlab
+
+Containerization(Docker, Kubernetes)
+
+Docker 
+Kubernetes 
+Kubernetes general q&a 
+Kubernetes Architecture 
+Networking in Kubernetes(Ingress Controller, Calico) 
+K8 Networking General q&a 
+Ingress Controller 
+Calico
+
+Infrastructure as Code(Terraform, Ansible)
+
+Terraform 
+Ansible
+
+Cloud Computing(AWS, Azure)
+
+AWS 
+Azure
+
+Monitoring and Logging(Prometheus & Grafana, ELK Stack, Splunk)
+
+Prometheus & Grafana 
+ELK Stack 
+Splunk
+
+Network ing
+
+Security & Code Quality(Owasp, Sonarqube, Trivy)
+
+OWASP,
+
+Dependency-Check 
+Sonarqube 
+Trivy
+
+Testing 
+Selenium
+
+Repository/artifact Management 
+Nexus
+
+Scripting (Linux, Shell Scripting, Python)
+
+Linux 
+Shell Scripting 
+Python
+
+Combined (GitHub Actions, ArgoCD,
+
+Kubernetes)
+
+DevOps General Q&A
+
+1. What is DevOps, and why is it important?
+
+Ans: DevOps is a set of practices that bridges the gap between
+
+development and
+
+operations
+
+teams
+
+by
+
+automating
+
+and
+
+integrating
+
+processes
+
+to
+
+improve
+
+collaboration,
+
+speed
+
+up
+
+software
+
+delivery,
+
+and
+
+maintain
+
+product
+
+reliability.
+
+It
+
+emphasizes
+
+continuous
+
+integration,
+
+continuous
+
+deployment
+
+(CI/CD),
+
+and
+
+monitoring,
+
+ensuring
+
+faster
+
+development,
+
+better
+
+quality
+
+control,
+
+and
+
+efficient
+
+infrastructure
+
+management.
+
+We
+
+need
+
+DevOps
+
+to
+
+shorten
+
+development
+
+cycles,
+
+improve
+
+release
+
+efficiency,
+
+and
+
+foster
+
+a
+
+culture
+
+of
+
+collaboration
+
+across
+
+the
+
+software
+
+delivery
+
+lifecycle.
+
+2. Can you explain the differences between Agile and DevOps?
+
+Ans :
+
+Feature Agile DevOps
+
+Focus Software development and iterative releases
+
+Collaboration between dev & ops for smooth deployment
+
+Scope Development only Development, deployment, and operations
+
+Automation
+
+Some automation in testing
+
+Heavy automation in CI/CD, infra, and monitoring
+
+Feedback Loop
+
+End-user & stakeholder feedback
+
+Continuous monitoring & real-time feedback
+
+3. What are the key principles of DevOps?
+
+Ans: Key Principles of DevOps
+
+Automation : Automate processes like testing, integration, and deployment
+
+to
+
+speed
+
+up
+
+delivery
+
+and
+
+reduce
+
+errors.
+
+Collaboration : Encourage close collaboration between development, QA,
+
+and
+
+operations
+
+teams.
+
+Continuous Integration/Continuous Deployment (CI/CD) : Ensure code
+
+changes
+
+are
+
+automatically
+
+tested
+
+and
+
+deployed
+
+to
+
+production
+
+environments.
+
+Monitoring and Feedback : Continuously monitor applications in
+
+production
+
+to
+
+detect
+
+issues
+
+early
+
+and
+
+provide
+
+quick
+
+feedback
+
+to
+
+developers.
+
+Infrastructure as Code (IaC) : Manage infrastructure using versioned code
+
+to
+
+ensure
+
+consistency
+
+across
+
+environments.
+
+Culture of Improvement : Foster a culture of continuous learning and
+
+improvement
+
+through
+
+frequent
+
+retrospectives
+
+and
+
+experimentation.
+
+4. How do Continuous Integration (CI) and Continuous Deployment
+
+(CD)
+
+work
+
+together
+
+i
+
+=== SOURCE: Deployment of Java Web App Using Azure DevOps and AKS. - Tools and Services:  … ===
+ Deployment of Java Web App Using Azure 
+DevOps and AKS.
+
+- Tools and Services: 
+ Build Tool: Maven 
+ CI-CD Tool: Azure Pipelines 
+ Centralized shared Repository: Azure Repository
+
+ Artifacts Repository: Azure Artifacts 
+ Code Quality-Check & Code Analysis: SonarQube
+
+ Containerization Tool: Docker 
+ Container Security Tool: Trivy 
+ Container Registry: ACR 
+ For Deployment: AKS Cluster
+
+1. My Azure Organisation:
+
+2. Create new Project:
+
+3. Import your Code repo from GitHub.
+
+4. Repo files as below: (main branch)
+
+5. AWS Security Group for Azure DevOps Agent and SonarQube Server.
+
+6. Azure DevOps Agent & SonarQube Server both are on AWS.
+
+7. Configuration of Azure DevOps Agent.
+
+8. To make the agent Online, Run  ~/myagent$ ./run.sh
+
+9. Creation of Kubernetes Cluster on AKS.
+
+10.
+
+Created AKS resources.
+
+11.
+
+Creation of Azure Container Registry (ACR).
+
+12. Created Application Service Connection  Updated Application Credentials as Secret 
+ Added Role-Assignment.
+
+13. Below Service Connections required for ACR, K8s, and SonarQube.
+
+14. Azure Pipeline Stages:
+
+15. Finally, after a lot of debugging, pipeline is successful.
+
+16. Pipeline status on Azure Agent.
+
+17. Build artifact (.jar) is stored in Azure Artifacts:
+
+18.
+
+Test runs of the pipelines.
+
+19. App is running on below 2 K8s pods.
+
+20.
+
+K8s services including Load-Balancer.
+
+=== SOURCE: DevOps Shack 200 Jenkins Scenario Based Question and Answer Jenkins Setup and… ===
+DevOps Shack
+
+200 Jenkins Scenario Based
+
+Question and Answer
+
+Jenkins Setup and Configuration 
+1. How would you design a Jenkins setup for a large-scale enterprise application 
+with multiple teams? 
+ Design a master-agent architecture where the master handles scheduling 
+and orchestrating jobs, and agents execute jobs. 
+ Use distributed builds by configuring Jenkins agents on different machines 
+or containers. 
+ Implement folder-based multi-tenancy to isolate pipelines for each team. 
+ Secure the Jenkins setup using role-based access control (RBAC). 
+ Example: Team A has access to Folder A with restricted pipeline visibility, 
+while the master node ensures no resource contention. 
+2. How can you scale Jenkins to handle high build loads? 
+ Use Kubernetes-based Jenkins agents that scale dynamically based on 
+workload. 
+ Implement build queue monitoring and optimize resource allocation by 
+offloading non-critical jobs to low-priority nodes. 
+ Use Jenkins Operations Center (CloudBees CI) for centralized management 
+of multiple Jenkins instances. 
+3. How do you manage plugins in a Jenkins environment to ensure stability?
+
+ Maintain a list of approved plugins after testing compatibility with the 
+Jenkins version. 
+ Regularly update plugins in a staging environment before rolling them into 
+production. 
+ Example: While upgrading the Git plugin, test it with your pipelines in 
+staging to ensure no disruption.
+
+Pipeline Design and Management 
+4. How do you design a Jenkins pipeline to support multiple environments (e.g., 
+Dev, QA, Prod)? 
+ Use parameterized pipelines where environment-specific configurations 
+(e.g., URLs, credentials) are passed as parameters. 
+ Implement environment-specific stages or branch-specific pipelines. 
+ Example: A pipeline that promotes a build from Dev to QA and then to 
+Prod using approval gates between stages. 
+5. How can you handle dynamic branch creation in Jenkins pipelines? 
+ Use multibranch pipelines that automatically detect new branches in a 
+repository and create pipelines for them. 
+ Configure the Jenkinsfile in each branch to define its pipeline behavior. 
+6. How do you ensure pipeline resilience in case of intermittent failures? 
+ Use retry blocks in declarative or scripted pipelines to retry failed stages. 
+ Example: Retrying a flaky test stage three times with exponential backoff. 
+ Implement conditional steps using catchError to handle failures gracefully.
+
+Security and Access Control 
+7. How do you secure sensitive credentials in Jenkins pipelines? 
+ Use the Jenkins Credentials plugin to store secrets securely. 
+ Access credentials using environment variables or bindings in the pipeline. 
+ Example: Fetch an API key stored in Jenkins credentials using 
+withCredentials in a scripted pipeline. 
+8. How do you enforce role-based access control (RBAC) in Jenkins? 
+ Use the Role-Based Authorization Strategy plugin. 
+ Define roles like Admin, Developer, and Viewer, and assign permissions for 
+
+
+=== SOURCE: GIT & GITHUB GIT:   GIT IS A OPEN SOURCE VERSION CONTROL SYSTEM USED TO MANAGE… ===
+GIT & GITHUB 
+GIT: 
+• GIT IS A OPEN SOURCE VERSION CONTROL SYSTEM USED TO MANAGE AN TRACK 
+CHANGES IN SOFTWARE DVELOPMENT PROJECTS. 
+• IT ALLOWS MULTIPLE DEVELOPERS TO COLLABORATE ON A PROJECT BY KEEPING TRACK 
+OF CODE CHANGES,MANAGING,DIFFERENT VERSIONS,AND FACILITATING TEAMWORK.
+
+VERSION CONTROL: 
+• GIT TRACKS CHANGES TO FILES,ALLOWING DEVELOPERS TO ACCESS PREVIOUS 
+VERSIONS,IDENTIFY BUGS,AND REVERT TO EARLIER STATES WHEN NEEDED.
+
+COLLABORATION: 
+• GIT ALLOWS MULTIPLE DEVELOPERS TO WORK ON THE SAME PROJECT 
+SIMULTANEOUSLY WITHOUT INTERFERING WITH EACH OTHERS CODE. 
+• CHANGES CAN BE MERGED SEAMLESSLY.
+
+BRANCHING AND MERGING: 
+• DEVELOPERS CAN CREATE BRANCHES TO WORK ON SPECIFIC FEATURES OR FIXES 
+INDEPENDENTLY 
+• THESE BRACHES CAN BE MERGED BACK INTO THE MAIN CODEBASE WHEN READY.
+
+CODE HISTORY AND TRACKING: 
+• GIT PROVIDES A DETAILED HISTORY OF WHO MADE WHAT CHANGES AND 
+WHEN,HELPING IN DEBUGGING AND ACCOUNTABILITY.
+
+BACKUP AND RECOVERY: 
+• BY PUSHING CODE TO AREMOTE REPOSITORY LIKE GITHUB ,DEVELOPERS ENSURE THEIR 
+WORK IS BACKED UP AND RECOVERABLE.
+
+EFFICIENT WORKFLOW: 
+• TOOLS AND COMMANDS IN GIT STREAMLINE DEVELOPMENT TASKS SUCH AS CODE 
+REVIEWS,FEATURE DEVELOPMENT,AND RELEASES.
+
+OPEN SOURCE AND WIDELY SUPPORTED: 
+• GIT IS FREE,OPEN SOURCE,AND COMPATIBLE WITH ALL MAJOR DEVELOPMENT TOOLS 
+AND OPERATING SYSTEMS.
+
+GITHUB:
+
+• GITHUB IS A WEB-BASED PLATFORM FOR HOSTING AND MANAGING GIT REPOSITORIES. IT 
+PROVIDES TOOLS FOR VERSION CONTROL, COLLABORATION, AND PROJECT MANAGEMENT, 
+MAKING IT EASIER FOR DEVELOPERS TO WORK TOGETHER ON SOFTWARE PROJECTS. 
+HOSTING GIT REPOSITORIES
+
+• STORES CODE ONLINE WITH EASY ACCESS.
+
+COLLABORATION
+
+• ENABLES TEAMS TO WORK TOGETHER USING FEATURES LIKE PULL REQUESTS 
+AND ISSUE TRACKING.
+
+PROJECT MANAGEMENT
+
+• PROVIDES TOOLS LIKE KANBAN BOARDS, TASK MANAGEMENT, AND ISSUE 
+TRACKING.
+
+OPEN-SOURCE CONTRIBUTIONS 
+• ALLOWS DEVELOPERS TO CONTRIBUTE TO PUBLIC PROJECTS AND FORK 
+REPOSITORIES.
+
+CI/CD (CONTINUOUS INTEGRATION & DEPLOYMENT) 
+• AUTOMATES BUILDING, TESTING, AND DEPLOYMENT WITH GITHUB ACTIONS.
+
+CODE REVIEW 
+• FACILITATES TEAM-BASED CODE REVIEWS AND DISCUSSIONS.
+
+SECURITY & CODE SCANNING 
+• OFFERS SECURITY FEATURES LIKE DEPENDENCY VULNERABILITY SCANNING.
+
+CLOUD DEVELOPMENT 
+• PROVIDES GITHUB CODESPACES FOR CODING DIRECTLY IN THE CLOUD.
+
+PORTFOLIO SHOWCASE 
+• ALLOWS DEVELOPERS TO DISPLAY THEIR WORK PUBLICLY.
+
+INTEGRATION WITH DEV TOOLS 
+• WORKS WITH VARIOUS DEVOPS, TESTING, AND MONITORING TOOLS.
+
+HISTORY OF GIT & GITHUB 
+HISTORY OF GIT 
+• GIT WAS CREATED BY LINUS TORVALDS IN 2005 TO MANAGE THE DEVELOPMENT OF THE LINUX 
+KERNEL. 
+• BEFORE GIT, THE LINUX COMMUNITY USED A PROPRIETARY VERSION CONTROL SYSTEM CALLED 
+BITKEEPER. 
+• DUE TO DISPUTES BETWEEN THE LINUX COMMUNITY AND BITKEEPER'S COMPANY, THE NEED 
+AROSE FOR A NEW, OPEN-SOURCE VERSION CONTROL SYSTEM. 
+• LINUS TORVALDS DESIGNED GIT TO BE FAST, DISTRIBUTED, AND SCALABLE FOR LARGE 
+PROJECTS. 
+• GIT BECAME POPULAR QUICKLY AND WAS ADOPTED BY MANY OPEN-SOURCE AND ENTERPRISE
+
+=== SOURCE: GIT INTERVIEW QUESTIONS 1)What is GIT? GIT is a distributed version control… ===
+GIT INTERVIEW QUESTIONS 
+1)What is GIT?
+
+GIT is a distributed version control system and source code management (SCM) system 
+with an emphasis to handle small and large projects with speed and efficiency.
+
+2) What is the command you can use to write a commit message?
+
+The command that is used to write a commit message is “git commit –a”. The –a 
+on the command line instructs git to commit the new content of all tracked files that have been 
+modified. You can use “git add<file>” before git commit –a if new files need to be committed for the 
+first time.
+
+3)What is the difference between GIT and SVN?
+
+The difference between GIT and SVN is
+
+a) Git is less preferred for handling extremely large files or frequently changing 
+binary files while SVN can handle multiple projects stored in the same repository.
+
+b) GIT does not support ‘commits’ across multiple branches or tags. Subversion 
+allows the creation of folders at any location in the repository layout.
+
+c)Gits are unchangeable, while Subversion allows committers to treat a tag as a 
+branch and to create multiple revisions under a tag root.
+
+4) What is a repository in GIT?
+
+A repository contains a directory named. git, where git keeps all of its metadata for 
+the repository. The content of the. git directory is private to git.
+
+5) What are the advantages of using GIT?
+
+a) Data redundancy and replication
+
+b) High availability
+
+c) Only one. Its directory per repository
+
+d) Superior disk utilization and network performance
+
+e) Collaboration friendly
+
+f) Any sort of projects can use GIT
+
+6)What is the function of ‘GIT PUSH’ in GIT?
+
+‘GIT PUSH’ updates remote refs along with associated objects.
+
+7) What language is used in GIT?
+
+GIT is fast, and ‘C’ language makes this possible by reducing the overhead of 
+runtimes associated with higher languages.
+
+8) Why GIT better than Subversion?
+
+GIT is an open-source version control system; it will allow you to run ‘versions’ of a project, which 
+show the changes that were made to the code overtime also it allows you keep the backtrack if 
+necessary and undo those changes. Multiple developers can check out, and upload changes and each 
+change can then be attributed to a specific developer.
+
+9) What is “Staging Area” or “Index” in GIT?
+
+Before completing the commits, it can be formatted and reviewed in an intermediate 
+area known as ‘Staging Area’ or ‘Index’.
+
+10) What is GIT stash?
+
+GIT stash takes the current state of the working directory and index and puts 
+in on the stack for later and gives you back a clean working directory. So, in case if you are in the 
+middle of something and need to jump over to the other job, and at the same time you don’t want to 
+lose your current edits then you can use GIT stash.
+
+11) What is GIT stash drop?
+
+When you are done with the stashed item or want to remove it from the list, 
+run the git ‘stash drop’ command. It will remove the last added stash item by default, and it can also 
+remove a specific item if you include as an ar
+
+=== SOURCE: Get any Video course - https://zarantech.teachable.com/courses LinkedIn Learner ===
+Get any Video course - https://zarantech.teachable.com/courses
+LinkedIn Learner Community page - https://www.linkedin.com/showcase/devops-learner-community
+GLOSSARY OF
+DEVOPS
+JENKINS TERMS
+A Quick Reference Guide toDevOps JenkinsTerminologies
+
+Term Definition
+Jenkins
+An open-source automation server used for
+continuous integration and continuous delivery
+(CI/CD) pipelines
+Continuous
+Integration (CI)
+The practice of frequently merging code changes into
+a shared repository and building and testing the code
+automatically
+Continuous Delivery
+(CD)
+The practice of automatically deploying code changes
+to a production environment after successful testing
+Pipeline A series of steps (or stages) that code changes go
+through in a CI/CD process
+Job A single unit of work in Jenkins, which can be
+executed as part of a pipeline or separately
+Build The process of compiling, packaging, and testing code
+changes
+Artifact A compiled and packaged code component, such as a
+binary or JAR file
+SCM Short for "Source Code Management," SCM tools (like
+Git) help manage changes to code over time
+Branch A separate copy of the codebase that allows for
+parallel development of new features or bug fixes
+Merge The process of combining code changes from one
+branch into another
+1
+Glossary of Jenkins 
+Copyright© 2023, ZaranTech LLC. All rights reserved
+REFERENCE
+MATERIALS
+Get any Video course - https://zarantech.teachable.com/courses
+LinkedIn Learner Community page - https://www.linkedin.com/showcase/devops-learner-community
+Term Definition
+Pull Request A request to merge code changes from one branch into
+another, typically accompanied by a review process
+Test A step in the pipeline that verifies that code changes
+work as intended
+Unit Test A type of test that verifies the functionality of a single
+code component or module
+Integration TestA type of test that verifies the functionality of multiple
+code components or modules working together
+Acceptance TestA type of test that verifies that a code change meets
+business requirements
+Deployment The process of making code changes available to users
+in a production environment
+Server
+A computer or software application that provides
+resources or services to other computers or
+applications
+Agent A software component that runs on a separate
+machine and is used to execute steps in a pipeline
+Node A physical or virtual machine that hosts agents
+Master The central server that coordinates pipeline execution
+and manages agents
+Plugin A software module that extends the functionality of
+Jenkins
+2 Copyright© 2023, ZaranTech LLC. All rights reserved
+REFERENCE
+MATERIALS
+Get any Video course - https://zarantech.teachable.com/courses
+LinkedIn Learner Community page - https://www.linkedin.com/showcase/devops-learner-community
+Glossary of Jenkins 
+Term Definition
+Environment
+A specific configuration of a production or
+development environment, such as "staging" or
+"production"
+Docker A containerization platform used to package and
+deploy applications
+Kubernet
+
+=== SOURCE: GitOps GITOPS ADITYA JAISWAL Click here for DevSecOps & Cloud DevOps Course… ===
+GitOps
+
+GITOPS ADITYA JAISWAL
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+GitOps - The Argo CD Handbook 
+with Hands-on 
+Introduction 
+ArgoCD is a declarative, GitOps continuous delivery tool for Kubernetes. It 
+automates the deployment of the desired application states defined in Git 
+repositories, ensuring applications are always in sync with the declared 
+configuration. ArgoCD is designed to provide application deployment and 
+lifecycle management in a way that is both secure and scalable.
+
+GitOps
+
+GITOPS ADITYA JAISWAL
+
+Problem in Normal Continuous Delivery 
+Traditional continuous delivery methods often face several challenges: 
+1. Complexity in Configuration Management: Managing configurations 
+across multiple environments can become cumbersome and error - 
+prone. 
+2. Lack of Consistency: Ensuring consistency between environments (e.g., 
+development, staging, production) is difficult. 
+3. Manual Interventions: Frequent manual interventions are required to 
+handle deployments, leading to inefficiencies and potential errors.
+
+4. Poor Visibility: Limited visibility into the deployment state and 
+application status makes it difficult to troubleshoot issues quickly.
+
+GitOps 
+GitOps is a paradigm for continuous delivery and operational tasks using Git as 
+the single source of truth. It brings the following benefits: 
+1. Declarative Descriptions: The desired state of the system is described 
+declaratively. 
+2. Version Control: Git’s version control capabilities ensure every change is 
+tracked and auditable. 
+3. Automated Synchronization: Tools like ArgoCD automatically 
+synchronize the desired state in Git with the actual state in the cluster. 
+4. Enhanced Collaboration: GitOps encourages collaboration and review 
+through Git's pull request workflow. 
+GitOps
+
+GITOPS ADITYA JAISWAL
+
+Difference between GitOps and Traditional CD 
+Traditional CD and GitOps differ on the core principles of push and pull-based 
+deployments. 
+Most CI/CD processes work on a push-based mechanism, which means things 
+move to their respective destination at the trigger of an event. For example, 
+when a developer has finished writing his code, he must execute a set of 
+commands to move his code into the server for deployment. In a Kubernetes 
+environment, the developer has to configure the clusters using tools like 
+Kubectl and Helm in the pipeline to apply changes. 
+Argo is a CD tool that uses a pull-based mechanism. A pull-based CD 
+mechanism means the destination triggers an event to pull the data from the 
+source(git) to deploy at the destination. Argo CD, which resided inside the 
+cluster for reasons explained later on the blog, pulls the most recent verified 
+version of code into the cluster for deployment. There are a lot of benefits to 
+this model, like improved security and ease of use.
+
+This pull-based mechanism is called GitOps, where the source code 
+management systems like Git are treated as the only source of truth for 
+application and configura
+
+=== SOURCE: Github Action — Mar 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course
+
+DevOps Shack
+
+GitHub Comprehensive Guide
+
+Ultimate GitHub Actions CI/CD Pipeline Guide
+
+GitHub Actions is GitHub’s CI/CD platform that allows you to automate, 
+customize, and execute your software development workflows right in your 
+GitHub repository.
+
+Why Use GitHub Actions?
+
+Feature
+
+Explanation
+
+Native to GitHub No external CI/CD setup needed
+
+Automates Testing Run unit, integration, and e2e tests
+
+Continuous Deployment Deploy to cloud, Kubernetes, or servers
+
+Artifact Management Share builds/logs between jobs
+
+Secure Secrets Handling Encrypted secrets and environment variables
+
+Cross-platform Supports Ubuntu, Windows, and macOS runners
+
+Key Components 
+1️.Workflow 
+A workflow defines the entire automation pipeline.
+
+Location: .github/workflows/workflow-name.yml
+
+Structure: 
+name: My CI Pipeline 
+on: push 
+jobs: ...
+
+3
+
+2️. Events (Triggers) 
+These define when a workflow runs. 
+Trigger Description 
+push On code push 
+pull_request When a PR is opened/synced 
+schedule Cron-based jobs (e.g., nightly builds) 
+workflow_dispatch Manual trigger from GitHub UI 
+release On release creation
+
+Example: 
+on:
+
+push:
+
+branches: [main]
+
+pull_request:
+
+schedule:
+
+- cron: "0 0 * * *"
+
+3️. Jobs 
+Each job is a group of steps that run on a specific runner (machine).
+
+Example: 
+jobs:
+
+test:
+
+runs-on: ubuntu-latest
+
+steps:
+
+- run: echo "Running tests" 
+4️.Steps 
+Each step is an individual task in a job, like: 
+• Running shell scripts
+
+4
+
+• Using GitHub Actions 
+• Installing dependencies
+
+Example: 
+steps:
+
+- name: Print Hello
+
+run: echo "Hello, World!"
+
+5️. Runners 
+A runner is a server (hosted by GitHub or yourself) that executes your workflow. 
+Type OS Options Notes 
+ubuntu-latest Linux Most commonly used 
+windows-latest Windows Useful for .NET/Windows apps 
+macos-latest macOS Useful for iOS/macOS builds 
+self-hosted Any For custom hardware/software needs
+
+6️. Actions 
+An action is a pre-built, reusable module you can include in workflows.
+
+Categories: 
+• Official (maintained by GitHub) 
+• Community (published by developers) 
+• Custom (you can write your own)
+
+Example: 
+- uses: actions/checkout@v4 
+- uses: actions/setup-node@v4
+
+with:
+
+node-version: '18'
+
+5
+
+7️. Secrets & Variables 
+• Secrets: Encrypted values stored in repo settings 
+• Variables: Environment-specific values (region, env, etc.)
+
+Example: 
+env:
+
+REGION: ${{ vars.AWS_REGION }}
+
+- name: Login
+
+run: echo "My secret is ${{ secrets.MY_SECRET }}"
+
+Real-World Examples
+
+Simple Node CI Workflow 
+name: Node CI
+
+on: push
+
+jobs:
+
+build:
+
+runs-on: ubuntu-latest
+
+steps:
+
+- uses: actions/checkout@v4
+
+- uses: actions/setup-node@v4
+
+with:
+
+node-version: '18'
+
+- run: npm install
+
+- run: npm test
+
+Docker Build & Push 
+jobs:
+
+docker:
+
+runs-on: ubuntu-latest
+
+steps:
+
+- uses: actions/checkout@v4
+
+- uses: docker/login-action@v3
+
+with:
+
+username: ${{ secrets.DOCKER_USER }}
+
+password: ${{ secrets.DOCKER_PASS }}
+
+- uses: docker/build-push-action@v6
+
+6
+
+with:
+
+context: .
+
+
+=== SOURCE: It is the basic version of our application -if we have any changes in our image ===
+It is the basic version of our application 
+-if we have any changes in our image or in Jenkins pipeline the argo 
+CD deploy the new version in Kubernetes.
+
+This is second version this is our project. 
+Project overview
+
+Now will create IAM as shown.
+
+For demo purpose I am using the administration access
+
+User created as shown.
+
+=== SOURCE: JENKINS CONTINUOUS INTEGRATION: It is the combination of continuous build and… ===
+JENKINS 
+CONTINUOUS INTEGRATION: It is the combination of continuous build and 
+continuous test. 
+CONTINUOUS INTEGRATION = CONTINUOUS BUILD + CONTINUOUS TEST
+
+Whenever a developer commits the code using source code management like GIT, then the CI 
+pipeline gets the changes of the code runs automatically build and unit test. 
+Due to integrating the new code with old code, we can easily get to know the code is a 
+success or failure. 
+It ﬁnds the errors more quickly 
+Delivery the products to client more frequently
+
+Developers don't need to manual tasks
+
+Reduces the developers time 20% to 30%
+
+CD: CONTINUOUS DELIVERY/DEPLOYMENT: 
+Continuous Delivery is making it available for deployment. Anytime a new build artifact is 
+available, the artifact is automatically placed in the desired environment and deployed.
+
+Continuous Deployment is when you commit your code then it gets automatically tested,
+
+build and deploy on the production server.
+
+CI/CD PIPELINE: A CI/CD pipeline is a set of automated steps and tasks that code 
+changes go through, from the initial commit to deployment. These pipelines are typically
+
+deﬁned and conﬁgured using CI/CD tools and scripts. A pipeline can include actions such as 
+code compilation, testing, packaging, and deployment.
+
+It looks like Software Development Life Cycle, but let's see how it works. Lets consider an 
+example, if you are developing a web application.
+
+Version Control: Here developers need to write code for web applications. So it needs to be 
+committed using version control system like GIT or SVN. 
+Build: Lets consider your code is written in java, it needs to be compiled before execution. In 
+this build step code gets compiled.
+
+Unit Test: If the build step is completed, then move to testing phase in this step unit step will 
+be done. 
+Deploy: If the test step is completed, then move to Deploy phase in this step you can deploy 
+your code in dev, testing environment. Here you can see your application output. 
+Auto Test: Once our code is working ﬁne in testing servers, then we need to do Automation
+
+testing using Selenium or Junit. 
+Deploy to Production: If everything is ﬁne then you can directly deploy your code in 
+production server. 
+NOTE: If we have error in Code then it will give feedback and it will be corrected, if we have
+
+error in Build then it will give feedback and it will be corrected, Pipeline will work like this until 
+it reaches Deploy. 
+Because of this pipeline, Bugs will be reported fast and get rectiﬁed so entire development is 
+fast.
+
+JENKINS: 
+Jenkins is an open source project written in java by Kohsuke Kawaguchi it runs on the 
+Window, Linux and Mac OS . 
+Jenkins is a widely used open-source automation tool that helps developers and teams 
+automate and streamline various tasks related to building, testing, and deploying the
+
+applications
+
+It is community -supported, Free to use, and the First choice for Continuous Integration.
+
+Consist of Plugins 
+Automates the Entire Software Development L
+
+=== SOURCE: Jenkins Jenkins is an automation tool used to create CI/CD pipelines that… ===
+Jenkins 
+Jenkins is an automation tool used to create CI/CD pipelines that build, test and deploy 
+software. It is not limited to that it can automate anything, you can run your python, bash 
+scripts as well as your Ansible playbooks.
+
+Additionally, it will have various plugins that can be used that work well with the testing 
+tools like Junit and Selenium. It can be installed on operating system like windows, Linux, 
+MacOS. 
+It has a web interface, it can create a job and create a functionality you want to like build 
+triggers, provide RBAC and encryption. 
+Jenkins Infrastructure 
+Master server which controls the pipelines and schedules the builds to the agent. Then 
+the Agents/Minions will run the build on the workspace.
+
+Example workflow: 
+1. A developer commits a code to the Git Repository, Master becomes aware of this 
+commit and triggers the appropriate pipeline and then distributes the builds to one 
+of the agents to run, selects the appropriate agent based on the labels.
+
+2. Agents run the builds, which are basically Linux commands to build, test and deploy 
+the code.
+
+Jenkins Agents 
+Permanent Agent: This are just dedicated, everyday standalone Linux, windows servers 
+set up to run Jenkins job. You need to have JAVA installed on the servers and set up a SSH 
+as master makes the communication using SSH. Necessary tools must also be installed on 
+the servers. 
+Cloud Agents: These are more popular choices in the real world, Ephemeral/Dynamic 
+agents spun up on the demand based on the agents template you configure.
+
+Example: Docker, Kubernetes and AWS fleet manager.
+
+Build Types 
+Freestyle builds Project: Simplest method to create a build. You can use UI and plugin to 
+manage the build. Mostly they will be set up to execute a shell script. 
+Pipeline:
+
+Pipeline used groovy syntax to specify what happens in the build. Pipelines are mostly 
+broken down into stages. 
+Common stages of pipeline are: 
+Clone: Usually clone the local repository and set up environment variables on the agent. 
+Build: It will take up the code and builds it, means generating local artifacts like a JAR file, 
+executable or a container image. 
+Test: Test against the newly built code.
+
+Package: It gets packaged ready for the deployment. 
+Deploy: Sent out artifacts to our registry. 
+Install Jenkins 
+You can directly install Jenkins on the OS or deploy it in a container like docker or 
+Kubernetes, suggested method is to use in the docker. 
+Install blue ocean is popular addon for the Jenkins which provides a new user experience 
+based on personalized, modern design that allows users to graphically create, visualize 
+and diagnose CI/CD pipelines.
+
+I’m using AWS EC2 instance to launch Jenkins via a docker container, please follow the 
+below steps:
+
+Prerequisites 
+• A system with Docker installed. You can download Docker from the official website. 
+• An active internet connection. 
+Step 1: Connect to your EC2 instance and you can follow Jenkins installation as per your 
+OS form t
+
+=== SOURCE: Jenkins Pipeline with Plugins: Real-World Use Cases for Jenkins Pipeline… ===
+Jenkins Pipeline with 
+Plugins: Real-World 
+Use Cases for Jenkins 
+Pipeline
+Whitepaper
+Jenkins Pipeline with Plugins: Real-World Use Cases for Jenkins Pipeline
+2
+3 Introduction
+3 Overview
+3 Audience
+4 Important Note About Style and 
+Code Samples
+4 Jenkins Setup
+4 Publishing HTML Reports
+4 Introduction
+5 Setup
+6 Snippet Generator
+7 Publishing HTML
+8 Conclusion
+8 Links
+8 Notifications
+8 Introduction
+9 Setup	and	Configuration
+10 Original Pipeline
+11 Job	Started	Notification
+13 Job	Successful	Notification
+14 Job	Failed	Notification
+15 Code Cleanup
+17 Conclusion
+17 Links
+18 Continuous Delivery
+18 Introduction
+19 Preparing the App
+19 Preparing Jenkins
+20 Writing	the	Pipeline
+21 Running the Tests
+23 Security Scanning
+24 Deploying
+24 Conclusion
+Contents 25 Sauce	OnDemand	for
+
+UI	Testing
+25 Introduction
+25 Starting	from	Framework
+27 Adding	Platforms
+31 Conclusion
+32 Epilogue: Jenkins Pipeline
+
+vs. Freestyle
+35 Links
+36 Using xUnit to
+
+Publish Results
+36 Introduction
+37 Initial	Setup
+38 Switching from JUnit to xUnit
+41 Accept a Baseline
+44 Allow for Flakiness
+47 Conclusion
+47 Links
+48 Summary
+Whitepaper
+Jenkins Pipeline with Plugins: Real-World Use Cases for Jenkins Pipeline
+3
+Jenkins	is	one	of	the	preeminent	automation	tools.	Jenkins	is	
+extensible by design, using plugins. Plugins are what give Jenkins 
+its	great	flexibility	for	automating	a	wide	range	of	processes	on	
+diverse	platforms.	Jenkins	Pipeline	builds	on	that	flexibility	and	rich	
+plugin ecosystem while enabling Jenkins users to write their Jenkins 
+automation	as	code.	This	technical	guide	will	show	a	number	of	
+common use cases for plugins with Jenkins Pipeline.
+
+Overview 
+These use cases include:
+
+»
+
+Publishing HTML reports
+
+»
+
+Sending notifications
+
+»
+
+Continuous	delivery	using	Docker
+
+»
+
+Running UI tests in Sauce OnDemand
+
+»
+
+Test	result	interpretation	and	reporting
+
+Audience 
+This paper assumes familiarity with the following areas:
+
+»
+
+Installing	and	configuring	Jenkins	plugins
+
+»
+
+Configuring	Jenkins	jobs	via	the	UI
+
+»
+
+Jenkins Pipeline basics
+
+»
+
+Groovy language as it applies to Jenkins Pipeline
+
+»
+
+Usage of Git
+Introduction
+Whitepaper
+Jenkins Pipeline with Plugins: Real-World Use Cases for Jenkins Pipeline
+4
+Important	Note	About	Style	and	Code	Samples
+
+All	sections	are	presented	in	a	tutorial	style,	but	are	not	strictly	tutorials.	
+All the code shown in this guide is real code, mostly Jenkins Pipeline (Groovy) code, but there are also a few uses of 
+JavaScript	and	Ruby.	The	code	shown	was	run	and	it	produced	the	output	shown.	Effort	has	been	made	to	clearly	show	
+the	progressive	changes	and	their	results,	but	your	result	may	look	different	even	if	you	run	the	same	code.	The	code	
+shown	may	not	work	in	your	Jenkins	instance	without	modification.
+
+In	particular,	copying	the	Jenkins	Pipeline	code	shown	directly	into	a	Jenkins	Pipeline	job	via	the	Jenkins	UI	will	not	
+work.	The	pipelines	shown	expect	to	be	run	from	a	Jenkinsfile	in	the	software	configuration	management	(SCM)	of	the	
+project
+
+=== SOURCE: Jenkins — Feb 2025 ===
+#################
+#################
+Table of Contents 
+Forward: Why We Use Jenkins at Bugfender
+
+2 
+What is Jenkins and Why Should You Be Using it?
+
+4 
+What is Continuous Integration?
+
+5 
+How Does Continuous Integration Differ from Continuous Delivery? 6 
+How Does CI/CD Beneﬁt a Devops Team?
+
+7 
+Intro to Jenkins
+
+9 
+Pros vs. Cons of Jenkins
+
+10 
+How to Install Jenkins in Ubuntu
+
+13 
+Selecting the Right Machine
+
+13 
+Choosing an Operating System
+
+14 
+How to Install Jenkins
+
+14 
+Recommended Detour: Add SSL to Protect Your Jenkins Installation 17 
+How to Add your First Android Job to Jenkins
+
+21 
+Conﬁguring Android App Builds in Jenkins
+
+21
+
+Accelerate Gradle (optional)
+
+27 
+Running Unit Tests
+
+28 
+Running Integration Tests
+
+29 
+Suggestions for Next Steps
+
+31 
+How to Add Your First iOS Job to Jenkins
+
+32 
+How to Add a Mac Node for iOS Builds
+
+33 
+Conﬁguring iOS Jobs
+
+39 
+Adding Tests
+
+42 
+Closing Words
+
+44 
+Keys to Sustainability Maintaining Jenkins
+
+44 
+Tips for Getting Started Today
+
+45
+
+Table of contents
+  
+1
+#################
+#################
+Forward 
+Why We Use Jenkins at Bugfender 
+We designed Bugfender to meet our own internal need for remote 
+logging capabilities for mobile app development at Mobile Jazz. We 
+launched it as a product in its own right in 2015.
+
+We took a common mobile developer headache and made it a little simpler. In 
+the beginning, several of our developers realized they needed a remote way to 
+store users’ logs, so they set up the infrastructure to make it happen.
+
+As this side project has become a business of its own right, much of our 
+progress can be credited to all the work that has gone into automating and 
+maintaining cloud-based development, testing, and deployment 
+environments. 
+About 4 years ago, we realized that although we would write good iOS unit 
+tests, we did not execute them regularly enough to make sure they kept 
+working.
+
+Writing tests without using them is a complete waste of time, so we decided 
+to go one step further: using Jenkins to automate the execution of the tests 
+every time someone makes a change to the code. 
+In this way, Jenkins has allowed us to cut excess by reducing the time spent 
+manually running tests. At Bugfender, we like to home-cook solutions to 
+automate as much as possible, so this open source software worked for us. 
+Table of contents
+  
+2
+#################
+#################
+Jenkins makes sure our code compiles, so we save hundreds of hours of 
+manpower because we don’t have to work through the tiny issues in 
+compilation and shipping to a production-ready state. Every commit that is 
+green is deployable to production. Boom, we’re done. 
+At its core, CI/CD is all about letting machines do what they do best 
+so humans can do what brings the most value to your company.
+
+Of course, one of the main obstacles is belief in the value of CD/CI at every 
+company level. As we will explain in the ﬁrst chapter of in this ebook, there 
+are complications to maintaining a CI/CD environment, 
+
+=== SOURCE: Jenkins — May 2024 ===
+1
+
+Jenkins From Scratch
+
+Follow for more posts like this 👉🏽 Shivam Agnihotri
+
+Jenkins
+
+Jenkins is a powerful application that allows continuous integration and continuous delivery of 
+projects, regardless of the platform you are working on. It is a free source that can handle any 
+kind of build or continuous integration. You can integrate Jenkins with a number of testing and 
+deployment technologies. In this tutorial, we would explain how you can use Jenkins to build 
+and test your software projects continuously.
+
+Why Jenkins?
+
+2
+
+Jenkins is a software that allows continuous integration. Jenkins will be installed on a 
+server where the central build will take place. The following flowchart demonstrates a 
+very simple workflow of how Jenkins works.
+
+Along with Jenkins, sometimes, one might also see the association of Hudson. Hudson 
+is a very popular open-source Java-based continuous integration tool developed by Sun 
+Microsystems which was later acquired by Oracle. After the acquisition of Sun by Oracle, 
+a fork was created from the Hudson source code, which brought about the introduction 
+of Jenkins.
+
+What is Continuous Integration?
+
+Continuous Integration is a development practice that requires developers to integrate 
+code into a shared repository at regular intervals. This concept was meant to remove the 
+problem of finding later occurrence of issues in the build lifecycle. Continuous 
+integration requires the developers to have frequent builds. The common practice is 
+that whenever a code commit occurs, a build should be triggered.
+
+System Requirements
+
+JDK JDK 1.5 or above
+
+Memory 2 GB RAM (recommended)
+
+3
+
+Disk Space No minimum requirement. Note that since all builds will be 
+stored on the Jenkins machines, it has to be ensured that 
+sufficient disk space is available for build storage.
+
+Operating System Version Jenkins can be installed on Windows, Ubuntu/Debian, Red
+
+Hat/Fedora/CentOS, Mac OS X, openSUSE, FReeBSD,
+
+OpenBSD, Gentoo or Docker or AWS
+
+Java Container The WAR file can be run in any container that supports 
+Servlet 2.4/JSP 2.0 or later. (An example is Tomcat 5).
+
+Jenkins - Installation
+
+Download Jenkins
+
+The official website for Jenkins is Jenkins. If you click the given link, you can get the 
+home page of the Jenkins official website as shown below.
+
+4
+
+By default, the latest release and the Long-Term support release will be available for 
+download. The past releases are also available for download. Click the Long-Term 
+Support Release tab in the download section.
+
+5
+
+Click the link “Older but stable version” to download the Jenkins war file.
+
+Starting Jenkins
+
+Open the command prompt. From the command prompt, browse to the directory where 
+the jenkins.war file is present. Run the following command
+
+D:\>Java –jar Jenkins.war
+
+After the command is run, various tasks will run, one of which is the extraction of the 
+war file which is done by an embedded webserver called winstone.
+
+D:\>Java –jar Jenkins.war
+
+Running from: D:\jenki
+
+=== SOURCE: Page | 1 1. Basic Git Commands (For managing repositories)   git init:… ===
+Page | 1
+
+1. Basic Git Commands (For managing repositories) 
+ git init: Initializes a new Git repository in the current 
+directory. 
+ git clone <repo_url>: Clones a repository from a remote 
+URL to your local machine. 
+ git status: Shows the working directory status (which files are 
+modified, staged, etc.). 
+ git add : Stages a file or files to be committed. 
+ git commit -m "message": Commits staged changes to the 
+local repository with a message. 
+ git push: Pushes committed changes to the remote repository. 
+ git pull: Fetches and merges changes from the remote 
+repository to your local working directory. 
+ git fetch: Downloads objects and refs from another repository 
+(without merging). 
+ git merge : Merges changes from the specified branch into the 
+current branch. 
+ git log: Shows the commit history of the repository. 
+ git diff: Shows the differences between your working 
+directory and the index (staged changes).
+
+2. Branching Commands (Managing branches) 
+ git branch: Lists all branches in your repository. 
+ git branch <branch_name>: Creates a new branch. 
+ git checkout <branch_name>: Switches to an existing 
+branch. 
+ git checkout -b <branch_name>: Creates and switches to a 
+new branch in one step. 
+ git merge <branch_name>: Merges changes from the 
+specified branch into the current branch.
+
+Page | 2
+
+ git rebase <branch_name>: Applies changes from one 
+branch onto another branch (instead of merging). 
+ git branch -d <branch_name>: Deletes the specified branch 
+(locally). 
+ git branch -D <branch_name>: Forcefully deletes a branch 
+(locally). 
+ git remote set-head origin <branch_name>: Sets the 
+default branch for the remote repository.
+
+3. Remote Commands (Managing remotes and syncing 
+with the cloud) 
+ git remote -v: Shows the remote repository URLs. 
+ git remote add : Adds a new remote repository. 
+ git remote remove : Removes a remote repository. 
+ git push origin <branch_name>: Pushes a branch to a 
+remote repository. 
+ git push -u origin <branch_name>: Pushes a branch to a 
+remote repository and sets the upstream for the branch. 
+ git pull origin <branch_name>: Fetches and merges a 
+branch from the remote repository. 
+ git fetch origin: Downloads objects and refs from the 
+remote repository. 
+ git remote show origin: Displays detailed information 
+about a remote repository.
+
+4. Staging and Committing (Managing changes) 
+ git add . : Stages all modified files in the working directory. 
+ git add -A: Stages all modified files (including file deletions). 
+ git reset : Unstages a file (reverts it to the working directory).
+
+Page | 3
+
+ git commit --amend: Modifies the last commit (can change 
+the commit message or add changes). 
+ git commit --all: Automatically stages tracked files and 
+commits them. 
+ git commit -a: Stages and commits all modified files. 
+ git commit --no-verify: Skips pre-commit hooks while 
+committing. 
+ git reset --soft HEAD~1: Moves the HEAD pointer back 
+one commit but leaves your
+
+=== SOURCE: Page | 1 1. Basic Git Commands (For managing repositories)   git init:… ===
+Page | 1
+
+1. Basic Git Commands (For managing repositories) 
+ git init: Initializes a new Git repository in the current 
+directory. 
+ git clone <repo_url>: Clones a repository from a remote 
+URL to your local machine. 
+ git status: Shows the working directory status (which files are 
+modified, staged, etc.). 
+ git add : Stages a file or files to be committed. 
+ git commit -m "message": Commits staged changes to the 
+local repository with a message. 
+ git push: Pushes committed changes to the remote repository. 
+ git pull: Fetches and merges changes from the remote 
+repository to your local working directory. 
+ git fetch: Downloads objects and refs from another repository 
+(without merging). 
+ git merge : Merges changes from the specified branch into the 
+current branch. 
+ git log: Shows the commit history of the repository. 
+ git diff: Shows the differences between your working 
+directory and the index (staged changes).
+
+2. Branching Commands (Managing branches) 
+ git branch: Lists all branches in your repository. 
+ git branch <branch_name>: Creates a new branch. 
+ git checkout <branch_name>: Switches to an existing 
+branch. 
+ git checkout -b <branch_name>: Creates and switches to a 
+new branch in one step. 
+ git merge <branch_name>: Merges changes from the 
+specified branch into the current branch.
+
+Page | 2
+
+ git rebase <branch_name>: Applies changes from one 
+branch onto another branch (instead of merging). 
+ git branch -d <branch_name>: Deletes the specified branch 
+(locally). 
+ git branch -D <branch_name>: Forcefully deletes a branch 
+(locally). 
+ git remote set-head origin <branch_name>: Sets the 
+default branch for the remote repository.
+
+3. Remote Commands (Managing remotes and syncing 
+with the cloud) 
+ git remote -v: Shows the remote repository URLs. 
+ git remote add : Adds a new remote repository. 
+ git remote remove : Removes a remote repository. 
+ git push origin <branch_name>: Pushes a branch to a 
+remote repository. 
+ git push -u origin <branch_name>: Pushes a branch to a 
+remote repository and sets the upstream for the branch. 
+ git pull origin <branch_name>: Fetches and merges a 
+branch from the remote repository. 
+ git fetch origin: Downloads objects and refs from the 
+remote repository. 
+ git remote show origin: Displays detailed information 
+about a remote repository.
+
+4. Staging and Committing (Managing changes) 
+ git add . : Stages all modified files in the working directory. 
+ git add -A: Stages all modified files (including file deletions). 
+ git reset : Unstages a file (reverts it to the working directory).
+
+Page | 3
+
+ git commit --amend: Modifies the last commit (can change 
+the commit message or add changes). 
+ git commit --all: Automatically stages tracked files and 
+commits them. 
+ git commit -a: Stages and commits all modified files. 
+ git commit --no-verify: Skips pre-commit hooks while 
+committing. 
+ git reset --soft HEAD~1: Moves the HEAD pointer back 
+one commit but leaves your
+
+=== SOURCE: Production grade Jenkins using Prometheus, Grafana & InfluxDB Monitoring Stack… ===
+Production grade Jenkins using Prometheus, Grafana & InfluxDB
+
+Monitoring Stack Setup Guide 
+Prerequisites 
+Ensure the following tools are installed and available: 
+• Docker 
+• Jenkins 
+• Prometheus 
+• Grafana 
+• InfluxDB 
+• SQL Queries
+
+Setup Instructions 
+Install Required Plugins 
+1. InfluxDB Plugin 
+2. Prometheus Plugin
+
+Grafana Setup 
+• Create a folder for Grafana. 
+• Configure jobs as needed.
+
+Docker Installation on Ubuntu 
+Run the following commands to install Docker on an Ubuntu system: 
+curl -fsSL https://get.docker.com -o get-docker.sh 
+sh get-docker.sh
+
+Once Docker is installed successfully, proceed to the next steps.
+
+Bring Up the Monitoring Stack Using Docker 
+Pull the Jenkins Image or Create It from a Dockerfile 
+To pull and run the Jenkins image, execute the following command: 
+docker run -d -p 8080:8080 jenkins/jenkins:lts-jdk17
+
+Access the Jenkins Container 
+To access the Jenkins container, use the following command: 
+docker exec -it <container_id> /bin/bash
+
+Replace <container_id> with the actual container ID of the Jenkins container. You can find 
+the container ID by running: 
+docker ps
+
+Retrieve the Initial Admin Password 
+Inside the Jenkins container, retrieve the initial admin password by running: 
+cat /var/jenkins_home/secrets/initialAdminPassword
+
+Example output: 
+aff15ca7bac3491abc9b7345673bb1ac
+
+Use this password to log in to the Jenkins web interface.
+
+You can copy this content into a text editor or word processor and save it as a .docx or .pdf 
+file. Let me know if you need further assistance!
+
+Here’s a well-structured and formatted version of your instructions for setting up 
+Prometheus with Docker. You can copy this and save it as a document for your reference.
+
+Prometheus Setup Guide 
+Prometheus Configuration 
+1. Navigate to the desired directory where you want to create the Prometheus 
+configuration file: 
+cd /home/ubuntu
+
+2. Create and edit the prometheus.yml file: 
+vi prometheus.yml
+
+3. Add the following configuration to the prometheus.yml file: 
+global:
+
+scrape_interval: 15s
+
+# How often to scrape targets by default.
+
+evaluation_interval: 15s
+
+# How often to evaluate rules by default.
+
+scrape_timeout: 10s
+
+# Timeout for scraping targets.
+
+# Alerting rules configuration 
+alerting:
+
+alertmanagers:
+
+- static_configs:
+
+- targets:
+
+# Alertmanager instances
+
+- "localhost:9093"
+
+# Rule files for recording and alerting rules 
+rule_files:
+
+# List of files containing alerting and recording rules
+
+- "alert.rules"
+
+# Scrape configuration 
+scrape_configs:
+
+# Scrape configuration for Prometheus itself
+
+- job_name: "jenkins"
+
+static_configs:
+
+- targets:
+
+- "localhost:8080"
+
+metrics_path: /prometheus
+
+Running Prometheus with Docker 
+1. Use the following command to run Prometheus in a Docker container: 
+docker run -d --name prometheus-container \
+
+-v /home/ubuntu/prometheus.yml:/etc/prometheus/prometheus.yml \
+
+-e TZ=UTC \
+
+-p 9090:9090 \
+
+ubuntu/prometheus:2.33-22.04_beta
+
+a. -d: Run the container in detached mode. 
+b. --name pr
+
+=== SOURCE: Ratnadeep sali Version control systems   Git   GitHub   Cloud-based Git… ===
+Ratnadeep sali
+
+Version control 
+systems
+
+● Git
+
+● GitHub – Cloud-based Git repository hosting
+
+● GitLab – Git repository with built-in CI/CD pipelines
+
+● Bitbucket – Git repository with Jira integration
+
+Ratnadeep sali 
+● Git
+
+1. Git Setup and Configuration
+
+git --version
+
+# Check Git version
+
+git config --global user.name "Your Name" # Set global username
+
+git config --global user.email "your.email@example.com" # Set global email
+
+git config --global 
+core.editor "vim" # Set default editor
+
+git config --global init.defaultBranch main # Set default branch name
+
+git config --list
+
+# View Git configuration
+
+git help <command>
+
+# Get help for a Git command
+
+2. Creating and Cloning Repositories
+
+git init
+
+# Initialize a new Git repository
+
+git clone <repo_url>
+
+# Clone an existing repository
+
+git remote add origin <repo_url># Link local repo to a remote repo 
+git remote -v
+
+# List remote repositories
+
+3. Staging and Committing Changes
+
+git status
+
+# Check the status of changes
+
+git add <file>
+
+# Add a file to the staging area
+
+git add .
+
+# Add all files to the staging area
+
+git commit -m "Commit message"
+
+# Commit staged files
+
+git commit -am "Commit message"
+
+# Add & commit changes in one step
+
+git commit --
+amend -m "New message"
+
+# Modify the last commit message
+
+Ratnadeep sali
+
+4. Viewing History and Logs
+
+git log
+
+# Show commit history
+
+git log --oneline
+
+# Show history in one-line format
+
+git log --graph --decorate --all
+
+# Display commit history as a graph
+
+git show 
+<commit_id>
+
+# Show details of a specific commit
+
+git diff
+
+# 
+Show unstaged changes
+
+git diff --staged
+
+# Show staged but uncommitted changes
+
+git blame <file>
+
+# Show who modified each line of a file
+
+5. Branching and Merging
+
+git branch
+
+# List all branches
+
+git branch <branch_name>
+
+# Create a new branch
+
+git checkout <branch_name>
+
+# Switch to another branch
+
+git checkout -b <branch_name>
+
+# Create and switch to a new branch
+
+git merge <branch_name>
+
+# Merge a branch into the current branch
+
+git branch -d <branch_name>
+
+Ratnadeep sali
+
+# Delete a local branch
+
+git branch -D <branch_name>
+
+# Force delete a branch
+
+6. Working with Remote Repositories
+
+git fetch
+
+# Fetch changes from remote repo
+
+git pull origin <branch_name>
+
+# Pull latest changes
+
+git push origin <branch_name>
+
+# Push changes to remote repo
+
+git push -u origin 
+<branch_name>
+
+# Push and set upstream tracking
+
+git remote show origin
+
+# 
+Show details of the remote repo
+
+git remote rm origin
+
+# Remove the remote 
+repository
+
+7. Undoing Changes
+
+git restore <file>
+
+# Unstage changes
+
+git restore --staged <file>
+
+# Unstage a file from the staging area
+
+reset HEAD~1
+
+# Undo the last commit but keep changes
+
+git reset --hard HEAD~1
+
+# Undo the last commit and discard changes
+
+git revert 
+<commit_id>
+
+# Create a new commit to undo changes
+
+git stash
+
+# Save uncommitted changes temporarily
+
+git stash pop
+
+# Apply stashed changes
+
+git stash drop
+
+# Remove stashed changes
+
+8. Tagging and Releases
+
+Ratnadeep sali
+
+git ta
+
+=== SOURCE: Set up a Kubernetes pod as Self-hosted runner for GitHub Actions pipe line… ===
+Set up a Kubernetes pod as Self-hosted runner for GitHub Actions pipe line
+
+Step1: Clone the Repository to VS Code
+
+Step2: Update the GitHub Personal Access Token 
+Step3: Update Base64 Encoded Values in `secret.yaml` 
+• Use the following command to encode your token or other sensitive data: 
+echo -n "ghp_your_generated_token" | base64 
+• Open the `secret.yaml` file in your preferred text editor. 
+• ocate the `data` section and Replace the old base64 value with new one generated in step1
+
+data:
+
+TOKEN: "your-new-base64-encoded-value"
+
+Step4: Update GitHub Username and Repository Name Secret in `ge-
+deployment.yaml` 
+• Open the `ge-deployment.yaml` file in your preferred text editor. 
+• Locate the section where the GitHub username and repository name secrets are defined. 
+• Update the secret for the GitHub username:
+
+- name: GITHUB_USERNAME
+
+value: "your-new-username" 
+• Update the secret for the repository name:
+
+- name: REPOSITORY_NAME
+
+value: "your-new-repository-name"
+
+step5: Deploy the Self-Hosted Runner Using `kubectl` 
+• Ensure you have `kubectl` installed and configured to interact with your Kubernetes cluster. 
+• Navigate to the directory containing your Kubernetes manifests: 
+cd /home/setup-k8s-runner 
+• Apply the manifests to deploy the runner: 
+kubectl apply -f selfthosted-runner 
+• Verify that the pods are running: 
+kubectl get pods 
+• Check the logs of the runner pod to ensure it is registered successfully: 
+kubectl logs <runner-pod-name> 
+step6: Verify the Runner Registration in Github 
+• After applying the changes, navigate to your GitHub repository. 
+• Go to Settings> Actions > **Runners. 
+• Verify that the Kubernetes runner is listed as an active runner.
+
+Step7. Configure the Runner to Monitor Changes in the `nginx` Folder 
+• Ensure your GitHub Actions workflow is set up to trigger on changes to the `nginx` folder. 
+Update your `.github/workflows/<workflow-file>.yml` file with the following:
+
+on:
+
+push:
+
+paths:
+
+- 'nginx/**' 
+• Verify that the runner picks up and executes jobs when changes are made to the `nginx` 
+folder.
+
+=== SOURCE: Top 50 Jenkins questions, along with examples: What is Jenkins?   Jenkins is an ===
+Top 50 Jenkins questions, along with examples:
+
+What is Jenkins? 
+ Jenkins is an open-source automation server used for 
+Continuous Integration/Continuous Delivery (CI/CD). It 
+helps automate the build, testing, and deployment 
+process. 
+ Example: Jenkins can trigger automatic builds when new 
+code is pushed to a Git repository.
+
+How does Jenkins work? 
+ Jenkins automates parts of software development by 
+using jobs to pull code from repositories, build, and 
+deploy it. 
+ Example: A Jenkins job pulls code from GitHub, runs 
+tests, and deploys the app.
+
+What are the advantages of using Jenkins? 
+ Automates repetitive tasks, integrates with various tools, 
+supports plugins, and is easy to configure for continuous 
+integration. 
+ Example: Jenkins automates daily builds and 
+deployments to production.
+
+Explain the architecture of Jenkins. 
+ Jenkins follows a master-slave architecture where the 
+master controls the build process, and slaves execute 
+jobs on different environments. 
+ Example: A master Jenkins server delegates tasks to 
+different agent nodes (Windows/Linux).
+
+What is Continuous Integration in Jenkins? 
+ Continuous Integration is a practice where developers 
+integrate code into a shared repository frequently. 
+Jenkins automates this process. 
+ Example: Jenkins builds the project and runs tests 
+whenever code is pushed.
+
+What are Jenkins Pipelines? 
+ Pipelines are a series of steps to build, test, and deploy 
+code in Jenkins. They are defined in a Jenkinsfile. 
+ Example: A pipeline can have stages like “Build,” “Test,” 
+and “Deploy.”
+
+How do you install Jenkins? 
+ Jenkins can be installed using a WAR file or native 
+packages (Linux, Windows, Mac). 
+ Example: Install Jenkins on Ubuntu with sudo apt-get 
+install jenkins.
+
+What are the system requirements for installing Jenkins? 
+ Jenkins requires at least 256MB RAM, 1GB disk space, 
+and Java 8 or higher . 
+ Example: Java must be installed using sudo apt install 
+openjdk-8-jdk.
+
+How do you configure Jenkins? 
+ Configuration involves setting up credentials, agents, 
+security, and plugins. 
+ Example: Set Git credentials under “Manage Jenkins” > 
+“Manage Credentials.”
+
+What is a Jenkins job? 
+ A Jenkins job is a task or set of tasks configured to be 
+run within Jenkins. 
+ Example: A "Freestyle Project" to build a Java 
+application.
+
+How do you create a Jenkins job? 
+ In Jenkins dashboard, click "New Item," select the job 
+type, and configure the tasks. 
+ Example: Create a Freestyle job to compile code using 
+Maven.
+
+Explain the different types of Jenkins jobs. 
+ Freestyle, Pipeline, Multibranch Pipeline, and Maven 
+jobs. 
+ Example: A Maven job builds a project using the Maven 
+tool.
+
+How do you trigger a Jenkins job automatically? 
+ Jobs can be triggered by SCM changes or scheduled with 
+cron expressions. 
+ Example: Poll Git every 5 minutes for changes using H/5 
+* * * *.
+
+How do you set up a Jenkins job to build periodically? 
+ Use cron syntax in the “Build Triggers”
+
+=== SOURCE: Top Jenkins Interview Questions Enlisted below are some of the most popular… ===
+Top Jenkins Interview Questions 
+Enlisted below are some of the most popular Jenkins Interview Questions that have been 
+answered by experts. 
+Q #1) What is Jenkins? 
+Answer: Jenkins is a free open source Continuous Integration tool and automation server 
+to monitor continuous integration and delivery. It is written in Java. 
+It is known as an automated Continuous Delivery tool that helps to build and test the 
+software system with easy integration of changes to the system. Jenkins follows Groovy 
+Scripting. 
+Also, it enables developers to continuously check in their code and also analyze the post-
+build actions. The automation testers can use to run their tests as soon as the new code is 
+added or code is modified. 
+Q #2) What are the features of Jenkins? 
+Answer: Jenkins comes with the following features: 
+1. Free open source. 
+2. Easy installation on various operating systems. 
+3. Build Pipeline Support. 
+4. Workflow Plugin. 
+5. Test harness built around JUnit. 
+6. Easy upgrades. 
+7. Rapid release cycle. 
+8. Easy configuration setup. 
+9. Extensible with the use of third-party plugins. 
+Q #3) What are the advantages of Jenkins? Why we use Jenkins? 
+Answer: Jenkins is used to continuously monitor the large code base in real-time. It 
+enables developers to find bugs in their code and fix them. Email notifications are made to 
+the developers regarding their check-ins as a post-build action. 
+Advantages of Jenkins are as follows: 
+ Build failures are cached during the integration stage. 
+ Notifies the developers about build report status using LDAP (Lightweight 
+Directory Access Protocol) mail server. 
+ Maven release project is automated with simple steps. 
+ Easy bug tracking. 
+ Automatic changes get updated in the build report with notification. 
+ Supports Continuous Integration in agile development and test-driven 
+development. 
+Q #4) Mention some of the important plugins in Jenkins? 
+Answer: Plugins in Jenkins includes: 
+ Gits 
+ Maven 2 Project 
+ HTML Publisher 
+ Copy Artcraft 
+ Join 
+ Green Balls 
+ Amazon EC2 
+Q #5) What is Continuous Integration in Jenkins? 
+Answer: Continuous integration is the process of continuously checking-in the developer’s 
+code into a version control system and triggering the build to check and identify bugs in the 
+written code. 
+This is a very quick process and also gives them a chance to fix the bugs. Jenkins is 
+one such continuous integration tool.
+
+In software development, multiple developers work on different software modules. While 
+performing integration testing all the modules are being integrated together. It is considered 
+as the development practice to integrate the code into the source repository 
+Whenever the programmer/developer makes any change to the current code, then it 
+automatically 
+gets integrated with the system running on the tester’s machine and makes the testing task 
+easy and speedy for the system testers. 
+Continuous Integration comprises of: 
+ Development and Compilation 
+ 
+
+=== SOURCE: sonarqube_club-bioinfo.md 12/05/2021 1 / 16 Check the quality of your code with ===
+sonarqube_club-bioinfo.md 12/05/2021
+1 / 16
+Check the quality of your code with SonarQube
+What is SonarQube ?
+SonarQube is a code review tool that automatically detects bugs, vulnerabilities and code smells in your
+code.
+It can be integrated into your continuous integration workﬂow.
+This tool can analyse the code quality of 27 programming languages including :
+Python
+JavaScript
+HTML5 / CSS 3
+Java
+PhP
+Unfortunately it doesn't support R but plugins exist:
+sonar-r-plugin but it doesn't seem to be actively maintained.
+covr: can create a SonarQube Generic XML ﬁle for test coverage.
+Overview
+This section is based on 'Overview' section in sonarQube documentation
+(https://docs.sonarqube.org/latest/):
+During the development of a project:
+1. Developers write code in an IDE and then commit/merge their changes.
+2. A continuous integration (CI) tool builds and runs unit tests, and an integrated SonarQube scanner
+analyses your changes
+3. The scanner posts the results to the SonarQube server which provides feedback.
+SonarQube installation
+SonarQube instance components
+sonarqube_club-bioinfo.md 12/05/2021
+2 / 16
+A SonarQube instance is composed of three components:
+1. The SonarQube Server. This server is composed of:
+A web server that serves the SonarQube user interface
+A search server that gets the data stored in a SonarQube database
+A compute engine that processes code analysis report and saves it in a SonarQube database
+2. A database server used to store:
+The SonarQube conﬁguration
+The metrics and issues for code quality and security (supported database PostgreSQL,
+Microsoft SQL server and Oracle)
+3. One or more scanners to analyse projects
+Prerequisites to install SonarQube
+To run sonarQube, you must have Java 11 installed on your machine.
+A small instance of the SonarQube server requires 2GB or RAM to run eﬃciently.
+A 64-bit system on the server side.
+Free disk space to store code quality analyses.
+For linux, you must ensure that:
+vm.max_map_count is greater than or equal to 524288
+fs.file-max is greater than or equal to 131072
+the user running SonarQube can open at least 131072 ﬁle descriptors
+the user running SonarQube can open at least 8192 threads
+Command to check this.
+sysctl vm.max_map_count 
+sysctl fs.file-max 
+ulimit -n 
+ulimit -u 
+sonarqube_club-bioinfo.md 12/05/2021
+3 / 16
+You can set the vm.max_map_count and fs.file-max values permanently by editing
+/etc/sysctl.conf: echo "vm.max_map_count=524288" >> /etc/sysctl.conf && echo
+"fs.file-max=131072" >> /etc/sysctl.conf . Then reload the conﬁguration with the new value
+with sudo sysctl -p.
+If the user running SonarQube does not have the permission to have at least 131072 open descriptors, you
+must insert those lines in /etc/security/limits.conf:
+sonarqube
+
+-
+
+nofile
+
+131072 
+sonarqube
+
+-
+
+nproc
+
+8192 
+Quick installation of the SonarQube server
+SonarQube can be installed quickly to try it by using a docker image or an executable ﬁle. This is very useful
+to quickly getting started with SonarQube. Howeve

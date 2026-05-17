@@ -1,0 +1,6906 @@
+DOMAIN: linux-systems
+DOCS WITH TEXT: 27
+
+=== SOURCE: Bash Scripting for beginners 1 BASH SCRIPTING FOR BEGINNERS Why Bash? What is… ===
+Bash Scripting for beginners 
+1 
+BASH SCRIPTING FOR BEGINNERS
+Why Bash? 
+What is Bash? 
+Bash is a shell( what we interact with or run commands on in a UNIX system), for example 
+here’s a bash shell running the ls command: 
+ubuntu@willie:~$ ls / 
+bin 
+boot 
+cdrom home lib32 
+dev 
+etc 
+kubernetes lib64 media proc sbin swapfile usr 
+lib libx32 
+lost+found opt 
+mnt root snap sys var 
+VPCTPro run srv tmp 
+The ls command lists the current working directory, and there are other commands that the shell 
+recognises in the /bin directory, automating these commands rather than running them over and 
+over is where bash scripting comes in. 
+Although, there are a lot of shells we can work with like the zsh, sh …, check the shell you are 
+using by typing 
+As DevOps Engineers, we will be running a lot of commands, hence we might need to automate
+these commands, 
+To layman, bash script is just like a bunch of commands in a test file, (but more interestingly, we
+have conditional statements, loops( while for ..)) and so on, but bash is really an interpreter or a
+shell used in our UNIX system 
+As we get started, we assume you have a Linux server or Linux running 
+codelivly.com
+codelivly.com
+Bash Scripting for beginners 
+2 
+Note: This script looks simple, but this is just to give a liltle understanding of bash script and
+helps if we want to run a bunch of 200 commands 
+Now let’s write a proper bash script. 
+To start our bash script, we must add the shebang, it is always at the first line of every script
+that tells the script which interpreter to use, let’s see an example of this 
+$ echo $SHELL
+/bin/bash 
+What is bash script? 
+A script is generally a text file that has a set of commands in it which when executed runs the 
+commands as if they were ran on the shell for example, we can create a script ; 
+ubuntu@willie:~$ nano myscript.sh 
+And add the command ls / Note: nano is just the preferred editor here, you can use editors like 
+“vim” 
+To run this script, we need to make it executable by running the chmod +x myscript.sh (giving an 
+executable permission to the script) and run the script with the ./ 
+ubuntu@willie:~$ chmod +x myscript.sh 
+ubuntu@willie:~$ ./myscript.sh 
+bin 
+boot 
+cdrom home lib32 
+dev 
+etc 
+kubernetes lib64 media proc sbin swapfile usr 
+lib libx32 mnt 
+lost+found opt 
+root snap sys 
+srv tmp 
+var 
+VPCTPro run 
+#!/bin/bash 
+echo "Hello World!" 
+echo “My current working directory is:”
+pwd 
+Hello World 
+codelivly.com
+Bash Scripting for beginners 
+3
+
+This script sets the variable 
+the string. Run the command
+
+and
+
+Notice the shebang at the first line. Running the script, we have 
+Variable has a lot of use cases, but it helps us avoid retyping. Another example is the bash
+script below; 
+#!/bin/bash 
+word="fun" 
+echo "Linux is $word" 
+A variable is a way of assigning a name to a value or vice-versa, which could be in the form 
+myName=”Willie”, and can be retrieved by using the echo command echo $myName 
+Now let’s implement this in our script 
+and the echo 
+
+=== SOURCE: Bash scripting cheatsheet Introduction Example Variables String quotes Shell… ===
+Bash scripting cheatsheet 
+Introduction
+
+Example
+
+Variables
+
+String quotes
+
+Shell execution
+
+Generally quote your variables unless they contain wildcards to expand or command fragments.
+
+Conditional execution
+
+Functions
+
+Conditionals
+
+Strict mode
+
+Brace expansion
+
+Same as
+
+Same as
+
+Same as
+
+Same as
+
+Parameter expansions 
+Basics
+
+Prefix name expansion
+
+Indirection
+
+Substitution
+
+Comments
+
+Remove suffix
+
+Remove prefix
+
+Remove long suffix
+
+Remove long suffix
+
+Remove long prefix
+
+Remove long prefix
+
+Replace first match
+
+Replace all
+
+Replace suffix
+
+Replace prefix
+
+Substrings
+
+Length
+
+Manipulation
+
+Default values
+
+Substring
+
+( 
+position, length 
+)
+
+Substring from the right
+
+Length of
+
+Loops
+
+Basic for loop
+
+C-like for loop
+
+Ranges
+
+, or
+
+if unset (or null)
+
+Set
+
+to
+
+if unset (or null)
+
+if
+
+is set (and not null)
+
+Show error message and exit if
+
+is unset (or null) 
+Omitting the
+
+removes the (non)nullity checks, e.g.
+
+expands to
+
+if unset otherwise
+
+.
+
+With step size
+
+Reading lines
+
+Forever
+
+Functions 
+Defining functions
+
+Returning values
+
+=== SOURCE: DEVOPS SHACK 100 Linux Errors & solution 1. Permission Denied RCA: The user… ===
+DEVOPS SHACK 
+100 Linux Errors
+
+& solution
+
+1. Permission Denied 
+RCA: The user does not have the necessary permissions to execute or modify the file. 
+Solution: Use sudo or change file permissions. 
+Command: 
+sudo chmod +x script.sh
+
+2. File Not Found (No such file or directory) 
+RCA: The specified file does not exist, or the path is incorrect. 
+Solution: Verify the correct path and check if the file exists. 
+Command: 
+ls -l /path/to/file
+
+3. Directory Not Found 
+RCA: The specified directory does not exist or was deleted. 
+Solution: Create the missing directory. 
+Command: 
+mkdir -p /desired/paths
+
+4. Read-Only File System 
+RCA: The filesystem is mounted as read-only due to disk corruption or improper shutdown. 
+Solution: Remount the filesystem in read/write mode. 
+Command: 
+mount -o remount,rw /
+
+5. Disk Space Full (No space left on device) 
+RCA: The disk is full, preventing new files from being created. 
+Solution: Delete unnecessary files or expand disk space. 
+Command: 
+df -h 
+rm -rf /var/log/*
+
+6. Symbolic Link Points to Non-Existent File (broken symlink) 
+RCA: The original file of the symlink was moved or deleted. 
+Solution: Find and recreate the symlink. 
+Command: 
+ls -l symlink_name 
+ln -sf /new/target/path symlink_name
+
+7. Too Many Open Files 
+RCA: The system has reached its file descriptor limit. 
+Solution: Increase the open file limit. 
+Command: 
+Ulimit
+
+-n 100000
+
+8. Text file busy Error 
+RCA: The file is in use by another process while trying to modify or delete it. 
+Solution: Identify and stop the process using it. 
+Command: 
+lsof | grep filename 
+kill -9 <PID>
+
+9. Stale NFS file handle 
+RCA: The NFS-mounted file was deleted or moved on the remote system. 
+Solution: Remount the NFS share. 
+Command: 
+umount -l /mnt/nfs 
+mount –a
+
+10. Argument list too long 
+RCA: Too many arguments passed to a command, exceeding system limits. 
+Solution: Use find or xargs instead of rm *. 
+Command: 
+find /path -type f –delete
+
+11. Process Killed Automatically 
+RCA: The Out-of-Memory (OOM) killer terminated the process. 
+Solution: Increase swap memory or optimize memory usage. 
+Command: 
+free -m 
+dmesg | grep -i 'oom'
+
+12. Zombie Process Remains After Termination 
+RCA: The parent process has not cleaned up the child process. 
+Solution: Restart the parent process or kill the zombie process. 
+Command: 
+ps aux | grep Z 
+kill -9 <PID>
+
+13. Segmentation Fault (core dumped) 
+RCA: A program attempted to access restricted memory. 
+Solution: Debug using gdb. 
+Command: 
+gdb ./program core
+
+14. Too Many Processes Running (Fork Bomb) 
+RCA: A process is recursively creating child processes. 
+Solution: Use ulimit to prevent excessive process creation. 
+Command: 
+ulimit -u 5000
+
+15. Device is Busy When Unmounting a Partition 
+RCA: A process is using the partition. 
+Solution: Find and kill the process before unmounting. 
+Command: 
+lsof +D /mnt/partition 
+kill -9 <PID> 
+umount /mnt/partition
+
+21. Network Unreachable 
+RCA: Incorrect network configuration or firewall rule
+
+=== SOURCE: DevOps Shack 200 scenario-based Linux interview questions Basic Linux… ===
+DevOps Shack
+
+200 scenario-based Linux interview questions
+
+Basic Linux Administration
+
+1. User Management: A user complains they cannot log
+
+in.
+
+How
+
+will
+
+you
+
+troubleshoot?
+ 2. File Permissions: A script is executable by one
+
+user
+
+but
+
+not
+
+another.
+
+How
+
+do
+
+you
+
+resolve
+
+this?
+ 3. Process Management: A service is consuming 100%
+
+CPU.
+
+How
+
+will
+
+you
+
+find
+
+and
+
+fix
+
+it?
+ 4. SSH Issues: You cannot SSH into a remote machine.
+
+How
+
+do
+
+you
+
+debug?
+ 5. Disk Space Full: / partition is full. How do you
+
+find
+
+and
+
+delete
+
+large
+
+files
+
+safely?
+ 6. File Corruption: A log file is showing junk
+
+characters.
+
+How
+
+will
+
+you
+
+check
+
+and
+
+recover
+
+it?
+ 7. Crontab Not Running: A scheduled job is not
+
+executing.
+
+How
+
+do
+
+you
+
+debug?
+ 8. Package Installation Failing: yum or apt is
+
+failing.
+
+How
+
+will
+
+you
+
+resolve
+
+it?
+ 9. User Cannot Sudo: A user was added to sudoers, but
+
+sudo
+
+still
+
+doesn’t
+
+work.
+
+What
+
+could
+
+be
+
+wrong?
+ 10. Kernel Panic: How do you troubleshoot and recover
+
+from
+
+a
+
+kernel
+
+panic?
+ 11. Zombie Processes: How do you identify and remove
+
+zombie
+
+processes?
+
+12. Too Many Open Files Error: How do you fix “Too
+
+many
+
+open
+
+files”
+
+in
+
+Linux?
+ 13. Finding and Killing Processes: A process is
+
+causing
+
+high
+
+memory
+
+usage.
+
+How
+
+do
+
+you
+
+locate
+
+and
+
+stop
+
+it?
+ 14. Home Directory Missing: A user's home directory
+
+is
+
+missing.
+
+How
+
+will
+
+you
+
+restore
+
+it?
+ 15. Time Sync Issues: The server time is incorrect.
+
+How
+
+do
+
+you
+
+fix
+
+NTP
+
+sync?
+ 16. Finding Recently Changed Files: How do you find
+
+all
+
+files
+
+modified
+
+in
+
+the
+
+last
+
+10
+
+minutes?
+ 17. Deleting Large Files But Space Not Freeing Up:
+
+What
+
+could
+
+be
+
+the
+
+reason?
+ 18. Checking System Load: How do you analyze high
+
+system
+
+load
+
+issues?
+ 19. NFS Mount Issues: How do you troubleshoot an NFS
+
+mount
+
+not
+
+working?
+ 20. Hostname Resolution Issues: ping is working, but ssh is failing by hostname. Why?
+
+File System & Storage
+
+21. How do you extend a partition without unmounting
+
+it?
+ 22. What steps are needed to add a new disk to a
+
+Linux
+
+server?
+ 23. How to check which processes are writing to a
+
+file
+
+in
+
+real
+
+time?
+ 24. How to recover a deleted file in Linux? 25. How to check disk I/O performance in Linux?
+
+26. A directory is taking too much space. How do you
+
+analyze
+
+it?
+ 27. How do you remount a filesystem in read-write
+
+mode
+
+without
+
+rebooting?
+ 28. What happens when a file is deleted but is still
+
+in
+
+use
+
+by
+
+a
+
+process?
+ 29. How do you create and mount a swap file? 30. How do you find large unused files across
+
+multiple
+
+partitions?
+ 31. How do you fix a corrupted file system using fsck? 32. What is inode exhaustion, and how do you resolve
+
+it?
+ 33. You need to copy a huge file across servers.
+
+What’s
+
+the
+
+fastest
+
+way?
+ 34. Your df -h and du -sh show different disk usage.
+
+Why?
+ 35. How do you find out which directory is consuming
+
+the
+
+most
+
+in
+ /var? 36. A file is not getting deleted despite rm -f. Why? 37. How do you enable disk quotas for users? 38. A RAID-5 disk has f
+
+=== SOURCE: DevOps Shack LINUX TROUBLESHOOTING GUIDE 1. System Boot Issues 1.1 Boot Loader… ===
+DevOps Shack
+
+LINUX TROUBLESHOOTING GUIDE
+
+1. System Boot Issues
+
+1.1 Boot Loader Issues (GRUB Issues)
+
+Symptoms:
+
+● System does not boot into Linux. ● Stuck at GRUB prompt. ● Error: grub-rescue>
+
+Causes:
+
+● Corrupt or missing GRUB configuration. ● Wrong boot device. ● Kernel update failure.
+
+Solution:
+
+1. Boot using a Live CD/USB.
+
+Mount the root partition: sudo mount /dev/sdXn /mnt Reinstall GRUB: sudo grub-install --root-directory=/mnt /dev/sdX Update GRUB: sudo update-grub 
+1.2 Kernel Panic
+
+Symptoms:
+
+● Black screen with panic messages. ● Kernel panic – not syncing error.
+
+Causes:
+
+● Incompatible kernel update. ● Corrupt boot files.
+
+Solution:
+
+1. Reboot and select an older kernel from GRUB.
+
+Check logs using: journalctl -xb 
+2. Roll back the kernel update if necessary.
+
+2. Login and User Issues
+
+2.1 Forgotten Root Password
+
+Symptoms:
+
+● Cannot log in as root.
+
+Solution:
+
+1. Boot into recovery mode.
+
+Remount root partition: mount -o remount,rw /
+
+Reset password: passwd root 
+2. Reboot.
+
+2.2 SSH Connection Refused
+
+Symptoms:
+
+● Connection refused when trying to SSH.
+
+Causes:
+
+● SSH service not running. ● Firewall blocking SSH.
+
+Solution:
+
+Check SSH status: sudo systemctl status sshd Start service if stopped: sudo systemctl start sshd Check firewall rules: sudo ufw allow ssh 
+3. File System and Disk Issues
+
+3.1 Disk Space Full
+
+Symptoms:
+
+● No space left on device error.
+
+Solution:
+
+Check disk usage: df -h Find large files: du -ah / | sort -rh | head -20 
+1. Delete unnecessary files.
+
+3.2 Read-Only File System
+
+Symptoms:
+
+● Read-only file system error.
+
+Solution:
+
+Remount the filesystem: sudo mount -o remount,rw / Check and repair disk errors: sudo fsck -y /dev/sdXn 
+4. Process and Performance Issues
+
+4.1 High CPU Usage
+
+Symptoms:
+
+● System slows down. ● High load average in top output.
+
+Solution:
+
+Identify culprit process: top
+
+Kill process: kill -9 <PID> 
+5. Networking Issues
+
+5.1 No Internet Connection
+
+Solution:
+
+Check network interfaces: ip a Restart networking: sudo systemctl restart NetworkManager 
+6. Package Management Issues
+
+6.1 Broken Package Dependencies
+
+Symptoms:
+
+● Unable to correct problems, you have held broken
+
+packages
+ ● Package installation fails
+
+Solution:
+
+Identify broken packages: sudo apt --fix-broken install Clean package cache: sudo apt clean && sudo apt autoremove Reinstall dependencies:
+
+sudo apt install -f 
+6.2 Slow Package Installation
+
+Symptoms:
+
+● Installing or updating packages takes too long
+
+Solution:
+
+Update repository lists: sudo apt update Switch to a faster mirror: sudo sed -i
+
+'s/http:\/\/archive.ubuntu.com/http:\/\/mirror.example.com/'
+
+/etc/apt/sources.list 
+7. Service and Daemon Issues
+
+7.1 Service Not Starting
+
+Symptoms:
+
+● Failed to start service-name.service
+
+Solution:
+
+Check service logs: sudo journalctl -xe | grep service-name Restart the service: sudo systemctl restart service-name 
+1. Check configuration files for errors.
+
+7.2 Port Conflicts
+
+Symptoms:
+
+● Service fails to bind to a port
+
+Solut
+
+=== SOURCE: DevOps Shack.com DevOps Shack 100 Linux Interview Questions and Answers   Table ===
+DevOps Shack.com
+
+DevOps Shack
+
+100 Linux Interview Questions and Answers
+
+🧾 Table of Contents
+
+✅ Section 1: Linux Basics and Fundamentals
+
+1. What is Linux and how is it different from Unix?
+
+2. Explain the Linux boot process step-by-step.
+
+3. What are runlevels? How are they configured in modern distros?
+
+4. What are the major components of the Linux operating system?
+
+5. What are the differences between a process and a thread?
+
+✅ Section 2: Filesystem and File Management
+
+6. Explain the Linux Filesystem Hierarchy (FHS).
+
+7. What is inode? How does Linux manage files?
+
+8. What are hard links and soft links? When should you use each?
+
+9. How does Linux handle file permissions? Explain chmod, chown, and
+
+umask.
+
+10. Explain sticky bit, SUID, and SGID with examples.
+
+✅ Section 3: Linux Shell and Scripting
+
+11. What is a shell? List different types of shells in Linux.
+
+12. What are environment variables? How do you manage them?
+
+13. What is the difference between cron, at, and systemd
+
+timers?
+
+14. Explain how to write and debug a shell script.
+
+15. What is the significance of #!/bin/ in a shell script?
+
+✅ Section 4: Linux User and Permission Management
+
+16. How do you create, delete, and manage users in Linux?
+
+17. Explain how groups work in Linux. Difference between primary and
+
+secondary
+
+groups?
+
+18. How to set password aging policies and enforce them?
+
+19. What is /etc/passwd, /etc/shadow, and /etc/group?
+
+20. How do you manage sudo access for a user?
+
+✅ Section 5: Process Management and Job Scheduling
+
+21. Explain ps, top, htop, nice, renice, and kill commands.
+
+22. What is the difference between foreground and background
+
+processes?
+
+23. How do you trace zombie and orphan processes?
+
+24. What is strace and how do you debug using it?
+
+25. How does the cron scheduler work? How to schedule jobs with
+
+examples?
+
+✅ Section 6: Disk and Storage Management
+
+26. How to create and manage partitions using fdisk or parted?
+
+27. Explain LVM (Logical Volume Manager) in detail.
+
+28. How to mount and unmount file systems?
+
+29. How do you monitor disk space usage with df, du, and ncdu?
+
+30. What is the difference between ext3, ext4, xfs, and btrfs?
+
+✅ Section 7: Networking in Linux
+
+31. Explain how IP addressing and subnetting works in Linux.
+
+32. How do you check and configure network interfaces?
+
+33. Explain netstat, ss, ip, and ifconfig commands.
+
+34. How do you troubleshoot network issues using ping, traceroute, nmap, and tcpdump?
+
+35. How does Linux firewall (iptables and firewalld) work?
+
+✅ Section 8: System Monitoring and Performance Tuning
+
+36. How to monitor system performance with top, vmstat, iostat, sar, and dstat?
+
+37. What is load average? How to interpret it?
+
+38. How to monitor memory usage in real-time?
+
+39. How to analyze logs and system events?
+
+40. What are cgroups and how do they help in resource management?
+
+✅ Section 9: Package Management
+
+41. How does package management work in Debian vs RedHat-based
+
+systems?
+
+42. What are the differ
+
+=== SOURCE: DevOps Shack.com DevOps Shack Top 200 Linux Commands   Introduction Linux is… ===
+DevOps Shack.com
+
+DevOps Shack
+
+Top 200 Linux Commands
+
+📘 Introduction
+
+Linux is the backbone of modern computing. From powering over 90% of cloud
+
+infrastructure
+
+and
+
+web
+
+servers
+
+to
+
+enabling
+
+embedded
+
+systems,
+
+mobile
+
+devices,
+
+and
+
+supercomputers
+
+—
+
+Linux
+
+is
+
+everywhere.
+
+And
+
+at
+
+the
+
+heart
+
+of
+
+Linux
+
+is
+
+the
+
+command
+
+line
+
+—
+
+a
+
+powerful
+
+interface
+
+that
+
+gives
+
+users
+
+complete
+
+control
+
+over
+
+the
+
+operating
+
+system.
+
+Whether you're a system administrator, DevOps engineer, developer,
+
+cybersecurity
+
+analyst,
+
+or
+
+a
+
+beginner
+
+learning
+
+Linux
+
+for
+
+the
+
+first
+
+time,
+
+mastering
+
+the
+
+command
+
+line
+
+is
+
+non-negotiable.
+
+The
+
+terminal
+
+isn't
+
+just
+
+a
+
+tool;
+
+it’s
+
+a
+
+superpower
+
+that
+
+allows
+
+you
+
+to
+
+automate
+
+tasks,
+
+monitor
+
+systems,
+
+manage
+
+files,
+
+install
+
+software,
+
+troubleshoot
+
+issues,
+
+and
+
+interact
+
+with
+
+every
+
+layer
+
+of
+
+a
+
+Linux-based
+
+system
+
+—
+
+all
+
+at
+
+lightning
+
+speed.
+
+🎯 What This Document Offers
+
+This document is your ultimate companion to learning Linux. It contains the Top
+
+200
+
+most
+
+important
+
+and
+
+widely-used
+
+Linux
+
+commands,
+
+explained
+
+in
+
+plain
+
+English
+
+with
+
+clear
+
+syntax,
+
+use
+
+cases,
+
+examples,
+
+outputs,
+
+and
+
+pro
+
+tips
+
+for
+
+real-world
+
+usage.
+
+Each command is grouped into logical categories such as:
+
+● File management
+
+● Process monitoring
+
+● System information
+
+● Networking
+
+● Disk operations
+
+● User & group management
+
+● Package management
+
+● Text processing (awk, sed, grep, etc.)
+
+● Scripting
+
+● Permissions & ownership
+
+● System services
+
+● Security and troubleshooting
+
+Basic Linux Commands
+
+1. pwd – Prints the current working directory you're in.
+
+2. ls – Lists the files and directories in the current folder.
+
+.
+
+3. cd – Changes the directory you're working in.
+
+4. clear – Clears the terminal screen.
+
+5. echo – Displays a line of text or variable value.
+
+6. exit – Closes the terminal session.
+
+7. history – Displays a list of previously used commands.
+
+.
+
+8. man – Opens the manual page for a command.
+
+9. whoami – Prints the current logged-in username.
+
+10. hostname – Shows the system’s hostname.
+
+File and Directory Operations
+
+11. touch – Creates a new empty file.
+
+12. mkdir – Creates a new directory.
+
+13. rmdir – Removes empty directories.
+
+14. rm – Removes files or directories.
+
+15. cp – Copies files or directories.
+
+16. mv – Moves or renames files.
+
+17. stat – Displays detailed file information.
+
+18. file – Identifies the type of file (text, binary, image, etc.).
+
+19. basename – Returns the file name from a full path.
+
+20. dirname – Returns the directory path from a full file path.
+
+File Permissions & Ownership
+
+21. chmod – Changes file or directory permissions.
+
+22. chown – Changes file ownership (user and/or group).
+
+23. chgrp – Changes the group ownership of a file.
+
+24. umask – Sets default permissions for newly created files.
+
+25. lsattr – Lists file attributes on a Linux file system.
+
+26. chattr – Changes file attributes on a Linux file system.
+
+27. getfacl – Displays Access Control List (A
+
+=== SOURCE: Interview Ouestions > Linux — Apr 2025 ===
+200 Linux Scenario Based Questions & Answers
+
+DevOps Shack
+
+Q1. User can see (ls) a file but cannot edit it. 
+Scenario: 
+User lists a file but gets Permission denied when opening it with an editor like vim or nano. 
+Root Cause: 
+They have read permission (r) but not write permission (w) on the file. Editing requires write 
+access. 
+Solution: 
+1. Check ownership and permissions: 
+ls -l /path/to/file 
+2. Fix ownership (if needed): 
+sudo chown username:groupname /path/to/file 
+3. Or add write permission: 
+sudo chmod u+w /path/to/file 
+Tip: 
+Always use group permissions instead of giving everyone (others) write access for corporate 
+systems.
+
+Q2. Accidentally deleted a config file like /etc/ssh/sshd_config. 
+Scenario: 
+Important system config file is accidentally deleted, system services depending on it might 
+break after restart. 
+Root Cause: 
+When you delete a file, only its metadata link is removed. If the file is open by a running 
+service, recovery is possible. 
+Solution: 
+1. Find if any process is still using the deleted file: 
+lsof | grep deleted
+
+2. Recover the file: 
+cp /proc/PID/fd/FD /path/to/newfile 
+3. If no running process: 
+o Need to restore from backup 
+o If no backup, use file system recovery tools (like extundelete). 
+Tip: 
+Always configure automatic daily backups of /etc to avoid system outage due to config loss.
+
+Q3. "Read-only file system" error when creating or modifying files. 
+Scenario: 
+Commands like touch, mkdir, or editors fail with Read-only file system error. 
+Root Cause: 
+The file system was mounted read-only by the OS due to detecting disk or file system 
+corruption to avoid further damage. 
+Solution: 
+1. Confirm filesystem is read-only: 
+mount | grep ro 
+2. Check disk errors: 
+dmesg | tail 
+3. Reboot into rescue mode and run fsck: 
+sudo fsck /dev/sdX 
+4. Allow fsck to fix errors and reboot. 
+Tip: 
+Monitor disk health regularly using tools like smartctl to detect hardware failure early.
+
+Q4. "Permission denied" when creating file under /tmp/. 
+Scenario: 
+Even in /tmp/, user cannot create or write files and gets permission denied.
+
+Root Cause: 
+Permissions on /tmp were accidentally changed. /tmp should have 1777 permissions (world-
+writable with sticky bit). 
+Solution: 
+1. Check permissions: 
+ls -ld /tmp 
+2. Restore correct permissions: 
+sudo chmod 1777 /tmp 
+Tip: 
+/tmp must always have 1777 permissions; without it, apps and users can face weird errors.
+
+Q5. "No such file or directory" when executing a binary. 
+Scenario: 
+A binary file exists, but running it gives No such file or directory. 
+Root Cause: 
+Either missing dependent shared libraries, or wrong binary compiled for another 
+architecture. 
+Solution: 
+1. Check file architecture: 
+file ./binaryfile 
+2. Check dynamic dependencies: 
+ldd ./binaryfile 
+3. Install missing libraries if needed. 
+Tip: 
+Always compile binaries on the same OS and architecture when preparing for production.
+
+Q6. Deleted /var/log/messages log file by mistake. 
+Scenario: 
+Important system logs
+
+=== SOURCE: Interview Ouestions > Linux — Mar 2025 ===
+1. 
+2. 
+3. 
+4. 
+5. 
+6. 
+7. 
+8. 
+9. 
+10. 
+11. 
+12. 
+13. 
+14. 
+15. 
+16. 
+17. 
+18. 
+19. 
+100+ Linux Technical Interview Questions:
+Give any 3 examples of operating systems.
+Windows, Linux, and macOS.
+What is the root home directory?
+The root home directory is /root.
+Your company has terminated a server administrator. What is the ﬁrst thing as an 
+administrator you should do to enhance the security?
+Change the root password.
+How to check kernel version?
+Use the command uname -a.
+How to become a root user from a regular user?
+Use su - or sudo su to switch to the root user.
+How to check the computer name or hostname in Linux?
+Use the hostname command.
+List 3 basic commands to navigate the ﬁlesystem.
+cd, pwd, and ls.
+How to check network interfaces in Linux?
+Use ifconﬁg, ip addr, or ip a.
+List 3 di erent methods of adding a user.
+Methods include using useradd, adduser, or manually editing /etc/passwd and 
+/etc/shadow ﬁles.
+What is the command to create a new user?
+useradd username.
+How to change a user password?
+Use the command passwd username.
+Which directory has all the conﬁguration ﬁles?
+The /etc directory.
+List any 4 Linux distributions.
+Kali, Red Hat, CentOS, Ubuntu, and SUSE.
+How to log o  from the system?
+Use the exit command.
+How to create a directory?
+Use the mkdir command.
+Explain the purpose of the “touch” command.
+touch is used to create an empty ﬁle or update the timestamp of an existing ﬁle.
+If a command hangs, how to stop it and get the prompt back?
+Press Ctrl + C.
+Which command is used to count words or lines?
+wc.
+How to rename a ﬁle or directory?
+Use the mv command.
+20. 
+21. 
+22. 
+23. 
+24. 
+25. 
+26. 
+27. 
+28. 
+29. 
+30. 
+31. 
+32. 
+33. 
+34. 
+35. 
+36. 
+How to change a hostname in Linux?
+Edit /etc/hostname and /etc/hosts, then restart the system or use hostnamectl 
+set-hostname newname.
+What is the command to change ﬁle/directory permissions?
+Use chmod.
+What is the purpose of pipe (|)?
+To pass the output of one command as input to another command.
+What is /etc directory used for?
+It contains conﬁguration ﬁles for the system.
+Which command is used to list ﬁles in a directory?
+ls -l.
+There is a command which gives you information about other commands, please 
+explain that command and what is it used for?
+man is used to display the manual pages for other commands, providing 
+detailed information on usage and options.
+How to delete a ﬁle and a directory?
+Use rm ﬁlename for ﬁles and rmdir dirname for directories.
+What is the di erence between “tail” and “tail -10”?
+tail displays the last 10 lines of a ﬁle by default, while tail -10 explicitly speciﬁes 
+to display the last 10 lines.
+List 4 commands to display or read a ﬁle’s contents.
+cat, more, less, vi.
+Which command is used to read the top 5 lines of a ﬁle?
+head -5 ﬁlename.
+What are the di erent commands or methods to write to a ﬁle?
+echo > ﬁlename, vi ﬁlename, cat > ﬁlename.
+What are the di erent types of shells?
+sh, bash, ksh, csh, zsh.
+Which is the core of the operating system?
+Kernel.
+Whic
+
+=== SOURCE: Interview Ouestions > Linux — Mar 2025 ===
+https://www.linkedin.com/in/prasad-suman-mohan
+
+150+ Scenario-Based Interview Questions for 
+Linux – Part 2
+
+Image Credit: https://i.ytimg.com/vi/dVd_EA9tglo/hq720.jpg?sqp=-
+oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLC3bEfJIBOOHl8lyQaxmUhV3ZCgPA
+
+56. Securing File Transfers 
+Question: You need to securely transfer files between two servers. What tools would you 
+use? 
+Answer: Use scp or rsync over SSH to securely transfer files. 
+Example: 
+scp file.txt user@remote:/path/to/destination 
+rsync -avz file.txt user@remote:/path/to/destination 
+Explanation: 
+• scp: Securely copies files using SSH. 
+• rsync: Synchronizes files and directories over SSH.
+
+57. Handling File System Corruption
+
+https://www.linkedin.com/in/prasad-suman-mohan
+
+Question: A file system has become corrupted, and you need to recover data. What steps 
+would you take? 
+Answer: Unmount the file system and use fsck to check and repair it. 
+Example: 
+umount /dev/sdXn 
+fsck -f /dev/sdXn 
+Explanation: 
+• fsck: Checks and repairs file system errors.
+
+58. Optimizing Database Connections 
+Question: A database server is experiencing a high number of connections. How would you 
+optimize connection management? 
+Answer: Use connection pooling and adjust database configuration settings to manage 
+connections efficiently. 
+Example: 
+# Example for PostgreSQL 
+# Edit postgresql.conf 
+max_connections = 200 
+Explanation: 
+• Connection pooling: Reduces the overhead of establishing new connections.
+
+59. Monitoring System Load 
+Question: You need to monitor system load over time to identify performance bottlenecks. 
+What tools would you use? 
+Answer: Use sar and vmstat to monitor system load and performance metrics. 
+Example: 
+sar -u 1 3 
+vmstat 5 
+Explanation: 
+• sar: Collects and reports system activity. 
+• vmstat: Reports virtual memory statistics.
+
+https://www.linkedin.com/in/prasad-suman-mohan
+
+60. Handling Disk Space Alerts 
+Question: You receive an alert that a server is running out of disk space. How would you 
+identify and resolve the issue? 
+Answer: Use df and du to identify large files or directories, and clean up unnecessary files. 
+Example: 
+df -h 
+du -sh /* 2>/dev/null 
+Explanation: 
+• df: Displays disk space usage. 
+• du: Shows disk usage by directory.
+
+61. Managing System Updates 
+Question: You need to ensure that all servers are updated with the latest security patches. 
+How would you automate this process? 
+Answer: Use unattended-upgrades to automatically apply security updates. 
+Example: 
+sudo apt install unattended-upgrades 
+sudo dpkg-reconfigure --priority=low unattended-upgrades 
+Explanation: 
+• unattended-upgrades: Automatically installs security updates.
+
+62. Managing Cron Jobs 
+Question: You need to schedule a script to run every hour. How would you set this up? 
+Answer: Use crontab to schedule the script. 
+Example: 
+crontab -e 
+# Add the following line 
+0 * * * * /path/to/script.sh 
+Explanation: 
+• crontab -e: Edits the crontab file to schedule tasks.
+
+https:/
+
+=== SOURCE: L i n u x B a s i c C o m m a n d s D a y - 2 @ P r a s h a n t T i w a r i l s ===
+L
+i
+n
+u
+x
+
+B
+a
+s
+i
+c
+C
+o
+m
+m
+a
+n
+d
+s
+D
+a
+y
+-
+
+2
+@
+P
+r
+a
+s
+h
+a
+n
+t
+
+T
+i
+w
+a
+r
+i
+l
+s
+[
+l
+s
+
+O
+p
+t
+i
+o
+n
+s
+]
+l
+s
+
+-
+a
+l
+s
+
+-
+l
+c
+d
+c
+d
+
+.
+.
+c
+d
+
+.
+.
+/
+.
+.
+p
+w
+d
+d
+a
+t
+e
+@
+P
+rashant 
+Tiwari
+L
+i
+s
+t
+
+f
+i
+l
+e
+s
+
+a
+n
+d
+
+d
+i
+r
+e
+c
+t
+o
+r
+i
+e
+s
+.
+S
+h
+o
+w
+s
+
+a
+l
+l
+
+f
+i
+l
+e
+s
+,
+
+i
+n
+c
+l
+u
+d
+i
+n
+g
+
+h
+i
+d
+d
+e
+n
+
+f
+i
+l
+e
+s
+(
+s
+t
+a
+r
+t
+i
+n
+g
+
+w
+i
+t
+h
+
+.
+)
+D
+i
+s
+p
+l
+a
+y
+
+f
+i
+l
+e
+s
+
+i
+n
+
+a
+
+l
+o
+n
+g
+
+l
+i
+s
+t
+i
+n
+g
+
+f
+o
+r
+m
+a
+t
+
+(
+s
+h
+o
+w
+s
+p
+e
+r
+m
+i
+s
+s
+i
+o
+n
+s
+,
+
+o
+w
+n
+e
+r
+,
+
+s
+i
+z
+e
+,
+
+t
+i
+m
+e
+s
+t
+a
+m
+p
+,
+
+e
+t
+c
+.
+)
+C
+h
+a
+n
+g
+e
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+.
+M
+o
+v
+e
+
+u
+p
+
+1
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+
+(
+t
+o
+
+t
+h
+e
+
+p
+a
+r
+e
+n
+t
+
+d
+i
+r
+)
+2
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+
+s
+t
+e
+p
+
+b
+a
+c
+k
+S
+h
+o
+w
+
+c
+u
+r
+r
+e
+n
+t
+
+w
+o
+r
+k
+i
+n
+g
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+.
+S
+h
+o
+w
+
+t
+h
+e
+
+c
+u
+r
+r
+e
+n
+t
+
+d
+a
+t
+e
+
+&
+
+t
+i
+m
+e
+.
+F
+i
+l
+e
+
+&
+
+D
+i
+r
+e
+c
+t
+o
+r
+y
+
+N
+a
+v
+i
+g
+a
+t
+i
+o
+n
+m
+k
+d
+i
+r
+
+d
+i
+r
+n
+a
+m
+e
+r
+m
+
+-
+r
+f
+
+d
+i
+r
+n
+a
+m
+e
+
+@
+P
+rashant 
+Tiwari
+C
+r
+e
+a
+t
+e
+
+a
+
+n
+e
+w
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+.
+F
+o
+r
+c
+e
+f
+u
+l
+l
+y
+
+r
+e
+m
+o
+v
+e
+
+a
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+
+a
+n
+d
+i
+t
+s
+
+c
+o
+n
+t
+e
+n
+t
+s
+.
+
+D
+i
+r
+e
+c
+t
+o
+r
+y
+
+M
+a
+n
+a
+g
+e
+m
+e
+n
+t
+F
+i
+l
+e
+
+M
+a
+n
+a
+g
+e
+m
+e
+n
+t
+t
+o
+u
+c
+h
+
+f
+i
+l
+e
+_
+n
+a
+m
+e
+c
+p
+
+f
+i
+l
+e
+1
+
+f
+i
+l
+e
+2
+m
+v
+
+f
+i
+l
+e
+1
+
+f
+i
+l
+e
+2
+r
+m
+
+f
+i
+l
+e
+n
+a
+m
+e
+
+r
+m
+
+-
+r
+
+d
+i
+r
+n
+a
+m
+e
+
+C
+r
+e
+a
+t
+e
+
+a
+n
+
+e
+m
+p
+t
+y
+
+f
+i
+l
+e
+
+o
+r
+
+t
+o
+
+u
+p
+d
+a
+t
+e
+t
+h
+e
+
+t
+i
+m
+e
+s
+t
+a
+m
+p
+
+o
+f
+
+e
+x
+i
+s
+t
+i
+n
+g
+
+f
+i
+l
+e
+.
+
+C
+o
+p
+y
+
+a
+
+f
+i
+l
+e
+.
+M
+o
+v
+e
+
+o
+r
+
+r
+e
+n
+a
+m
+e
+
+a
+
+f
+i
+l
+e
+.
+D
+e
+l
+e
+t
+e
+
+a
+
+f
+i
+l
+e
+.
+D
+e
+l
+e
+t
+e
+
+a
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+
+a
+n
+d
+
+i
+t
+s
+
+c
+o
+n
+t
+e
+n
+t
+s
+.
+@
+P
+rashant Tiwari
+
+F
+i
+l
+e
+
+V
+i
+e
+w
+i
+n
+g
+
+&
+
+E
+d
+i
+t
+i
+n
+g
+c
+a
+t
+
+f
+i
+l
+e
+_
+n
+a
+m
+e
+m
+o
+r
+e
+
+f
+i
+l
+e
+_
+n
+a
+m
+e
+l
+e
+s
+s
+
+f
+i
+l
+e
+_
+n
+a
+m
+e
+[
+T
+e
+x
+t
+
+E
+d
+i
+t
+o
+r
+s
+]
+n
+a
+n
+o
+
+f
+i
+l
+e
+_
+n
+a
+m
+e
+v
+i
+m
+
+f
+i
+l
+e
+_
+n
+a
+m
+e
+V
+i
+e
+w
+
+f
+i
+l
+e
+
+c
+o
+n
+t
+e
+n
+t
+s
+.
+D
+i
+s
+p
+l
+a
+y
+s
+
+f
+i
+l
+e
+
+c
+o
+n
+t
+e
+n
+t
+
+o
+n
+e
+
+p
+a
+g
+e
+
+a
+t
+
+a
+t
+i
+m
+e
+.
+
+O
+n
+l
+y
+
+a
+l
+l
+o
+w
+s
+
+f
+o
+r
+w
+a
+r
+d
+
+n
+a
+v
+i
+g
+a
+t
+i
+o
+n
+.
+V
+i
+e
+w
+
+l
+a
+r
+g
+e
+
+f
+i
+l
+e
+s
+
+p
+a
+g
+e
+
+b
+y
+
+p
+a
+g
+e
+.
+A
+l
+l
+o
+w
+s
+
+b
+o
+t
+h
+
+f
+o
+r
+w
+a
+r
+d
+
+&
+
+b
+a
+c
+k
+w
+a
+r
+d
+n
+a
+v
+i
+g
+a
+t
+i
+o
+n
+S
+i
+m
+p
+l
+e
+
+&
+
+b
+e
+g
+i
+n
+n
+e
+r
+
+f
+r
+i
+e
+n
+d
+l
+y
+.
+
+E
+x
+i
+t
+:
+
+C
+T
+R
+L
+
++
+
+X
+
+S
+a
+v
+e
+:
+
+C
+T
+R
+L
+
++
+
+O
+A
+d
+v
+a
+n
+c
+e
+d
+,
+
+f
+a
+s
+t
+,
+
+&
+
+e
+f
+f
+i
+c
+i
+e
+n
+t
+.
+
+W
+o
+r
+k
+s
+
+i
+n
+c
+o
+m
+m
+a
+n
+d
+
+&
+
+i
+n
+s
+e
+r
+t
+
+m
+o
+d
+e
+s
+.
+🔹
+I
+n
+s
+e
+r
+t
+
+M
+o
+d
+e
+:
+
+P
+r
+e
+s
+s
+
+i
+🔹
+S
+a
+v
+e
+
+&
+
+E
+x
+i
+t
+:
+
+E
+S
+C
+
++
+
+:
+w
+q
+!
+🔹
+Q
+u
+i
+t
+
+W
+i
+t
+h
+o
+u
+t
+
+S
+a
+v
+i
+n
+g
+:
+
+E
+S
+C
+
++
+
+:
+q
+!
+@
+P
+rashant Tiwari
+g
+e
+d
+i
+t
+
+f
+i
+l
+e
+n
+a
+m
+e
+I
+t
+
+i
+s
+
+a
+
+g
+r
+a
+p
+h
+i
+c
+a
+l
+
+t
+e
+x
+t
+
+e
+d
+i
+t
+o
+r
+,
+
+u
+s
+e
+d
+
+i
+n
+d
+o
+c
+u
+m
+e
+n
+t
+a
+t
+i
+o
+n
+.
+R
+e
+l
+a
+t
+i
+v
+e
+
+P
+a
+t
+h
+R
+e
+l
+a
+t
+i
+v
+e
+
+p
+a
+t
+h
+
+i
+s
+
+t
+h
+e
+
+p
+a
+t
+h
+
+t
+o
+
+a
+
+f
+i
+l
+e
+/
+f
+o
+l
+d
+e
+r
+
+s
+t
+a
+r
+t
+i
+n
+g
+
+f
+r
+o
+m
+y
+o
+u
+r
+
+c
+u
+r
+r
+e
+n
+t
+
+l
+o
+c
+a
+t
+i
+o
+n
+.
+I
+t
+
+i
+s
+
+s
+h
+o
+r
+t
+c
+u
+t
+
+b
+a
+s
+e
+d
+
+o
+n
+
+y
+o
+u
+r
+
+c
+u
+r
+r
+e
+n
+t
+
+l
+o
+c
+a
+t
+i
+o
+n
+.
+E
+x
+a
+m
+p
+l
+e
+:
+
+c
+d
+
+D
+o
+c
+u
+m
+e
+n
+t
+s
+(
+I
+f
+
+y
+o
+u
+
+a
+r
+e
+
+i
+n
+
+/
+h
+o
+m
+e
+/
+u
+s
+e
+r
+/
+,
+
+t
+h
+i
+s
+
+c
+o
+m
+m
+a
+n
+d
+
+t
+a
+k
+e
+s
+
+y
+o
+u
+t
+o
+
+/
+h
+o
+m
+e
+/
+u
+s
+e
+r
+/
+D
+o
+c
+u
+m
+e
+n
+t
+s
+)
+A
+b
+s
+o
+l
+u
+t
+e
+
+P
+a
+t
+h
+A
+b
+s
+o
+l
+u
+t
+e
+
+p
+a
+t
+h
+
+i
+s
+
+t
+h
+e
+
+f
+
+
+=== SOURCE: L i n u x B a s i c s D a y - 1 @ P r a s h a n t T i w a r i L i n u x i s a n ===
+L
+i
+n
+u
+x
+
+B
+a
+s
+i
+c
+s
+D
+a
+y
+-
+
+1
+@
+P
+r
+a
+s
+h
+a
+n
+t
+
+T
+i
+w
+a
+r
+i
+L
+i
+n
+u
+x
+
+i
+s
+
+a
+n
+
+o
+p
+e
+r
+a
+t
+i
+n
+g
+
+s
+y
+s
+t
+e
+m
+
+l
+i
+k
+e
+
+w
+i
+n
+d
+o
+w
+s
+,
+m
+a
+c
+o
+s
+.
+I
+t
+’
+s
+
+o
+p
+e
+n
+-
+s
+o
+u
+r
+c
+e
+
+m
+e
+a
+n
+s
+
+a
+n
+y
+o
+n
+e
+
+c
+a
+n
+
+u
+s
+e
+,
+m
+o
+d
+i
+f
+y
+
+a
+n
+d
+
+s
+h
+a
+r
+e
+
+i
+t
+
+f
+o
+r
+
+f
+r
+e
+e
+.
+I
+t
+
+i
+s
+
+u
+s
+e
+d
+
+w
+i
+d
+e
+l
+y
+
+f
+o
+r
+
+i
+t
+s
+
+s
+t
+a
+b
+i
+l
+i
+t
+y
+,
+
+s
+e
+c
+u
+r
+i
+t
+y
+
+a
+n
+d
+f
+l
+e
+x
+i
+b
+i
+l
+i
+t
+y
+.
+W
+h
+a
+t
+
+i
+s
+
+L
+i
+n
+u
+x
+?
+@Prashant 
+Tiwar
+i
+L
+i
+n
+u
+x
+
+D
+i
+s
+t
+r
+i
+b
+u
+t
+i
+o
+n
+I
+t
+
+i
+s
+
+a
+
+v
+e
+r
+s
+i
+o
+n
+
+o
+f
+
+l
+i
+n
+u
+x
+
+t
+h
+a
+t
+
+c
+o
+m
+b
+i
+n
+e
+s
+
+t
+h
+e
+
+l
+i
+n
+u
+x
+k
+e
+r
+n
+e
+l
+
+w
+i
+t
+h
+
+a
+d
+d
+i
+t
+i
+o
+n
+a
+l
+
+s
+o
+f
+t
+w
+a
+r
+e
+,
+
+t
+o
+o
+l
+s
+
+a
+n
+d
+
+a
+u
+s
+e
+r
+
+i
+n
+t
+e
+r
+f
+a
+c
+e
+
+t
+o
+
+c
+r
+e
+a
+t
+e
+
+a
+
+c
+o
+m
+p
+l
+e
+t
+e
+
+o
+p
+e
+r
+a
+t
+i
+n
+g
+s
+y
+s
+t
+e
+m
+.
+
+E
+x
+a
+m
+p
+l
+e
+:
+-
+U
+b
+u
+n
+t
+u
+F
+e
+d
+o
+r
+a
+K
+a
+l
+i
+
+l
+i
+n
+u
+x
+R
+h
+e
+l
+C
+e
+n
+t
+O
+S
+T
+h
+e
+
+L
+i
+n
+u
+x
+
+s
+y
+s
+t
+e
+m
+
+s
+t
+o
+r
+e
+s
+
+a
+l
+l
+
+f
+i
+l
+e
+s
+
+o
+n
+
+f
+i
+l
+e
+s
+y
+s
+t
+e
+m
+s
+,
+
+w
+h
+i
+c
+h
+
+a
+r
+e
+
+o
+r
+g
+a
+n
+i
+z
+e
+d
+
+i
+n
+t
+o
+
+a
+
+s
+i
+n
+g
+l
+e
+i
+n
+v
+e
+r
+t
+e
+d
+
+t
+r
+e
+e
+
+k
+n
+o
+w
+n
+
+a
+s
+
+a
+
+f
+i
+l
+e
+-
+s
+y
+s
+t
+e
+m
+h
+i
+e
+r
+a
+r
+c
+h
+y
+.
+T
+h
+e
+
+/
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+
+i
+s
+
+t
+h
+e
+
+r
+o
+o
+t
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+
+a
+t
+
+t
+h
+e
+
+t
+o
+p
+o
+f
+
+t
+h
+e
+
+f
+i
+l
+e
+-
+s
+y
+s
+t
+e
+m
+
+h
+i
+e
+r
+a
+r
+c
+h
+y
+.
+
+L
+i
+n
+u
+x
+
+A
+r
+c
+h
+i
+t
+e
+c
+t
+u
+r
+e
+@Prashant 
+Tiwar
+i
+/
+b
+o
+o
+t
+:
+/
+d
+e
+v
+:
+
+/
+e
+t
+c
+:
+
+/
+h
+o
+m
+e
+:
+
+/
+r
+o
+o
+t
+:
+
+/
+r
+u
+n
+:
+L
+o
+c
+a
+t
+i
+o
+n
+@Prashant 
+Tiwar
+i
+F
+i
+l
+e
+s
+
+t
+o
+
+s
+t
+a
+r
+t
+
+t
+h
+e
+
+b
+o
+o
+t
+
+p
+r
+o
+c
+e
+s
+s
+.
+
+S
+p
+e
+c
+i
+a
+l
+
+d
+e
+v
+i
+c
+e
+
+f
+i
+l
+e
+s
+
+t
+h
+a
+t
+
+t
+h
+e
+
+s
+y
+s
+t
+e
+m
+u
+s
+e
+s
+
+t
+o
+
+a
+c
+c
+e
+s
+s
+
+h
+a
+r
+d
+w
+a
+r
+e
+.
+S
+y
+s
+t
+e
+m
+-
+s
+p
+e
+c
+i
+f
+i
+c
+
+c
+o
+n
+f
+i
+g
+u
+r
+a
+t
+i
+o
+n
+
+f
+i
+l
+e
+s
+.
+H
+o
+m
+e
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+,
+
+w
+h
+e
+r
+e
+
+r
+e
+g
+u
+l
+a
+r
+u
+s
+e
+r
+s
+
+s
+t
+o
+r
+e
+
+t
+h
+e
+i
+r
+
+d
+a
+t
+a
+
+a
+n
+d
+c
+o
+n
+f
+i
+g
+u
+r
+a
+t
+i
+o
+n
+
+f
+i
+l
+e
+s
+.
+H
+o
+m
+e
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+
+f
+o
+r
+
+t
+h
+e
+a
+d
+m
+i
+n
+i
+s
+t
+r
+a
+t
+i
+v
+e
+
+s
+u
+p
+e
+r
+u
+s
+e
+r
+,
+
+r
+o
+o
+t
+.
+R
+u
+n
+t
+i
+m
+e
+
+d
+a
+t
+a
+
+f
+o
+r
+
+p
+r
+o
+c
+e
+s
+s
+e
+s
+
+t
+h
+a
+t
+s
+t
+a
+r
+t
+e
+d
+
+s
+i
+n
+c
+e
+
+t
+h
+e
+
+l
+a
+s
+t
+
+b
+o
+o
+t
+.
+
+T
+h
+i
+s
+d
+a
+t
+a
+
+i
+n
+c
+l
+u
+d
+e
+s
+
+p
+r
+o
+c
+e
+s
+s
+
+I
+D
+
+f
+i
+l
+e
+s
+
+a
+n
+d
+l
+o
+c
+k
+
+f
+i
+l
+e
+s
+.
+P
+u
+r
+p
+o
+s
+e
+/
+t
+m
+p
+:
+/
+u
+s
+r
+:
+
+/
+v
+a
+r
+:
+@Prashant 
+Tiwar
+i
+F
+i
+l
+e
+s
+
+t
+h
+a
+t
+
+a
+r
+e
+
+n
+o
+t
+
+a
+c
+c
+e
+s
+s
+e
+d
+,
+
+c
+h
+a
+n
+g
+e
+d
+,
+o
+r
+
+m
+o
+d
+i
+f
+i
+e
+d
+
+f
+o
+r
+
+1
+0
+
+d
+a
+y
+s
+
+a
+r
+e
+
+d
+e
+l
+e
+t
+e
+d
+f
+r
+o
+m
+
+t
+h
+i
+s
+
+d
+i
+r
+e
+c
+t
+o
+r
+y
+
+a
+u
+t
+o
+m
+a
+t
+i
+c
+a
+l
+l
+y
+.
+
+I
+n
+s
+t
+a
+l
+l
+e
+d
+
+s
+o
+f
+t
+w
+a
+r
+e
+,
+
+s
+h
+a
+r
+e
+d
+
+l
+i
+b
+r
+a
+r
+i
+e
+s
+,
+i
+n
+c
+l
+u
+d
+i
+n
+g
+
+f
+i
+l
+e
+s
+,
+
+a
+n
+d
+
+r
+e
+a
+d
+-
+o
+n
+l
+y
+
+p
+r
+o
+g
+r
+a
+m
+d
+a
+t
+a
+.
+
+S
+i
+g
+n
+i
+f
+i
+c
+a
+n
+t
+
+s
+u
+b
+d
+i
+r
+e
+c
+t
+o
+r
+i
+e
+s
+
+i
+n
+c
+l
+u
+d
+e
+:
+
+•
+
+/
+u
+s
+r
+/
+b
+i
+n
+:
+
+U
+s
+e
+r
+
+c
+o
+m
+m
+a
+n
+d
+s
+
+•
+
+/
+u
+s
+r
+/
+s
+b
+i
+n
+:
+
+S
+y
+s
+t
+e
+m
+
+a
+d
+m
+i
+n
+i
+s
+t
+r
+a
+t
+i
+o
+n
+c
+o
+m
+m
+a
+n
+d
+s
+
+•
+
+/
+u
+s
+r
+/
+l
+o
+c
+a
+l
+:
+
+L
+o
+c
+a
+l
+l
+y
+
+c
+u
+s
+t
+o
+m
+i
+z
+e
+d
+s
+o
+f
+t
+w
+a
+r
+e
+.
+u
+s
+e
+d
+
+f
+o
+r
+
+f
+i
+l
+e
+s
+
+t
+h
+a
+t
+
+g
+r
+o
+w
+
+a
+n
+d
+
+c
+h
+a
+n
+g
+e
+o
+v
+e
+r
+
+t
+i
+m
+e
+,
+
+s
+u
+c
+h
+
+a
+s
+
+l
+o
+g
+s
+,
+
+c
+a
+c
+h
+e
+s
+,
+
+a
+n
+d
+t
+e
+m
+p
+o
+r
+a
+r
+y
+
+f
+i
+l
+e
+s
+.
+F
+o
+l
+l
+o
+w
+
+m
+e
+
+t
+o
+g
+e
+t
+
+m
+o
+r
+e
+a
+n
+d
+
+t
+i
+p
+s
+
+l
+i
+k
+e
+t
+h
+i
+s
+.
+@Prashant 
+Tiwar
+i
+I
+
+
+=== SOURCE: LINUX INTERVIEW QUESTIONS Crack Your Next Interview with Confidence! Author:… ===
+LINUX INTERVIEW QUESTIONS Crack Your Next Interview with Confidence!
+
+Author: Umar Shahzad
+
+1. Filesystem Basics
+
+1. What is the command to create an empty file?
+
+●
+ touch filename 2. How do you create a new directory?
+
+●
+ mkdir directory_name 3. How do you list all files in a directory?
+
+●
+ ls 4. How do you list all files, including hidden ones?
+
+●
+ ls -a 5. How do you display the current working directory?
+
+●
+ pwd 6. How do you move or rename a file?
+
+●
+ mv source_file destination_file 7. How do you copy a file?
+
+●
+ cp source_file destination_file 8. What command is used to delete a file?
+
+●
+ rm filename
+
+9. How do you delete a directory and its contents?
+
+●
+ rm -r directory_name 10. How do you display the contents of a file?
+
+●
+ cat filename 11. How do you display the first 10 lines of a file?
+
+●
+ head filename 12. How do you display the last 10 lines of a file?
+
+●
+ tail filename 13. How do you check free disk space?
+
+●
+ df -h 14. How do you display disk usage of a directory?
+
+●
+ du -sh directory_name 15. How do you search for a file by name in a directory?
+
+●
+ find /path/to/directory -name filename 16. How do you compress a file using gzip?
+
+●
+ gzip filename 17. How do you decompress a gzip file?
+
+●
+ gunzip filename.gz 18. How do you archive multiple files using tar?
+
+●
+ tar -czvf archive.tar.gz files 19. How do you extract a tar.gz archive?
+
+●
+ tar -xzvf archive.tar.gz 20. How do you mount a filesystem?
+
+●
+ mount device_name mount_point 21. How do you unmount a filesystem?
+
+●
+ umount mount_point 22. How do you create a symbolic link?
+
+●
+ ln -s target_file link_name 23. How do you view file types in a directory?
+
+●
+ file filename 24. How do you remove an empty directory?
+
+●
+ rmdir directory_name 25. How do you check for file existence?
+
+●
+ test -f filename
+
+2. File Permissions and Ownership
+
+26. How do you change file permissions?
+
+●
+ chmod permissions filename
+
+27. How do you change file ownership?
+
+●
+ chown user:group filename 28. How do you view file permissions in a directory?
+
+●
+ ls -l 29. How do you recursively change permissions for a directory?
+
+●
+ chmod -R permissions directory_name 30. What does the chmod 777 command do?
+
+●
+
+Grants
+
+read,
+
+write,
+
+and
+
+execute
+
+permissions
+
+to
+
+everyone
+ 31. How do you view a file's access control list (ACL)?
+
+●
+ getfacl filename 32. How do you set a default ACL for a directory?
+
+●
+ setfacl -d -m u:user:permissions directory_name 33. How do you set permissions for a script to be executable?
+
+●
+ chmod +x script.sh 34. What is the significance of the sticky bit in Linux?
+
+●
+
+It
+
+restricts
+
+file
+
+deletion
+
+in
+
+shared
+
+directories
+
+like
+ /tmp. 35. How do you add the sticky bit to a directory?
+
+●
+ chmod +t directory_name
+
+3. Process Management
+
+36. How do you view running processes?
+
+●
+ ps -aux 37. How do you kill a process by PID?
+
+●
+ kill PID 38. How do you find the PID of a running process by name?
+
+●
+ pgrep process_name 39. How do you display processes in real-time?
+
+●
+ top or htop 40. How do you sto
+
+=== SOURCE: Linux Cheat Sheet for All Levels 1. Basic Level Commands Navigation & File… ===
+Linux Cheat Sheet for All Levels 
+1. Basic Level Commands 
+Navigation & File Management 
+• pwd – Print the current working directory.
+
+• $ pwd 
+• /home/user 
+• ls – List files and directories.
+
+• $ ls 
+• file1.txt file2.txt dir1 dir2 
+• cd <dir> – Change directory.
+
+• $ cd dir1 
+• $ pwd 
+• /home/user/dir1 
+• mkdir <dir> – Create a directory.
+
+• $ mkdir new_dir 
+• rm <file> – Remove files.
+
+• $ rm file1.txt 
+Viewing Files 
+• cat <file> – View file content.
+
+• $ cat file1.txt 
+• Hello, World! 
+• head <file> – View the first 10 lines of a file.
+
+• $ head file1.txt 
+• Line 1 
+• Line 2 
+• tail <file> – View the last 10 lines of a file.
+
+• $ tail file1.txt
+
+2. Medium Level Commands 
+File Permissions and Ownership 
+• chmod – Change file permissions.
+
+• $ chmod 755 script.sh 
+• $ ls -l script.sh 
+• -rwxr-xr-x 1 user user 1234 Dec 29 10:00 script.sh 
+• chown – Change file ownership.
+
+• $ sudo chown root:root file1.txt 
+• $ ls -l file1.txt 
+• -rw-r--r-- 1 root root 5678 Dec 29 10:15 file1.txt 
+Disk Usage 
+• df -h – Check disk space usage.
+
+• $ df -h 
+• Filesystem
+
+Size Used Avail Use% Mounted on 
+• /dev/sda1
+
+50G
+
+25G
+
+25G 50% / 
+• du -sh <dir> – Check directory size.
+
+• $ du -sh /home/user 
+• 1.2G
+
+/home/user 
+Networking 
+• ping <host> – Test network connectivity.
+
+• $ ping google.com 
+• PING google.com (172.217.12.206): 56 data bytes 
+• 64 bytes from 172.217.12.206: icmp_seq=1 ttl=54 
+time=12.3 ms 
+• netstat -tuln – View active ports and connections.
+
+• $ netstat -tuln 
+• Proto Recv-Q Send-Q Local Address
+
+Foreign 
+Address
+
+State 
+• tcp
+
+0
+
+0 0.0.0.0:22
+
+0.0.0.0:*
+
+LISTEN 
+Process Management 
+• ps aux – View running processes.
+
+• $ ps aux 
+• USER
+
+PID %CPU %MEM
+
+VSZ
+
+RSS TTY
+
+STAT 
+START
+
+TIME COMMAND 
+• root
+
+1 0.0 0.2 16936 4328 ?
+
+Ss
+
+10:00
+
+0:01 /sbin/init 
+• kill <PID> – Terminate a process.
+
+• $ kill 1234
+
+3. Advanced Level Commands 
+Archiving & Compression 
+• tar – Archive files.
+
+• $ tar -cvf archive.tar dir1 
+• $ ls 
+• archive.tar 
+• gzip – Compress a file.
+
+• $ gzip archive.tar 
+• $ ls 
+• archive.tar.gz 
+• gunzip – Decompress a file.
+
+• $ gunzip archive.tar.gz 
+• $ ls 
+• archive.tar 
+System Monitoring 
+• top – Real-time system monitoring.
+
+• $ top 
+• Tasks: 100 total,
+
+2 running, 98 sleeping,
+
+0 
+stopped,
+
+0 zombie 
+• dmesg – Kernel message log.
+
+• $ dmesg | tail 
+• [ 1000.123456] usb 2-1: USB disconnect, device 
+number 4 
+• uptime – Check system uptime.
+
+• $ uptime 
+• 10:30:05 up 2 days, 4:22, 2 users, load average: 
+0.15, 0.20, 0.25 
+Package Management 
+For Debian/Ubuntu: 
+• apt-get install <package> – Install a package.
+
+• $ sudo apt-get install vim 
+• apt-get update && apt-get upgrade – Update and 
+upgrade packages.
+
+• $ sudo apt-get update && sudo apt-get upgrade 
+For RHEL/CentOS: 
+• yum install <package> – Install a package.
+
+• $ sudo yum install vim 
+Automation with Scripting 
+• Creating a Shell Script
+
+• $ nano script.sh 
+Content of script.sh:
+
+#!/bin/bash 
+echo "Hello, World!" 
+Make executable and run:
+
+$ chmod +x script.sh 
+$ ./script
+
+=== SOURCE: Linux Interview Question & Answers Linux Commands 1. What is Linux? - Linux is… ===
+Linux Interview Question & Answers
+
+Linux Commands
+
+1. What is Linux?
+
+- Linux is an open-source operating system kernel that forms the basis 
+for various Linux distributions.
+
+2. What are the main components of a Linux system?
+
+- The main components of a Linux system are the kernel, shell, and file 
+system.
+
+3. What is the role of the Linux kernel?
+
+- The Linux kernel is the core component of the operating system that 
+manages system resources and provides services to applications.
+
+4. What is a shell in Linux?
+
+- The shell is a command-line interpreter that allows users to interact 
+with the operating system. It accepts and executes commands.
+
+5. What are some popular Linux distributions?
+
+- Popular Linux distributions include Ubuntu, Debian, Fedora, CentOS, 
+and Red Hat Enterprise Linux.
+
+6. How do you change file permissions in Linux?
+
+- The "chmod" command is used to change file permissions in Linux. 
+For example, "chmod 755 filename" sets read, write, and execute 
+permissions for the owner and read and execute permissions for others.
+
+7. What is the purpose of the "grep" command?
+
+- The "grep" command is used to search for specific patterns within files. 
+It is often used for text searching and filtering.
+
+8. How do you find files in Linux?
+
+- The "find" command is used to search for files and directories in Linux 
+based on various criteria like name, size, and permissions.
+
+9. What is the purpose of the "top" command?
+
+- The "top" command is used to monitor system processes and resource 
+usage in real-time.
+
+10. How do you check the disk usage in Linux?
+
+- The "df" command is used to display disk space usage of file systems.
+
+11. What is a symbolic link in Linux?
+
+- A symbolic link, also known as a soft link, is a special type of file that 
+points to another file or directory.
+
+12. What is the purpose of the "tar" command?
+
+- The "tar" command is used to create and manipulate archive files, 
+often used for bundling multiple files into a single file.
+
+13. How do you start and stop services in Linux?
+
+- Service management varies among distributions. In systemd-based 
+systems, you can use commands like "systemctl start service_name" and 
+"systemctl stop service_name" to start and stop services.
+
+14. What is the purpose of the "ping" command?
+
+- The "ping" command is used to check the connectivity between a 
+source and a destination using Internet Control Message Protocol (ICMP) 
+echo requests and replies.
+
+15. How do you check the network configuration in Linux?
+
+- The "ifconfig" command is used to display the network configuration 
+of a Linux system. However, in newer distributions, it has been replaced 
+by the "ip" command.
+
+16. What is SSH and how does it work?
+
+- SSH (Secure Shell) is a cryptographic network protocol used for 
+secure remote login, command execution, and file transfer between 
+computers. It encrypts the communication between the client and server.
+
+17. How do you kill a process in Linux?
+
+- The "kill" command is used to te
+
+=== SOURCE: Linux Interview Question & Answers Linux Commands 1. What is Linux? - Linux is… ===
+Linux Interview Question & Answers
+
+Linux Commands
+
+1. What is Linux?
+
+- Linux is an open-source operating system kernel that forms the basis 
+for various Linux distributions.
+
+2. What are the main components of a Linux system?
+
+- The main components of a Linux system are the kernel, shell, and file 
+system.
+
+3. What is the role of the Linux kernel?
+
+- The Linux kernel is the core component of the operating system that 
+manages system resources and provides services to applications.
+
+4. What is a shell in Linux?
+
+- The shell is a command-line interpreter that allows users to interact 
+with the operating system. It accepts and executes commands.
+
+5. What are some popular Linux distributions?
+
+- Popular Linux distributions include Ubuntu, Debian, Fedora, CentOS, 
+and Red Hat Enterprise Linux.
+
+6. How do you change file permissions in Linux?
+
+- The "chmod" command is used to change file permissions in Linux. 
+For example, "chmod 755 filename" sets read, write, and execute 
+permissions for the owner and read and execute permissions for others.
+
+7. What is the purpose of the "grep" command?
+
+- The "grep" command is used to search for specific patterns within files. 
+It is often used for text searching and filtering.
+
+8. How do you find files in Linux?
+
+- The "find" command is used to search for files and directories in Linux 
+based on various criteria like name, size, and permissions.
+
+9. What is the purpose of the "top" command?
+
+- The "top" command is used to monitor system processes and resource 
+usage in real-time.
+
+10. How do you check the disk usage in Linux?
+
+- The "df" command is used to display disk space usage of file systems.
+
+11. What is a symbolic link in Linux?
+
+- A symbolic link, also known as a soft link, is a special type of file that 
+points to another file or directory.
+
+12. What is the purpose of the "tar" command?
+
+- The "tar" command is used to create and manipulate archive files, 
+often used for bundling multiple files into a single file.
+
+13. How do you start and stop services in Linux?
+
+- Service management varies among distributions. In systemd-based 
+systems, you can use commands like "systemctl start service_name" and 
+"systemctl stop service_name" to start and stop services.
+
+14. What is the purpose of the "ping" command?
+
+- The "ping" command is used to check the connectivity between a 
+source and a destination using Internet Control Message Protocol (ICMP) 
+echo requests and replies.
+
+15. How do you check the network configuration in Linux?
+
+- The "ifconfig" command is used to display the network configuration 
+of a Linux system. However, in newer distributions, it has been replaced 
+by the "ip" command.
+
+16. What is SSH and how does it work?
+
+- SSH (Secure Shell) is a cryptographic network protocol used for 
+secure remote login, command execution, and file transfer between 
+computers. It encrypts the communication between the client and server.
+
+17. How do you kill a process in Linux?
+
+- The "kill" command is used to te
+
+=== SOURCE: Linux Interview Question & Answers Linux Commands 1. What is Linux? - Linux is… ===
+Linux Interview Question & Answers
+
+Linux Commands
+
+1. What is Linux?
+
+- Linux is an open-source operating system kernel that forms the basis 
+for various Linux distributions.
+
+2. What are the main components of a Linux system?
+
+- The main components of a Linux system are the kernel, shell, and file 
+system.
+
+3. What is the role of the Linux kernel?
+
+- The Linux kernel is the core component of the operating system that 
+manages system resources and provides services to applications.
+
+4. What is a shell in Linux?
+
+- The shell is a command-line interpreter that allows users to interact 
+with the operating system. It accepts and executes commands.
+
+5. What are some popular Linux distributions?
+
+- Popular Linux distributions include Ubuntu, Debian, Fedora, CentOS, 
+and Red Hat Enterprise Linux.
+
+6. How do you change file permissions in Linux?
+
+- The "chmod" command is used to change file permissions in Linux. 
+For example, "chmod 755 filename" sets read, write, and execute 
+permissions for the owner and read and execute permissions for others.
+
+7. What is the purpose of the "grep" command?
+
+- The "grep" command is used to search for specific patterns within files. 
+It is often used for text searching and filtering.
+
+8. How do you find files in Linux?
+
+- The "find" command is used to search for files and directories in Linux 
+based on various criteria like name, size, and permissions.
+
+9. What is the purpose of the "top" command?
+
+- The "top" command is used to monitor system processes and resource 
+usage in real-time.
+
+10. How do you check the disk usage in Linux?
+
+- The "df" command is used to display disk space usage of file systems.
+
+11. What is a symbolic link in Linux?
+
+- A symbolic link, also known as a soft link, is a special type of file that 
+points to another file or directory.
+
+12. What is the purpose of the "tar" command?
+
+- The "tar" command is used to create and manipulate archive files, 
+often used for bundling multiple files into a single file.
+
+13. How do you start and stop services in Linux?
+
+- Service management varies among distributions. In systemd-based 
+systems, you can use commands like "systemctl start service_name" and 
+"systemctl stop service_name" to start and stop services.
+
+14. What is the purpose of the "ping" command?
+
+- The "ping" command is used to check the connectivity between a 
+source and a destination using Internet Control Message Protocol (ICMP) 
+echo requests and replies.
+
+15. How do you check the network configuration in Linux?
+
+- The "ifconfig" command is used to display the network configuration 
+of a Linux system. However, in newer distributions, it has been replaced 
+by the "ip" command.
+
+16. What is SSH and how does it work?
+
+- SSH (Secure Shell) is a cryptographic network protocol used for 
+secure remote login, command execution, and file transfer between 
+computers. It encrypts the communication between the client and server.
+
+17. How do you kill a process in Linux?
+
+- The "kill" command is used to te
+
+=== SOURCE: Linux Networking Commands 1. ifconfig - Display network interface information.… ===
+Linux Networking Commands
+
+1. ifconfig
+
+- Display network interface information. 
+Ifconfig
+
+2. ip
+
+- Show/manipulate routing, devices, policy routing, 
+and tunnels. 
+ip address show
+
+3. route
+
+- Display or manipulate the IP routing table. 
+route -n
+
+4. ping
+
+- Send ICMP ECHO_REQUEST to network hosts. 
+ping google.com
+
+5. traceroute
+
+- Print the route packets trace to network host. 
+traceroute google.com
+
+6. netstat
+
+- Print network connections, routing tables, interface 
+statistics, masquerade connections, and multicast 
+memberships. 
+netstat -an
+
+7. ss
+
+- Display socket statistics. 
+ss -tulpn
+
+8. hostname
+
+- Show or set the system's host name. 
+Hostname
+
+9. dig
+
+- DNS lookup utility. 
+dig google.com
+
+10. nslookup
+
+- Query Internet name servers interactively. 
+nslookup google.com
+
+11. route
+
+- Manipulate routing tables. 
+route add default gw 192.168.1.1
+
+12. iptables
+
+- Administration tool for IPv4 packet filtering and 
+NAT. 
+iptables -L
+
+13. tcpdump
+
+- Dump traffic on a network. 
+tcpdump -i eth0
+
+14. sshd
+
+- OpenSSH daemon. 
+service sshd restart
+
+15. telnet
+
+- User interface to the TELNET protocol. 
+telnet google.com 80
+
+16. scp
+
+- Secure copy (remote file copy program). 
+scp file.txt user@remote:/path/to/destination
+
+17. wget
+
+- Non-interactive network downloader. 
+wget http://example.com/file.zip
+
+18. curl
+
+- Command line tool for transferring data with URL 
+syntax. 
+curl http://example.com/api
+
+19. iptraf
+
+- Interactive color IP LAN monitor. 
+Iptraf
+
+20. iftop
+
+- Display bandwidth usage on an interface. 
+Iftop
+
+21. nmap
+
+- Network exploration tool and security scanner. 
+nmap -sP 192.168.1.0/24
+
+22. lsof
+
+- List open files. 
+lsof -i :80
+
+23. ethtool
+
+- Display or change ethernet card settings. 
+ethtool eth0
+
+24. arp
+
+- Display or modify the ARP cache. 
+arp -a
+
+25. route
+
+- Display or modify the IP routing table. 
+Route
+
+26. ss
+
+- Display socket statistics. 
+ss -s
+
+27. hostnamectl
+
+- Control the system hostname and related settings. 
+hostnamectl status
+
+28. resolvconf
+
+- Manage DNS information. 
+resolvconf -u
+
+29. mtr
+
+- Network diagnostic tool. 
+mtr google.com
+
+30. iwconfig
+
+- Configure a wireless network interface. 
+Iwconfig
+
+31. nc
+
+- Arbitrary TCP and UDP connections and listens. 
+nc -l 8080
+
+32. scp
+
+- Copy files between hosts on a network. 
+scp file.txt user@host:/path/to/destination
+
+33. ssh-keygen
+
+- Generate, manage, and convert authentication keys 
+for ssh. 
+ssh-keygen -t rsa
+
+34. ss
+
+- Show socket statistics. 
+ss -t -a
+
+35. tcpdump
+
+- Capture and display packets on a network. 
+tcpdump -i eth0 tcp port 80
+
+36. route
+
+- Add a new route. 
+route add -net 192.168.2.0 netmask 
+255.255.255.0 gw 192.168.1.1
+
+37. nmcli
+
+- Command-line client for NetworkManager. 
+nmcli connection show
+
+38. dig
+
+- Perform DNS lookups. 
+dig +short A google.com
+
+=== SOURCE: Linux interview questions for DevOps roles: 1. Basic Linux Commands   What are… ===
+Linux interview questions for DevOps roles:
+
+1. Basic Linux Commands 
+ What are some commonly used Linux commands in DevOps?
+
+o ls, cd, pwd, cp, mv, rm, cat, echo, grep, find, awk, sed, tar, zip, unzip 
+ How do you check disk usage and memory consumption in Linux?
+
+o Use df -h for disk usage and free -m for memory consumption. 
+ What is the difference between df -h and du -sh?
+
+o df -h shows disk usage of file systems, while du -sh shows the disk usage of 
+a specific directory. 
+ How do you find a file in Linux? (e.g., using find or locate)
+
+o Use find /path -name "filename" or locate filename (after running 
+updatedb). 
+ How do you count the number of lines in a file?
+
+o Use wc -l filename. 
+2. User and Permission Management 
+ How do you create a new user and assign them sudo privileges?
+
+o useradd username && passwd username && usermod -aG sudo 
+username 
+ What are file permissions in Linux? How do you modify them using chmod, 
+chown, and chgrp?
+
+o Use chmod to change permissions, chown to change file owner, and chgrp to 
+change group ownership. 
+ How do you find which users are currently logged in?
+
+o Use who, w, or users command. 
+ What is the difference between su and sudo?
+
+o su switches to another user, sudo executes a command as another user. 
+ Explain how Linux groups work and how to add a user to a group.
+
+o Groups manage user permissions; add a user using usermod -aG groupname 
+username. 
+3. Process Management 
+ How do you check running processes in Linux?
+
+o Use ps aux, top, or htop. 
+ How do you terminate a process using kill, killall, or pkill?
+
+o Use kill PID, killall process_name, or pkill process_name. 
+ What is the difference between nice and renice?
+
+o nice sets priority for a new process, renice changes priority of a running 
+process. 
+ How do you check CPU and memory usage of a process?
+
+o Use top, htop, or ps aux --sort=-%mem | head -5. 
+ What does the top and htop command do?
+
+o top shows running processes, htop is a more user-friendly version of top. 
+4. Package Management 
+ What is the difference between apt, yum, dnf, and zypper?
+
+o apt (Debian-based), yum & dnf (RHEL-based), zypper (SUSE-based) are 
+package managers. 
+ How do you install, remove, and update packages in Linux?
+
+o apt install/remove/update package (Debian), yum/dnf 
+install/remove/update package (RHEL). 
+ How do you find the location of an installed package?
+
+o Use which package or dpkg -L package. 
+ What is the difference between dpkg and rpm?
+
+o dpkg is for Debian-based systems, rpm is for RHEL-based systems. 
+5. Networking Commands 
+ How do you check open ports in Linux?
+
+o Use netstat -tulnp or ss -tulnp. 
+ What is the difference between netstat and ss?
+
+o ss is faster and more powerful than netstat. 
+ How do you test network connectivity using ping?
+
+o Use ping destination_IP. 
+ How do you check DNS resolution in Linux?
+
+o Use nslookup or dig domain.com. 
+ How do you find your system's IP address?
+
+o Use ip a or hostname -I. 
+
+
+=== SOURCE: Linux — Mar 2025 ===
+200+LinuxTechnical InterviewQuestions:
+1. Giveany3examplesofoperatingsystems.● Windows,Linux,andmacOS.2. Whatistheroothomedirectory?● Theroothomedirectoryis/root.3. Yourcompanyhasterminatedaserveradministrator. Whatistheﬁrstthingasanadministratoryoushoulddotoenhancethesecurity?● Changetherootpassword.4. Howtocheckkernelversion?● Usethecommanduname-a.5. Howtobecomearootuserfromaregularuser?● Usesu - orsudosu toswitchtotherootuser.6. HowtocheckthecomputernameorhostnameinLinux?● Usethehostnamecommand.7. List3basiccommandstonavigatetheﬁlesystem.● cd, pwd, andls.8. HowtochecknetworkinterfacesinLinux?● Useifconfigorip addrorip a9. List3differentmethodsofaddingauser.● Methodsincludeusinguseradd, adduser, ormanuallyediting
+/etc/passwdand/etc/shadowﬁles.10.Whatisthecommandtocreateanewuser?● useraddusername
+in/harunseker/ 1
+
+11.Howtochangeauserpassword?● Usethecommandpasswdusername.12.Whichdirectoryhasalltheconﬁgurationﬁles?● The/etcdirectory.13.Listany4Linuxdistributions.● Kali,RedHat,CentOS,Ubuntu,andSUSE.14.Howtologofffromthesystem?● Usetheexitcommand.15.Howtocreateadirectory?● Usethemkdircommand.16.Explainthepurposeofthe“touch”command.● touchisusedtocreateanemptyﬁleorupdatethetimestampofanexistingﬁle.17.Ifacommandhangs,howtostopitandgetthepromptback?● PressCtrl+ C.18.Whichcommandisusedtocountwordsorlines?● wc19.Howtorenameaﬁleordirectory?● Usethemvcommand.20.HowtochangeahostnameinLinux?● Edit/etc/hostnameand/etc/hosts, thenrestart thesystemoruse
+hostnamectlset-hostnamenewname.21.Whatisthecommandtochangeﬁle/directorypermissions?● Usechmod.22.Whatisthepurposeofpipe(|)?● Topasstheoutputofonecommandasinputtoanothercommand.23.Whatis /etcdirectoryusedfor?● Itcontainsconﬁgurationﬁlesforthesystem.24.Whichcommandisusedtolistﬁlesinadirectory?● ls -l25.Thereisacommandwhichgivesyouinformationaboutothercommands,pleaseexplainthatcommandandwhatisitusedfor?
+in/harunseker/ 2
+● manisusedtodisplaythemanualpagesforothercommands,providingdetailedinformationonusageandoptions.26.Howtodeleteaﬁleandadirectory?● Userm filenameforﬁlesandrmdirdirnamefordirectories.27.Whatisthedifferencebetween“tail”and“tail-10”?● taildisplaysthelast10linesofaﬁlebydefault,whiletail-10explicitlyspeciﬁestodisplaythelast10lines.28.List4commandstodisplayorreadaﬁle'scontents.● cat, more, less, vi.29.Whichcommandisusedtoreadthetop5linesofaﬁle?● head-5 filename30.Whatarethedifferentcommandsormethodstowritetoaﬁle?● echo> filename, vi filename, cat> filename.31.Whatarethedifferenttypesofshells?● Sh,bash,ksh,csh,zsh32.Whichisthecoreoftheoperatingsystem?● Kernel33.Whichamongthefollowinginteractsdirectlywithsystemhardware?● Kernel34.Listafewcommandsthatareusedintroubleshootingnetwork-relatedissues?● netstat: Displaysnetworkconnections.● tcpdump: Capturesandanalyzesnetworktraﬃc.● ping: Testsconnectivitytoanotherhost.● traceroute: Tracestheroutepacketstaketoanetworkhost.35.Howtocombine2ﬁlesinto1?E.g.,youhave3linesinﬁle“A”and5linesinﬁle“B”,whichcommandsyntaxtousethatwillcombineintooneﬁleof3+5=8lines?**● catfileA
+
+=== SOURCE: Linux — Mar 2025 ===
+50LinuxCommand thatCloudEngineersshouldknow
+Command:lsFull Form: ListSegments
+Deﬁnition:
+This
+command
+is
+used
+to
+list
+ﬁles
+and
+directories
+within
+the
+current
+working
+directory.
+Example:
+ls
+-l
+-
+This
+will
+list
+the
+ﬁles
+and
+directories
+along
+with
+their
+permissions,
+size,
+owner,
+group,
+and
+date
+and
+time
+of
+the
+last
+modiﬁcation.
+Command:pwdFull Form: PrintWorkingDirectory
+Deﬁnition:
+It
+shows
+the
+full
+pathname
+of
+the
+current
+working
+directory.
+Example:
+pwd
+-
+Executing
+this
+command
+will
+output
+the
+full
+path
+to
+the
+current
+directory.
+Command:cdFull Form: ChangeDirectory
+Deﬁnition:
+This
+command
+is
+used
+to
+change
+the
+current
+working
+directory.
+Example:
+cd
+/home/user/Documents
+-
+This
+will
+change
+the
+current
+directory
+to
+the
+Documents
+directory.
+
+2
+Command:mkdirFull Form: MakeDirectory
+Deﬁnition:
+This
+command
+is
+used
+to
+create
+new
+directories.
+Example:
+mkdir
+new_folder
+-
+This
+will
+create
+a
+new
+directory
+called
+"new_folder"
+in
+the
+current
+directory.
+Command:rmFull Form: Remove
+Deﬁnition:
+This
+command
+is
+used
+to
+remove
+ﬁles
+or
+directories.
+Example:
+rm
+myﬁle.txt
+-
+This
+will
+remove
+the
+ﬁle
+named
+"myﬁle.txt"
+in
+the
+current
+directory.
+Command:touchFull Form: Touch(Noabbreviation)
+Deﬁnition:
+This
+command
+is
+used
+to
+create
+new
+empty
+ﬁles
+.
+Example:
+touch
+newﬁle.txt
+-
+This
+will
+create
+a
+new
+empty
+ﬁle
+named
+"newﬁle.txt".
+Command:cpFull Form: Copy
+Deﬁnition:
+This
+command
+is
+used
+to
+copy
+ﬁles
+or
+directories
+from
+one
+location
+to
+another.
+Example:
+cp
+sourceﬁle.txt
+destinationfolder/
+-
+This
+will
+copy
+the
+ﬁle
+"sourceﬁle.txt"
+to
+the
+"destinationfolder".
+
+3
+Command:mvFull Form: Move
+Deﬁnition:
+This
+command
+is
+used
+to
+move
+or
+rename
+ﬁles
+or
+directories.
+Example:
+mv
+oldname.txt
+newname.txt
+-
+This
+will
+rename
+the
+ﬁle
+"oldname.txt"
+to
+"newname.txt".
+Command:catFull Form: Concatenate
+Deﬁnition:
+This
+command
+is
+used
+to
+display
+the
+content
+of
+ﬁles,
+concatenate
+ﬁles
+and
+redirect
+output
+in
+terminal
+or
+ﬁles.
+Example:
+cat
+ﬁle.txt
+-
+This
+will
+display
+the
+content
+of
+"ﬁle.txt".
+Command:lessFull Form: Less(Noabbreviation)
+Deﬁnition:
+This
+command
+is
+used
+for
+viewing
+ﬁles
+instead
+of
+opening
+the
+ﬁle.
+This
+is
+especially
+useful
+when
+dealing
+with
+large
+ﬁles.
+Example:
+less
+largeﬁle.txt
+-
+This
+will
+let
+you
+view
+"largeﬁle.txt"
+in
+a
+way
+that
+allows
+you
+to
+scroll
+through
+it
+with
+ease.
+Command:headFull Form: Head(Noabbreviation)
+Deﬁnition:
+This
+command
+outputs
+the
+ﬁrst
+part
+of
+ﬁles.
+Example:
+head
+ﬁle.txt
+-
+
+4
+This
+will
+output
+the
+ﬁrst
+10
+lines
+of
+"ﬁle.txt".
+Command:tailFull Form: Tail (Noabbreviation)
+Deﬁnition:
+This
+command
+outputs
+the
+last
+part
+of
+ﬁles.
+Example:
+tail
+ﬁle.txt
+-
+This
+will
+output
+the
+last
+10
+lines
+of
+"ﬁle.txt".
+Command:grepFull Form: Global RegularExpressionPrint
+Deﬁnition:
+This
+command
+searches
+ﬁles
+for
+lines
+that
+match
+a
+given
+pattern.
+Example:
+grep
+'hello'
+ﬁle.txt
+-
+This
+will
+search
+for
+the
+word
+'hello'
+in
+"ﬁle.txt"
+and
+print
+the
+lines
+where
+the
+pattern
+is
+found.
+Command:ﬁndFull Form: Find(Noabbreviation)
+Deﬁnition:
+This
+command
+is
+used
+to
+search
+and
+locate
+the
+list
+of
+ﬁles
+and
+dire
+
+=== SOURCE: Linux — Mar 2025 ===
+https://www.linkedin.com/in/vijaykumar-biradar-29b710161/
+
+Linux Fundamentals for beginners
+
+Why Use Linux
+
+Unix Vs Linux 
+Today Linux is in great demand. You can see the use of Linux everywhere. It's dominating on our servers, 
+desktop, smartphones and even used in some electrical devices like refrigerators. 
+Some people think Unix and Linux as synonyms, but that's not true. Many operating systems were developed 
+to be like Unix but none of them got the popularity as Linux. Linux is the clone of Unix. It has several 
+features similar to Unix, still have some key differences. Before Linux and Windows, computer world was 
+dominated by Unix. Unix is a copyrighted name and IBM AIX, HP-UX and Sun Solaris are only Unix 
+operating system remained till date.
+
+Difference between Linux and Unix 
+Comparison Linux Unix 
+Definition It is an open-source operating system 
+which is freely available to everyone. 
+It is an operating system which can be 
+only used by its copyrighters. 
+Examples It has different distros like Ubuntu, 
+Redhat, Fedora, etc 
+IBM AIX, HP-UX and Sun Solaris. 
+Users Nowadays, Linux is in great demand. 
+Anyone can use Linux whether a home 
+user, developer or a student. 
+It was developed mainly for servers, 
+workstations and mainframes.
+
+Usage Linux is used everywhere from servers, 
+PC, smartphones, tablets to mainframes 
+and supercomputers. 
+It is used in servers, workstations and 
+PCs. 
+Cost Linux is freely distributed, downloaded, 
+and distributed through magazines also. 
+And priced distros of Linux are also 
+cheaper than Windows. 
+Unix copyright vendors decide 
+different costs for their respective Unix 
+Operating systems. 
+Development As it is open source, it is developed by 
+sharing and collaboration of codes by 
+world-wide developers. 
+Unix was developed by AT&T Labs, 
+various commercial vendors and non-
+profit organizations. 
+Manufacturer Linux kernel is developed by the 
+community of developers from different 
+parts of the world. Although the father 
+of Linux, Linus Torvalds oversees 
+things. 
+Unix has three distributions IBM AIX, 
+HP-UX and Sun Solaris. Apple also 
+uses Unix to make OSX operating 
+system. 
+GUI Linux is command based but some 
+distros provide GUI based Linux. 
+Gnome and KDE are mostly used GUI. 
+Initially it was command based OS, 
+but later Common Desktop 
+Environment was created. Most Unix 
+distributions use Gnome. 
+Interface The default interface is BASH (Bourne 
+Again SHell). But some distros have 
+developed their own interfaces. 
+It originally used Bourne shell. But is 
+also compatible with other GUIs. 
+File system 
+support 
+Linux supports more file system than 
+Unix. 
+It also supports file system but lesser 
+than Linux. 
+Coding Linux is a Unix clone,behaves like Unix 
+but doesn't contain its code. 
+Unix contain a completely different 
+coding developed by AT&T Labs. 
+Operating 
+system 
+Linux is just the kernel. Unix is a complete package of 
+Operating system. 
+Security It provides higher security. Linux has 
+abo
+
+=== SOURCE: Page | 1 1. File and Directory Management   ls   List directory contents   cd ===
+Page | 1
+
+1. File and Directory Management 
+ ls – List directory contents 
+ cd – Change directory 
+ pwd – Print working directory 
+ cp – Copy files and directories 
+ mv – Move or rename files and directories 
+ rm – Remove files or directories 
+ mkdir – Make directories 
+ rmdir – Remove empty directories 
+ touch – Change file timestamps or create empty files 
+ find – Search for files in a directory hierarchy 
+ locate – Find files by name 
+ tree – Display directories in a tree-like format 
+ chmod – Change file permissions 
+ chown – Change file owner and group 
+ chgrp – Change group ownership 
+ stat – Display file or file system status 
+2. File Viewing and Editing 
+ cat – Concatenate and display file content 
+ tac – Concatenate and display file content in reverse 
+ more – View file content interactively (page by page) 
+ less – View file content interactively (scrollable) 
+ head – Output the first part of a file 
+ tail – Output the last part of a file 
+ nano – Text editor (terminal-based) 
+ vim / vi – Advanced text editors 
+ emacs – Text editor 
+ grep – Search text using patterns 
+ sed – Stream editor for filtering and transforming text 
+ awk – Pattern scanning and processing language 
+ cut – Remove sections from each line of files 
+ sort – Sort lines of text files
+
+Page | 2
+
+ uniq – Report or omit repeated lines 
+3. Process Management 
+ ps – Report a snapshot of current processes 
+ top – Display Linux tasks 
+ htop – Interactive process viewer (advanced top) 
+ kill – Send a signal to a process, typically to terminate 
+ killall – Terminate processes by name 
+ bg – Resume a suspended job in the background 
+ fg – Bring a job to the foreground 
+ jobs – List active jobs 
+ nice – Run a program with modified scheduling priority 
+ renice – Alter priority of running processes 
+ uptime – Show how long the system has been running 
+ time – Measure program running time 
+4. Disk Management 
+ df – Report file system disk space usage 
+ du – Estimate file space usage 
+ fdisk – Partition table manipulator for Linux 
+ lsblk – List information about block devices 
+ mount – Mount a file system 
+ umount – Unmount a file system 
+ parted – A partition manipulation program 
+ mkfs – Create a file system 
+ fsck – File system consistency check and repair 
+ blkid – Locate/print block device attributes 
+5. Networking 
+ ifconfig – Configure network interfaces 
+ ip – Show/manipulate routing, devices, and tunnels 
+ ping – Send ICMP Echo requests to network hosts
+
+Page | 3
+
+ netstat – Network statistics 
+ ss – Socket statistics (faster than netstat) 
+ traceroute – Trace the route packets take to a network host 
+ nslookup – Query Internet name servers interactively 
+ dig – DNS lookup utility 
+ wget – Non-interactive network downloader 
+ curl – Transfer data with URLs 
+ scp – Secure copy files between hosts 
+ ssh – Secure shell for remote login 
+ ftp – File Transfer Protocol client 
+6. User and Group Management 
+ userad
+
+=== SOURCE: Page. 1 www.linkedin.com/in/saqlain-khan-1779621b3 CREATED BY: HAFIZ MUHAMMAD… ===
+Page. 1
+
+www.linkedin.com/in/saqlain-khan-1779621b3 
+CREATED BY: HAFIZ MUHAMMAD SAQLAIN KHAN 
+Mastering Network Management in Red Hat Linux: A 
+Comprehensive Guide for Administrators 
+1. Introduction
+
+Network management in Red Hat Linux is a critical competency for system administrators, 
+encompassing the configuration, monitoring, and troubleshooting of network interfaces, 
+connections, and routing mechanisms. Efficient network management ensures system stability, 
+security, and optimal performance. This guide presents an in -depth analysis of essential 
+commands, configuration files, troubleshooting methodologies, and advanced networking 
+paradigms, equipping administrators with the requisite expertise to maintain a robust networking 
+infrastructure. 
+Note: Network interface names (e.g., ens160, ens224) are dynamically assigned based on the 
+system's hardware configuration. Administrators should verify interface names using ip a or nmcli 
+dev status before executing network-related commands. 
+What is a Network Interface? 
+A network interface is a connection point that allows a computer or virtual machine (VM) to 
+communicate with a network. It can be physical (like an Ethernet or Wi-Fi adapter) or virtual (used 
+in virtualization platforms like VMware). 
+Types of Network Interfaces in Virtualization 
+1. Bridge Networking (vmnet0): The VM acts like a physical machine on the same network 
+as the host. It gets an IP address from the same network as the host and can communicate 
+directly with other devices. 
+2. NAT (Network Address Translation) (vmnet8): The VM shares the host’s IP address to 
+access external networks (like the internet). It allows outgoing connections but blocks 
+incoming ones. 
+3. Host-Only Networking (vmnet1): The VM can communicate only with the host and other 
+VMs in the same host-only network. It has no access to external networks like the internet.
+
+Page. 2
+
+www.linkedin.com/in/saqlain-khan-1779621b3 
+CREATED BY: HAFIZ MUHAMMAD SAQLAIN KHAN 
+2. Network Management Commands
+
+2.1 Inspecting Network Adapters and Connections 
+Category Command Description 
+Display Network 
+Adapters 
+nmcli dev status Enumerates all network interfaces and their 
+current states. 
+Detailed Adapter 
+Information 
+nmcli device 
+show 
+Provides extensive hardware and configuration 
+details. 
+Active Connections nmcli con show Displays currently active network connections. 
+List IP Addresses ip a Enumerates all network interfaces and assigned 
+IPs. 
+Legacy Interface 
+Display 
+ifconfig Displays network interfaces (deprecated in 
+modern systems). 
+Alternative to ip a ip addr Provides a detailed view of IP addresses and 
+configurations.
+
+2.2 Managing Network Interfaces
+
+Category Command Description 
+Bring Up Interface nmcli con up ens160 Activates the network interface 
+ens160. 
+Bring Down 
+Interface 
+nmcli con down ens160 Deactivates the network interface 
+ens160. 
+Enable Interface ifup ens224 Brings an interface online. 
+Disable Interface ifdown ens224 Shuts 
+
+=== SOURCE: SHELLSCRIPTING By: Jaswanth T ___ Notes   Introduction to Shell Scripting… ===
+SHELLSCRIPTING 
+By: Jaswanth T 
+___ 
+Notes
+
+🖥 Introduction to Shell Scripting Basics 
+🔹 What is Shell Scripting? 
+Shell scripting is a powerful way to automate and streamline tasks within a Linux 
+environment by writing and executing commands. It’s invaluable for system 
+administration, task automation, and enhancing productivity. 
+🔑 Types of Shells: Some popular shells include: 
+● bash (Bourne Again Shell) - most widely used 
+● sh (Bourne Shell) 
+● ksh (KornShell) 
+● zsh (Z Shell)
+
+💡 Check Your Shell Type: Run the following command to identify your current 
+shell: 
+echo $0
+
+🔹 How to Create a File and Use It? 
+Creating and editing files using the vi command is a core skill for working in 
+Unix and Linux environments. Here’s a step-by-step guide on creating a file, 
+entering content, and saving it with vi, as well as how to run your script and 
+view its output. 
+1. Opening vi to Create a New File ○ Open 
+your terminal. 
+Type the following command to create or open a file in vi: 
+vi my_script.sh 
+○ Note: If my_script.sh doesn’t exist, vi will create a new file with 
+that name. 
+2. Basic vi Editing Commands 
+When you open vi, you’re in command mode, where you can issue 
+commands to vi. Here’s how to enter insert mode to start writing: 
+○ Press i to enter insert mode. You can now type content into the file. 
+3. Writing Content in vi 
+Let’s create a simple script that prints "Hello, World!" and displays the 
+current date and time. With vi in insert mode, type the following script: 
+#!/bin/bash 
+# This script prints a greeting and the current date 
+and time
+
+echo "Hello, World!" echo "The 
+current date and time is:" date 
+4. Exit Insert Mode: 
+Press Esc to return to command mode. 
+5. Saving and Exiting in vi 
+To save the file and exit vi: 
+○ Type :wq and press Enter. :wq 
+means "write (save) and quit." 
+Alternatively: 
+○ To save without exiting, type :w and press Enter. 
+○ To quit without saving changes, type :q! and press Enter. 
+6. Making the Script Executable 
+Before running your script, you need to make it executable. In the 
+terminal, type: 
+chmod +x my_script.sh 
+7. Running the Script and Viewing Output 
+Run the script by typing: 
+./my_script.sh 
+8. Run the Script Without Making It 
+Executable: 
+You can directly run it with bash by typing: 
+bash my_script.sh 
+View the Output:
+
+When you execute the script, you should see output similar to this: 
+Hello, World! 
+The current date and time is: 
+Tue Nov 6 12:34:56 UTC 2023
+
+🔹 Process Control Shortcuts 
+● Ctrl + C: Terminates a running process immediately. Useful for 
+stopping commands or scripts that are running. 
+● Ctrl + Z: Pauses (stops) a process and sends it to the background. 
+Resume with fg (foreground) or bg (background).
+
+🔹 Comments in Shell Scripting 
+Single-Line Comments: 
+Use the # symbol at the beginning of a line to create a single-line comment. 
+# This is a single-line comment 
+echo "Hello, World!" # This comment is on the same line as 
+a command 
+Multi-Line Comments: 
+Bash does not have
+
+=== SOURCE: Srujana   Cloud & Dev-Ops Explorer A Comprehensive Guide to Bash Scripting for… ===
+Srujana – Cloud & Dev-Ops Explorer
+
+A Comprehensive Guide to Bash Scripting for DevOps Engineers
+
+ Bash (Bourne Again Shell) is one of the most essential scripting languages for DevOps engineers. 
+It is used for automating system administration tasks, managing cloud infrastructure, creating 
+CI/CD pipelines, and handling configuration management. 
+1. What is Bash Scripting? 
+ Bash scripting is a way of automating command-line tasks in Unix-based operating systems like 
+Linux and macOS. A Bash script is simply a text file containing a series of commands that are 
+executed sequentially by the shell.
+
+Key Features of Bash Scripting 
+ Automates repetitive tasks like backups, updates, and deployments. 
+ Executes multiple commands in a sequence, reducing manual effort. 
+ Handles file operations (create, delete, move, modify files). 
+ Can be used in CI/CD pipelines and cloud automation.
+
+2. Why Should DevOps Engineers Learn Bash Scripting?
+
+ Bash scripting is a fundamental skill for DevOps engineers for the following reasons:
+
+Server Automation & Configuration Management
+
+ Automating software installation and configuration on Linux servers.
+
+Example: Updating system packages using Bash scripts.
+
+CI/CD Pipeline Integration
+
+ Writing Bash scripts to automate code building, testing, and deployment in Jenkins, GitHub 
+Actions, and GitLab CI/CD. Example: A script that triggers deployment when code is pushed to 
+GitHub. 
+Srujana – Cloud & Dev-Ops Explorer
+
+Cloud Infrastructure Automation 
+ Automating AWS, Azure, and GCP services using CLI tools inside Bash scripts. 
+Example: A script that provisions AWS EC2 instances using AWS CLI.
+
+Log Monitoring & System Alerts 
+ Writing Bash scripts to monitor system logs and send alerts when issues arise. 
+Example: A script that scans logs for error messages and emails the DevOps team.
+
+Containerization & Kubernetes Management 
+ Automating Docker container builds and Kubernetes deployments using Bash. 
+Example: A script that restarts a Kubernetes pod if it crashes.
+
+3. Bash Scripting Basics 
+ Before diving into advanced scripting, let’s cover the fundamentals. 
+1. Creating and Running a Bash Script 
+To create a Bash script, follow these steps:
+
+Step 1: Create a Script File 
+nano myscript.sh 
+or 
+vim myscript.sh
+
+Step 2: Add the Shebang (Interpreter Directive) 
+#!/bin/bash 
+echo "Hello, DevOps Engineer!"
+
+Step 3: Save and Exit 
+Press Ctrl + X, then Y, and hit Enter. 
+Srujana – Cloud & Dev-Ops Explorer
+
+Step 4: Make the Script Executable 
+chmod +x myscript.sh
+
+Step 5: Run the Script 
+./myscript.sh 
+Output: 
+Hello, DevOps Engineer!
+
+4. Bash Scripting Fundamentals
+
+1. Variables in Bash 
+#!/bin/bash 
+name="DevOps Engineer" 
+echo "Welcome, $name!" 
+Output: 
+Welcome, DevOps Engineer!
+
+2. User Input Handling
+
+#!/bin/bash 
+echo "Enter your name:" 
+read user_name 
+echo "Hello, $user_name!"
+
+3. Conditional Statements (if-else) 
+#!/bin/bash 
+echo "Enter a number:" 
+read num 
+if [ $num -gt 10 ]; then 
+Srujana – Cloud & De
+
+=== SOURCE: What is LVM? In simple terms, LVM (Logical Volume Manager) is a tool in Linux… ===
+What is LVM?
+
+In simple terms, LVM (Logical Volume Manager) is a tool in Linux that helps you manage your
+
+computer’s
+
+storage.
+
+It
+
+lets
+
+you
+
+create,
+
+resize,
+
+and
+
+organize
+
+your
+
+storage
+
+space
+
+without
+
+being
+
+stuck
+
+with
+
+the
+
+size
+
+of
+
+your
+
+hard
+
+drives
+
+or
+
+partitions.
+
+Imagine LVM as a flexible storage organizer . You can move, resize, and even combine storage
+
+from
+
+different
+
+hard
+
+drives
+
+to
+
+create
+
+one
+
+big
+
+storage
+
+space
+
+that’s
+
+easy
+
+to
+
+manage.
+
+It
+
+helps
+
+you
+
+make
+
+the
+
+most
+
+of
+
+your
+
+storage
+
+and
+
+avoid
+
+running
+
+out
+
+of
+
+space.
+
+Don’t worry if this sounds a bit complicated right now. As you read on, we’ll explain how
+
+volumes
+
+work
+
+and
+
+how
+
+LVM
+
+fits
+
+into
+
+the
+
+picture.
+
+What are volumes in linux ?
+
+volumes in Linux are like containers that hold your data. They represent storage space on your
+
+computer
+
+or
+
+server,
+
+and
+
+you
+
+can
+
+use
+
+them
+
+to
+
+store
+
+files
+
+and
+
+programs.
+ These volumes can be physical (like an SSD or HDD), partitioned sections of a physical disk, or
+
+even
+
+logical/virtual
+
+disks
+
+managed
+
+by
+
+a
+
+tool
+
+called
+
+LVM
+
+(Logical
+
+Volume
+
+Manager)
+.
+
+Types of Volumes
+
+1. Physical Volume (PV)
+
+● A physical volume is the actual storage device, like an HDD (Hard Disk Drive) or SSD
+
+(Solid
+
+State
+
+Drive)
+.
+
+Example: Your laptop's SSD or an external hard drive.
+
+📌 Key Point: Every volume must exist on a physical storage device.
+
+2. Volume Group (VG) ● A storage pool made from multiple physical volumes.
+
+Example: Combining an SSD[10 GB ] and HDD [ 10 GB ]
+
+in one group .
+
+📌 Key Point : VGs merge multiple devices into one.
+
+3. Logical Volume (LV) - Managed by LVM
+
+● A flexible storage unit inside a volume group, easy to resize or move.
+
+Example: Creating a 10GB Logical Volume (LV) from a 20GB Volume Group (VG)
+
+📌 Key Point : LVs allow for dynamic storage management, including resizing and moving.
+
+What is AWS EBS?
+
+AWS EBS (Elastic Block Store) is a block storage service that provides persistent storage for
+
+Amazon
+
+EC2
+
+instances.
+
+It
+
+behaves
+
+like
+
+a
+
+physical
+
+volume
+
+(PV)
+
+in
+
+Linux,
+
+offering
+
+block-level
+
+storage
+
+that
+
+can
+
+be
+
+attached
+
+to
+
+instances.
+
+📌 Key Point: AWS EBS is not an LV , but it is used as a PV in LVM .
+
+📌
+
+You
+
+can
+
+create
+
+Logical
+
+Volumes
+
+(LVs)
+
+inside
+
+AWS
+
+EBS
+
+by
+
+using
+
+LVM
+
+for
+
+more
+
+flexibility
+
+in
+
+managing
+
+your
+
+storage.
+
+Now, let's set up LVM on top of AWS EBS
+
+I already have an EC2 instance running, but you can launch one yourself—it's a simple process.
+
+By
+
+default,
+
+AWS
+
+provides
+
+an
+
+8GB
+
+EBS
+
+volume
+
+with
+
+your
+
+instance
+
+unless
+
+you
+
+customize
+
+the
+
+storage
+
+settings
+
+during
+
+creation.
+
+Connect to Remote Server via SSH
+
+Now Let’s understand some Important commands
+
+` 1- Lsblk -This command in Linux shows a clear list of all storage devices and their partitions.
+
+Think
+
+of
+
+it
+
+as
+
+a
+
+map
+
+of
+
+your
+
+system's
+
+disks—it
+
+tells
+
+you
+
+what
+
+storage
+
+is
+
+available,
+
+how
+
+it's
+
+divided,
+
+and
+
+where
+
+it's
+
+mounted.
+
+Breaking it Down
+
+● NAME → The disk name ( xvda ) ● SIZE → T

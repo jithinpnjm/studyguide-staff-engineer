@@ -1,0 +1,603 @@
+DOMAIN: scripting-bash-shell
+DOCS WITH TEXT: 4
+
+=== SOURCE: Bash scripting cheatsheet Introduction Example Variables String quotes Shell… ===
+Bash scripting cheatsheet 
+Introduction
+
+Example
+
+Variables
+
+String quotes
+
+Shell execution
+
+Generally quote your variables unless they contain wildcards to expand or command fragments.
+
+Conditional execution
+
+Functions
+
+Conditionals
+
+Strict mode
+
+Brace expansion
+
+Same as
+
+Same as
+
+Same as
+
+Same as
+
+Parameter expansions 
+Basics
+
+Prefix name expansion
+
+Indirection
+
+Substitution
+
+Comments
+
+Remove suffix
+
+Remove prefix
+
+Remove long suffix
+
+Remove long suffix
+
+Remove long prefix
+
+Remove long prefix
+
+Replace first match
+
+Replace all
+
+Replace suffix
+
+Replace prefix
+
+Substrings
+
+Length
+
+Manipulation
+
+Default values
+
+Substring
+
+( 
+position, length 
+)
+
+Substring from the right
+
+Length of
+
+Loops
+
+Basic for loop
+
+C-like for loop
+
+Ranges
+
+, or
+
+if unset (or null)
+
+Set
+
+to
+
+if unset (or null)
+
+if
+
+is set (and not null)
+
+Show error message and exit if
+
+is unset (or null) 
+Omitting the
+
+removes the (non)nullity checks, e.g.
+
+expands to
+
+if unset otherwise
+
+.
+
+With step size
+
+Reading lines
+
+Forever
+
+Functions 
+Defining functions
+
+Returning values
+
+=== SOURCE: Linux Cheat Sheet File and Directory Management 1. ls - Lists directory… ===
+Linux Cheat Sheet
+
+File and Directory Management 
+1. ls - Lists directory contents. 
+o ls - Basic list. 
+o ls -l - List with details. 
+o Example: ls -la Directory 
+2. cd - Change the current directory. 
+o cd Directory - Changes to "Directory". 
+o Example: cd /home 
+3. pwd - Print the current directory path. 
+o pwd - Outputs the current directory. 
+o Example: pwd 
+4. mkdir - Create a new directory. 
+o mkdir Directory - Creates "Directory". 
+o Example: mkdir /home/Directory 
+5. rmdir - Remove an empty directory. 
+o rmdir Directory - Deletes "Directory". 
+o Example: rmdir /home/Directory
+
+6. rm - Delete ﬁles and directories. 
+o rm ﬁle - Deletes "ﬁle". 
+o rm -r Directory - Deletes "Directory" 
+recursively. 
+o Example: rm -rf /home/Directory 
+7. cp - Copy ﬁles or directories. 
+o cp ﬁle new_ﬁle - Copies "ﬁle" to "new_ﬁle". 
+o cp -r Directory new_directory - Copies 
+"Directory" recursively. 
+o Example: cp -r Directory /backup/ 
+8. mv - Move or rename ﬁles and directories. 
+o mv ﬁle new_ﬁle - Renames "ﬁle" to 
+"new_ﬁle". 
+o Example: mv ﬁle /home/Directory/ 
+9. touch - Create an empty ﬁle. 
+o touch ﬁle - Creates "ﬁle". 
+o Example: touch /home/Directory/newﬁle 
+10. cat - Concatenate and display ﬁle contents. 
+o cat ﬁle - Shows contents of "ﬁle". 
+o Example: cat ﬁle
+
+11. less - View ﬁle content interacƟvely. 
+o less ﬁle - Opens "ﬁle" in viewer. 
+o Example: less ﬁle 
+12. more - View ﬁle content page-by-page. 
+o more ﬁle - Views ﬁle with paging. 
+o Example: more ﬁle 
+13. head - Show the ﬁrst few lines of a ﬁle. 
+o head -n 5 ﬁle - Shows ﬁrst 5 lines. 
+o Example: head ﬁle 
+14. tail - Show the last few lines of a ﬁle. 
+o tail -n 5 ﬁle - Shows last 5 lines. 
+o tail -f ﬁle - Shows last lines with live updates. 
+o Example: tail -f /var/log/syslog 
+15. ﬁnd - Search for ﬁles and directories. 
+o ﬁnd Directory -name "*.txt" - Searches for .txt 
+ﬁles. 
+o Example: ﬁnd /home -type f -name "*.sh" 
+16. locate - Find ﬁles by name (needs mlocate 
+package). 
+o locate ﬁle - Searches for "ﬁle". 
+o Example: locate ﬁle
+
+17. du - Disk usage of ﬁles and directories. 
+o du -sh Directory - Shows size of "Directory". 
+o Example: du -h Directory 
+18. df - Display disk space usage. 
+o df -h - Disk usage in human-readable format. 
+o Example: df -h 
+19. stat - Display detailed ﬁle or directory status. 
+o stat ﬁle - Shows stats of "ﬁle". 
+o Example: stat ﬁle 
+20. tree - Show directory structure in tree format. 
+o tree Directory - Displays "Directory" structure. 
+o Example: tree /home
+
+File Permissions and Ownership 
+21. chmod - Change ﬁle permissions. 
+o chmod 755 ﬁle - Sets permissions for "ﬁle". 
+o Example: chmod +x script.sh 
+22. chown - Change ﬁle ownership. 
+o chown user ﬁle - Changes owner to "user". 
+o Example: chown root ﬁle 
+23. chgrp - Change group ownership. 
+o chgrp group ﬁle - Changes group to "group". 
+o Example: chgrp admin ﬁle 
+24. umask - Set default permissions for new ﬁles. 
+o umask 022 - Default ﬁle permissions. 
+o Example: umask
+
+Process Management 
+25. ps - Show acƟve 
+
+=== SOURCE: Linux — Apr 2025 ===
+Linux 101 Hacks
+
+www.thegeekstuff.com
+Table of Contents
+Introduction
+
+........................................................... 7
+
+About the Author
+
+.................................................... 8
+
+Copyright & Disclaimer
+
+............................................ 9
+
+Version
+
+.............................................................................. 9
+
+More eBooks from The Geek Stuff
+
+.......................... 10
+
+Bash 101 Hacks
+
+............................................................... 10
+
+Sed and Awk 101 Hacks
+
+................................................... 11
+
+Nagios Core
+
+..................................................................... 12
+
+Vim 101 Hacks
+
+................................................................. 13
+
+Chapter 1: Powerful CD Command Hacks
+
+................ 14
+
+Hack 1. Define CD Base Directory Using CDPATH
+
+............... 14
+
+Hack 2. Use CD Alias to Navigate Up the Directory
+
+............. 15
+
+Hack 3. Perform mkdir and cd Using a Single Command
+
+.... 18
+
+Hack 4. Toggle Between Directories
+
+................................. 19
+
+Hack 5. Manipulate Directory Stack
+
+.................................. 20
+
+Hack 6. Automatically Correct Mistyped Directory Names
+
+. 23
+
+Chapter 2: Essential Linux Commands
+
+................... 24
+
+Hack 7. Grep Command
+
+................................................... 24
+
+Hack 8. Regular Expression in Grep
+
+.................................. 26
+
+Hack 9. Find Command
+
+.................................................... 29
+
+Hack 10. Suppress Standard Output and Error Message
+
+.... 31
+
+Hack 11. Join Command
+
+................................................... 32
+
+Hack 12. Change the Case
+
+............................................... 33
+
+Hack 13. Xargs Command
+
+................................................ 34
+
+Hack 14. Sort Command
+
+.................................................. 35
+
+Hack 15. Uniq Command
+
+.................................................. 37
+
+Hack 16. Cut Command
+
+................................................... 38
+
+Hack 17. Stat Command
+
+.................................................. 39
+
+Hack 18. Diff Command
+
+................................................... 41
+
+2
+Linux 101 Hacks
+
+www.thegeekstuff.com
+Hack 19. Display Total Connect Time of Users
+
+................... 42
+
+Hack 20. Execute Commands in the Background
+
+............... 43
+
+Hack 21. Sed Basics - Find and Replace Using RegEx
+
+........ 45
+
+Hack 22: Awk Introduction – Print Examples
+
+..................... 50
+
+Hack 23. Vim Editor Navigation Fundamentals
+
+.................. 56
+
+Hack 24. Chmod Command Examples
+
+................................ 60
+
+Hack 25. View Multiple Log Files in One Terminal
+
+.............. 62
+
+Hack 26. Less Command
+
+................................................... 64
+
+Hack 27. Wget Examples
+
+................................................. 68
+
+Chapter 3: SSH Commands and Tips
+
+....................... 76
+
+Hack 28. Debug SSH Client Session
+
+............
+
+=== SOURCE: Shell Scripting Guide What is Shell Scripting? Shell scripting automates tasks… ===
+Shell Scripting Guide
+
+What is Shell Scripting?
+
+Shell scripting automates tasks in Unix/Linux by using shell commands.
+
+Why Use Shell Scripting?
+
+- Automate repetitive tasks 
+- Manage system operations efficiently 
+- Schedule tasks using cron jobs
+
+How to Start with #!/bin/bash
+
+#!/bin/bash 
+echo "Hello, World!"
+
+Output: 
+Hello, World!
+
+Variables in Shell Scripting
+
+#!/bin/bash 
+name="John Doe" 
+echo "Hello, $name"
+
+Output: 
+Hello, John Doe
+
+Reading Input from User
+
+#!/bin/bash 
+echo "Enter your name: " 
+read name 
+echo "Hello, $name"
+
+Input: 
+Alice 
+Output: 
+Hello, Alice 
+Shell Scripting Guide
+
+Conditional Statements (if-else)
+
+#!/bin/bash 
+read num 
+if [ $num -gt 10 ]; then 
+echo "Greater than 10" 
+else 
+echo "10 or less" 
+fi
+
+Input: 
+12 
+Output: 
+Greater than 10
+
+For Loop Example
+
+#!/bin/bash 
+for i in {1..5}; do 
+echo "Iteration $i" 
+done
+
+Output: 
+Iteration 1 
+Iteration 2 
+Iteration 3 
+Iteration 4 
+Iteration 5
+
+While Loop Example
+
+#!/bin/bash 
+count=1 
+while [ $count -le 3 ]; do 
+echo "Count: $count" 
+((count++)) 
+done
+
+Output: 
+Count: 1 
+Shell Scripting Guide
+
+Count: 2 
+Count: 3
+
+Functions in Shell Scripting
+
+#!/bin/bash 
+function greet() { 
+echo "Hello, $1!" 
+} 
+greet "Alice"
+
+Output: 
+Hello, Alice!
+
+String Operations
+
+#!/bin/bash 
+str="Welcome to Linux" 
+echo "Substring: ${str:11}" 
+echo ${str/Linux/Unix}
+
+Output: 
+Substring: Linux 
+Welcome to Unix
+
+Concatenation
+
+#!/bin/bash 
+str1="Hello" 
+str2="World" 
+concat="$str1 $str2" 
+echo "$concat"
+
+Output: 
+Hello World
+
+Command Line Arguments
+
+#!/bin/bash 
+echo "First arg: $1" 
+Shell Scripting Guide
+
+echo "Second arg: $2"
+
+Command: 
+./script.sh Alice Bob 
+Output: 
+First arg: Alice 
+Second arg: Bob
+
+Error Handling (set -e)
+
+#!/bin/bash 
+set -e 
+echo "This will execute" 
+ls non_existent_file 
+echo "This will not execute"
+
+Output: 
+ls: cannot access 'non_existent_file': No such file or directory
+
+Debugging (set -x)
+
+#!/bin/bash 
+set -x 
+echo "Debugging Mode" 
+set +x
+
+Output: 
++ echo 'Debugging Mode' 
+Debugging Mode
+
+Regular Expressions
+
+grep "error" logfile.txt 
+sed 's/Linux/Unix/g' file.txt 
+awk '{print $1}' file.txt
+
+Pipe and Redirection
+
+ls -l | grep "txt" 
+echo "Hello" > file.txt 
+Shell Scripting Guide
+
+cat file.txt >> newfile.txt
+
+Subshell Example
+
+#!/bin/bash 
+(cd /tmp && ls)
+
+Output: 
+(temp directory contents)
+
+Background & Foreground Processes
+
+./script.sh & 
+fg
+
+Environmental Variables
+
+echo $HOME 
+echo $PATH
+
+Scheduling Jobs (cron)
+
+crontab -e 
+0 6 * * * /path/to/script.sh
+
+Process Management
+
+ps aux | grep bash 
+kill -9 PID
+
+Real-World Example: Backup Script
+
+#!/bin/bash
+
+backup_dir="/backup"
+
+mkdir -p $backup_dir
+
+tar -czf $backup_dir/backup_$(date +%F).tar.gz /home/user/
+
+echo "Backup completed!"

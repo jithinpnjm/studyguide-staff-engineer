@@ -1,0 +1,337 @@
+DOMAIN: observability
+DOCS WITH TEXT: 4
+
+=== SOURCE: Complete Infrastructure Monitoring Using Prometheus and Grafana Introduction:… ===
+Complete 
+Infrastructure 
+Monitoring 
+Using 
+Prometheus 
+and Grafana
+
+Introduction: 
+Infrastructure monitoring is a critical aspect of DevOps, enabling proactive 
+detection and resolution of system issues. This project focuses on real -world 
+infrastructure monitoring using Prometheus, Grafana, and Loki to 
+dynamically monitor Docker, Kubernetes, and AWS CloudWatch. 
+The monitoring stack provides insights into the health and performance of 
+containers, Kubernetes clusters, and cloud-based resources, ensuring efficient 
+system operation and resource utilization.
+
+Objective: 
+The Primary objective of this project is to: 
+ To set up Prometheus and Grafana for real-time monitoring. 
+ To collect metrics from Docker containers using cAdvisor.
+
+ To monitor Kubernetes clusters (AWS EKS) with Prometheus and 
+Grafana. 
+ To implement Loki for centralized log monitoring. 
+ To create dynamic dashboards in Grafana for visualization . 
+Technologies used:
+
+ AWS (Amazon Web Services): Cloud computing platform used to 
+deploy and manage infrastructure resources.
+
+ Prometheus: An open-source monitoring system for collecting 
+metrics from configured targets at given intervals.
+
+ Grafana: A visualization tool used to create dashboards and display 
+real-time monitoring data from Prometheus.
+
+ Loki: A log aggregation system for collecting and storing logs 
+efficiently. 
+ cAdvisor: A container monitoring tool used to track resource usage 
+and performance statistics of running containers.
+
+How I Set Up
+
+Step 1: Prometheus and Grafana Setup on AWS 
+Installation and Configuration 
+1. Deploy Prometheus and Grafana on an AWS EC2 instance. 
+2. Configure Prometheus to scrape metrics from various targets 
+(Docker, Kubernetes, AWS services). 
+3. Create a Grafana dashboard to visualize system and application 
+metrics. 
+4. Installation Guides: 
+ Promethus Installation&Setup 
+ Grafana Setup
+
+Check :
+
+Step 2: Docker Monitoring with cAdvisor 
+1. Web Server for Testing 
+ Created a web server to generate HTTP requests and test monitoring. 
+ Verified metrics collection and visualization in Prometheus & Grafana.
+
+2. Docker Server with cAdvisor for Container Monitoring
+
+ Deployed a Docker server with multiple running containers. 
+ Installed cAdvisor to collect container metrics. 
+ Integrated cAdvisor with Prometheus for real-time container 
+monitoring. 
+Installation: cAdvisor Setup 
+1. Install Docker on your server: 
+sudo apt update && sudo apt install -y docker.io 
+2. Start and enable the Docker service: 
+3. sudo systemctl start docker 
+sudo systemctl enable docker 
+4. Create two sample containers: 
+5. sudo docker run -d --name container1 nginx 
+sudo docker run -d --name container2 httpd 
+6. Verify running containers: 
+sudo docker ps
+
+ Install cAdvisor: 
+ sudo docker run -d --name=cadvisor \
+
+--volume=/:/rootfs:ro \
+
+--volume=/var/run:/var/run:rw \
+
+--volume=/sys:/sys:ro \
+
+--volume=/var/lib/docker/:/var/lib/docker:ro \
+
+--publish=8080:8080 \
+
+gcr.io/cadvisor/cadvisor
+
+
+=== SOURCE: Grafana+Prometheus — Feb 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+Comprehensive Monitoring Guide: 
+Prometheus and Grafana 
+Table of Contents 
+1. Introduction to Monitoring with Prometheus and Grafana 
+o Overview of modern monitoring 
+o Why choose Prometheus and Grafana? 
+o Key features and benefits 
+2. Setting Up Prometheus 
+o Installation and configuration 
+o Understanding Prometheus architecture 
+o Configuring scrape jobs 
+3. Prometheus Data Model and Query Language (PromQL) 
+o Metrics, labels, and time-series data 
+o Writing basic and advanced PromQL queries 
+o Aggregations, filters, and functions 
+4. Setting Up Grafana 
+o Installing Grafana 
+o Configuring data sources (Prometheus) 
+o User management and authentication 
+5. Building Dashboards in Grafana 
+o Creating and customizing dashboards 
+o Adding and configuring panels 
+o Using templating and variables
+
+3
+
+6. Alerting with Prometheus and Grafana 
+o Configuring Prometheus Alertmanager 
+o Defining alert rules and notifications 
+o Setting up Grafana alerting 
+7. Exporters and Instrumentation 
+o Understanding Prometheus exporters 
+o Popular exporters (Node Exporter, cAdvisor, Blackbox, etc.) 
+o Custom instrumentation for applications 
+8. Scaling and Performance Optimization 
+o Handling high cardinality metrics 
+o Federation and remote storage options 
+o Best practices for optimizing queries 
+9. Monitoring Kubernetes with Prometheus and Grafana 
+o Deploying Prometheus in Kubernetes 
+o Using kube-state-metrics and cAdvisor 
+o Building Kubernetes-specific dashboards 
+10. Security, Logging, and Maintenance 
+ Securing Prometheus and Grafana instances 
+ Logging and auditing 
+ Regular maintenance and troubleshooting
+
+4
+
+1. Introduction to Monitoring with Prometheus and 
+Grafana 
+Overview of Modern Monitoring 
+In today’s fast-paced digital world, monitoring plays a crucial role in 
+maintaining the reliability, performance, and security of IT infrastructure. 
+Whether managing traditional servers, cloud-based environments, or 
+containerized applications, monitoring helps detect issues before they impact 
+end-users. 
+Modern monitoring solutions follow these key principles: 
+ Proactive Detection: Identifying issues before they cause failures. 
+ Real-time Insights: Continuous tracking of system performance and 
+health. 
+ Automated Alerts: Immediate notifications for critical system anomalies. 
+ Scalability: Ability to handle large-scale, distributed environments. 
+ Visualization and Analysis: Converting raw data into meaningful insights. 
+Traditional monitoring tools relied on polling-based methods, which often had 
+limitations in handling dynamic infrastructures like microservices and 
+Kubernetes. This led to the rise of time-series monitoring solutions like 
+Prometheus and Grafana, which are built to handle real-time, high-volume 
+metric collection efficiently.
+
+Why Choose Prometheus and Grafana? 
+Prometheus: The Monitoring Powerhouse 
+Prometheus is an open-source time-series database and moni
+
+=== SOURCE: Prometheus+Grafana — Mar 2025 ===
+1
+
+Author – SUSHANT AHER
+
+https://www.linkedin.com/in/sushant-aher-devops/
+
+2
+
+What is Prometheus? 
+Prometheus is an open-source systems monitoring and alerting toolkit 
+originally built at SoundCloud. Since its inception in 2012, many companies and 
+organizations have adopted Prometheus, and the project has a very active 
+developer and user community. It is now a standalone open-source project and 
+maintained independently of any company. To emphasize this, and to clarify 
+the project's governance structure, Prometheus joined the Cloud Native 
+Computing Foundation in 2016 as the second hosted project, after Kubernetes. 
+Prometheus collects and stores its metrics as time series data, i.e. metrics 
+information is stored with the timestamp at which it was recorded, alongside 
+optional key-value pairs called labels. 
+For more elaborate overviews of Prometheus, see the resources linked from 
+the media section.
+
+Features 
+Prometheus's main features are: 
+• a multi-dimensional data model with time series data identified by 
+metric name and key/value pairs 
+• PromQL, a flexible query language to leverage this dimensionality 
+• no reliance on distributed storage; single server nodes are autonomous 
+• time series collection happens via a pull model over HTTP 
+• pushing time series is supported via an intermediary gateway 
+• targets are discovered via service discovery or static configuration 
+• multiple modes of graphing and dashboarding support 
+What are metrics? 
+• Metrics are numerical measurements in layperson terms. The term time 
+series refers to the recording of changes over time. What users want to 
+measure differs from application to application.
+
+3
+
+Architecture –
+
+This diagram illustrates the architecture of Prometheus and some of its 
+ecosystem components: 
+Prometheus scrapes metrics from instrumented jobs, either directly or via an 
+intermediary push gateway for short-lived jobs. It stores all scraped samples 
+locally and runs rules over this data to either aggregate and record new time 
+series from existing data or generate alerts. Grafana or other API consumers 
+can be used to visualize the collected data.
+
+4
+
+Installation 
+Githun repo –
+
+https://github.com/SushantAher02/prome-grafana/blob/master/graphana%20installation.txt
+
+5
+
+6
+
+Checking CPU usage –
+
+7
+
+8
+
+Application usage checking –
+
+=== SOURCE: What is Prometheus? Prometheus monitoring solution is a free and open-source… ===
+What is Prometheus? 
+Prometheus monitoring solution is a free and open-source solution for monitoring 
+metrics, events, and alerts. It collects and records metrics from servers, 
+containers, and applications.
+
+In addition to providing a flexible query language (PromQL), and powerful 
+visualization tools, it also provides an alerting mechanism that sends notifications 
+when needed. 
+Prerequisites: 
+Before diving into the setup process, make sure you have the following 
+prerequisites in place: 
+1. AWS EC2 Instance: Create an EC2 instance running Ubuntu. 
+2. SSH Access: Ensure you have SSH access to your EC2 instance. 
+3. Basic Linux Knowledge: Familiarity with basic Linux commands will be 
+beneficial. 
+Step 1 : Launch an instance: Connect to Public IP to server. 
+Setup of Prometheus & Grafana With Node Exporter
+on AWS EC2 Ubuntu
+
+In security Group – Edit Inbound Rule with TCP -9090 TCP – 9100 TCP – 
+3000
+
+Step 2: Create a Dedicated Prometheus User
+
+To enhance security and streamline administration, it’s best to create a dedicated 
+user for Prometheus. 
+This user will serve as a system account for the service. Run the following 
+command: 
+sudo useradd \
+
+- system \
+
+- no-create-home \
+
+- shell /bin/false Prometheus
+
+- sudo mkdir /etc/prometheus
+
+- sudo mkdir /var/lib/Prometheus 
+Step 3 : Download and Extract Prometheus 
+Let’s fetch the latest version of Prometheus from the official download page using 
+wget: 
+- wget 
+https://github.com/prometheus/prometheus/releases/download/v2.45.0/pro
+metheus-2.45.0.linux-amd64.tar .gz 
+Now, extract the Prometheus files: 
+- tar -xvf prometheus-2.45.0.linux-amd64.tar.gz
+
+tep 3: Create Directories for Prometheus 
+Create the necessary directories for Prometheus and its configuration files: 
+Navigate to the Prometheus directory:
+
+- cd proSmetheus-2.32.1.linux-amd64 
+Move Prometheus and promtool binaries to /usr/local/bin/: 
+- sudo mv prometheus promtool /usr/local/bin/ 
+Optionally, move console libraries to the Prometheus configuration directory: 
+- sudo mv consoles/ console_libraries/ /etc/prometheus/ 
+Lastly, move the example Prometheus configuration file: 
+- sudo mv prometheus.yml /etc/prometheus/prometheus.yml 
+Step 5: Set Correct Ownership 
+Ensure the correct ownership for /etc/prometheus/ and /data/ directories: 
+- sudo chown -R prometheus:prometheus /etc/prometheus/ /data/ 
+Step 6: Verify Prometheus Installation 
+Check if Prometheus is installed correctly by running:
+
+- prometheus –version
+
+Step 7: Configure Prometheus as a systemd Service 
+To manage Prometheus using systemd, create a systemd unit configuration file: 
+- sudo vim /etc/systemd/system/prometheus.service 
+Add the following content to the file: 
+[Unit] 
+Description=Prometheus 
+Wants=network-online.target 
+After=network-online.target
+
+StartLimitIntervalSec=500 
+StartLimitBurst=5 
+[Service] 
+User=prometheus 
+Group=prometheus 
+Type=simple 
+Restart=on-failure 
+RestartSec=5s 
+ExecStart=/usr/local/bin/prometheus \
+
+--config.file=/etc/prometheus/prometheus

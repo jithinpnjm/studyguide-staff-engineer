@@ -1,0 +1,4195 @@
+DOMAIN: general-devops
+DOCS WITH TEXT: 49
+
+=== SOURCE: Ansible   DevSecOps Petshop project | Jenkins CI/CD Hello friends, we will be… ===
+Ansible – DevSecOps Petshop project | Jenkins CI/CD
+
+Hello friends, we will be deploying a Petshop Java Based Application. This is an everyday use case 
+scenario used by several organizations. We will be using Jenkins as a CICD tool and deploying our 
+application on a Docker container and Kubernetes cluster. Hope this detailed blog is useful. 
+We will be deploying our application in two ways, one using Docker Container and the other using 
+K8S cluster. 
+Project Repo: github.com/Aj7Ay/jpetstore-6.git
+
+STEPS: 
+Step 1 -- Create an Ubuntu(22.04) T2 Large Instance 
+Step 2 -- Install Jenkins, Docker and Trivy 
+Step 3 -- Install Plugins like JDK, Sonarqube Scanner, Maven, OWASP Dependency Check 
+Step 4 -- Configure Sonar Server in Manage Jenkins 
+Step 5 -- Install OWASP Dependency Check Plugins 
+Step 6 -- Docker plugin and credential Setup 
+Step 7 -- Adding Ansible Repository in Ubuntu and install Ansible 
+Step 8 -- Kuberenetes Setup 
+Step 9 -- Master-slave Setup for Ansible and Kubernetes 
+Now, let’s get started and dig deeper into each of these steps:- 
+STEP1:Create an Ubuntu(22.04) T2 Large Instance
+
+Launch an AWS T2 Large Instance. Use the image as Ubuntu. You can create a new key pair or use an 
+existing one. Enable HTTP and HTTPS settings in the Security Group and open all ports (not best case 
+to open all ports but just for learning purposes it’s okay).
+
+Step 2 — Install Jenkins, Docker and Trivy 
+2A — To Install Jenkins 
+Connect to your console, and enter these commands to Install Jenkins 
+vi jenkins.sh 
+#!/bin/bash 
+sudo apt update -y 
+#sudo apt upgrade -y 
+wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | tee 
+/etc/apt/keyrings/adoptium.asc 
+echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] 
+https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' 
+/etc/os-release) main" | tee /etc/apt/sources.list.d/adoptium.list 
+sudo apt update -y 
+sudo apt install temurin-17-jdk -y 
+/usr/bin/java --version 
+curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
+
+/usr/share/keyrings/jenkins-keyring.asc > /dev/null 
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+
+https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+
+/etc/apt/sources.list.d/jenkins.list > /dev/null 
+sudo apt-get update -y 
+sudo apt-get install jenkins -y 
+sudo systemctl start jenkins 
+sudo systemctl status jenkins 
+sudo chmod 777 jenkins.sh 
+./jenkins.sh
+
+Once Jenkins is installed, you will need to go to your AWS EC2 Security Group and open Inbound Port 
+8080 and 8090, 9000 for sonar, since Jenkins works on Port 8080. 
+But for this Application case, we are running Jenkins on another port. so change the port to 8090 
+using the below commands. 
+sudo systemctl stop jenkins 
+sudo systemctl status jenkins 
+cd /etc/default 
+sudo vi jenkins
+
+#chnage port HTTP_PORT=8090 and save and exit 
+cd /lib/systemd/system 
+sudo vi jenkins.service #change Environments="Jenkins_port=8090" save and exit 
+sudo sys
+
+=== SOURCE: CICD PROJECT: Production Level Blog APP Deployment using EKS, Nexus, SonarQube, ===
+CICD PROJECT: Production Level Blog APP Deployment using EKS, Nexus, SonarQube, Trivy with 
+Monitoring Tools
+
+=> Tools Used: 
+• Jenkins: For managing the CI/CD pipeline. 
+• SonarQube: For static code analysis. 
+• Nexus: For managing dependencies and artifacts. 
+• Trivy: For scanning vulnerabilities in files and Docker images. 
+• Docker: To containerize applications. 
+• Prometheus: For monitoring metrics from services. 
+• Blackbox Exporter: For probing application availability. 
+• Grafana: For visualizing metrics. 
+• Kubernetes (AWS EKS): For managing containerized workloads. 
+• Terraform: For EKS deployment. 
+Prerequisites: 
+• Basic Understanding of CI/CD: Familiarity with Continuous Integration and Continuous 
+Deployment. 
+• AWS Account: Access to create and manage EC2 instances and EKS. 
+• Git Knowledge: Experience using Git and GitHub. 
+• Linux Commands: Basic experience with terminal commands and SSH access. 
+• Jenkins, Docker, and Kubernetes knowledge: Understanding of basic setup and usage.
+
+Table of Contents: 
+• Step 1: Set up Git Repository and create Security Token 
+• Step 2: Setup required servers (Jenkins, Sonarqube, Nexus, Monitoring tools) 
+• Step 3: Set up Jenkins, Sonarqube and Nexus 
+• Step 4: Install Jenkins Plugins, and Configure Nexus, Trivy, SonarQube and DockerHub to use 
+Jenkins 
+• Step 5: Create a complete CICD pipeline 
+• Step 6: Create the EKS cluster, Install AWS CLI, Kubectl and Terraform 
+• Step 7: Assign a custom domain to the deployed application 
+• Step 8: Monitor the application 
+Step 1. Set up Git Repository and create Security Token 
+a.> Create the Repo: We will need to setup a private git repo, it is assumed you already know how to 
+do one. If not click here to read the official GitHub docs. You can decide to make it public or 
+private for production use, it is best to set it to private this way it is more secured and not exposed to 
+the public. 
+However; by choice I will be leaving my repo public , this way you can get access to it and the source 
+files used for this project. Repo Link 
+b.> Create a Security Token: After setting up the git repo, we will have to create a security token ; 
+this will help us authenticate easily. Another major importance is that it ensures secured, managed 
+access to your repositories without exposing your actual password. 
+c.> Install GitBash in your local system and clone the repo: 
+Again, it is assumed you already know how to install Git Bash, it is quite easy to do this for Windows 
+and Mac. Download the OS and follow the installation prompts. Click Here to get started and install 
+Git. Having Git on your local system is a advisable because it makes it easier to push and commits 
+code. 
+After installing Git Bash, we need to clone the repo we will be using, this repo contains the source 
+code needed for this project. Click Here to CLONE it. 
+git clone https://github.com/ougabriel/full-stack-blogging-app.git 
+I am running the git clone command in VS Studio
+
+When this is done make
+
+=== SOURCE: Common DevOps Troubleshooting Scenarios and Solutions Author: Zayan Ahmed |… ===
+Common DevOps Troubleshooting
+
+Scenarios
+
+and
+
+Solutions
+
+Author: Zayan Ahmed | Estimated Reading time: 5 mins
+
+DevOps engineers often face different kinds of technical issues while managing cloud
+
+infrastructure
+
+and
+
+software
+
+deployment.
+
+Here
+
+are
+
+some
+
+common
+
+problems
+
+and
+
+their
+
+solutions
+
+explained
+
+simply.
+
+1. Application Crashes After Deployment
+
+Scenario: You deploy a new version of your application, but it crashes immediately. The logs
+
+show
+
+errors,
+
+but
+
+they
+
+are
+
+hard
+
+to
+
+understand.
+
+Solution: First, check the logs carefully using tools like kubectl logs (for Kubernetes) or docker logs (for Docker). Look for missing dependencies, incorrect environment
+
+variables,
+
+or
+
+database
+
+connection
+
+issues.
+
+If
+
+needed,
+
+roll
+
+back
+
+to
+
+the
+
+previous
+
+version
+
+and
+
+fix
+
+the
+
+bug
+
+before
+
+redeploying.
+
+2. High CPU or Memory Usage
+
+Scenario: Your application is running, but the server is slowing down or even crashing due
+
+to
+
+high
+
+resource
+
+usage.
+
+Solution: Use monitoring tools like Prometheus or Grafana to check which process is using
+
+too
+
+much
+
+CPU
+
+or
+
+memory.
+
+If
+
+a
+
+service
+
+is
+
+consuming
+
+too
+
+many
+
+resources,
+
+consider
+
+optimizing
+
+the
+
+code,
+
+adding
+
+autoscaling,
+
+or
+
+increasing
+
+instance
+
+size.
+
+3. Deployment Fails in CI/CD Pipeline
+
+Scenario: You push your code to Git, but the CI/CD pipeline fails during testing or
+
+deployment.
+
+Solution: Check the pipeline logs to see what failed. It could be a syntax error, missing
+
+dependencies,
+
+or
+
+incorrect
+
+configuration.
+
+Running
+
+the
+
+pipeline
+
+locally
+
+before
+
+pushing
+
+changes
+
+can
+
+help
+
+catch
+
+issues
+
+early.
+
+4. Network Connectivity Issues
+
+Scenario: Your app cannot connect to the database, API, or another microservice.
+
+Solution: Use tools like ping and curl to check connectivity. Verify firewall rules, security
+
+groups,
+
+and
+
+network
+
+policies.
+
+Also,
+
+ensure
+
+that
+
+DNS
+
+settings
+
+and
+
+service
+
+discovery
+
+configurations
+
+are
+
+correct.
+
+5. Container Fails to Start
+
+Scenario: A Docker container fails to start, showing errors related to ports, volumes, or
+
+permissions.
+
+Solution: Run docker logs <container_id> to see what went wrong. Make sure ports
+
+are
+
+not
+
+already
+
+in
+
+use,
+
+volumes
+
+are
+
+correctly
+
+mounted,
+
+and
+
+the
+
+container
+
+has
+
+the
+
+necessary
+
+permissions.
+
+6. Slow Application Performance
+
+Scenario: Users complain that your application is slow, taking too long to load pages or
+
+process
+
+requests.
+
+Solution: Use performance monitoring tools like New Relic or Datadog to find bottlenecks.
+
+Optimize
+
+slow
+
+database
+
+queries,
+
+enable
+
+caching,
+
+and
+
+check
+
+if
+
+load
+
+balancing
+
+is
+
+working
+
+properly.
+
+7. Security Vulnerabilities
+
+Scenario: A security scan finds vulnerabilities in your software or infrastructure.
+
+Solution: Regularly update dependencies, apply security patches, and follow best practices
+
+for
+
+securing
+
+cloud
+
+resources.
+
+Use
+
+tools
+
+like
+
+OWASP
+
+ZAP
+
+for
+
+application
+
+security
+
+testing
+
+and
+
+enable
+
+role-based
+
+access
+
+control
+
+(RBAC)
+
+to
+
+restrict
+
+access.
+
+8.
+
+=== SOURCE: Complete DevOps Project: Multi-Tier Application Deployment Locally Your First… ===
+Complete DevOps Project: Multi-Tier Application Deployment Locally
+
+Your First Complete DevOps Project: Multi-Tier Deployment from Scratch (PART 1/2) 
+If you want to become a job-ready DevOps engineer, I strongly recommend not skipping any steps. It 
+may seem challenging at first, but as you progress, you'll gain expertise. 
+Keep in mind that all these projects are based on real-world scenarios and are highly relevant in the 
+industry. 
+Development and DevOps go hand in hand - developers build applications, while DevOps engineers 
+ensure seamless operation across environments. 
+From experience, understanding the final output before deployment is crucial. Knowing its 
+appearance, dependencies, and functionality helps in efficient setup. DevOps engineers orchestrate 
+services to optimize performance, cost, and reliability. Once deployed, the application interface 
+appears as follows. This Java-based application relies on five key services: MySQL, Memcache, 
+RabbitMQ, Tomcat, and Nginx—working together for smooth operation across environments.
+
+Application UI after a successful deployment 
+This DevOps project is detailed and extensive, so I'm breaking it into two parts. In this first part, we'll 
+focus on setting up a local environment using VirtualBox and Vagrant. 
+VirtualBox is used to create virtual machines (VMs), while Vagrant enables the automation and 
+management of multiple VMs through code. The first time I created a VM using Vagrant, I was truly 
+amazed—and I'm sure you will be too! These tools are essential for mastering DevOps, and this guide 
+will walk you through their setup and usage.
+
+Here I will show the setup in Mac environment for the setup but you use any environment to setup 
+the same 
+I am writing the whole project flow and setup step by step so that you can keep track easily and 
+focus only one step at a time. But remember for starting each step, you need to successfully 
+complete previous step. 
+Install VirtualBox & Vagrant This is a single-line command on Mac. If you encounter any installation 
+issues, feel free to ask in the comments. Sometimes, even simple tasks can take longer than 
+expected, but every problem has a solution. 
+If you're new to VirtualBox, take some time to understand how it works. Once you're familiar with 
+it, Vagrant makes managing multiple VMs incredibly easy. In this post, you'll get hands-on experience 
+with both! 
+Install by brew, the VirtualBox & Vagrant 
+Copy> brew install virtualbox vagrant 
+Install vagrant plugin vagrant-hostmanager
+
+Copy> vagrant plugin install vagrant-hostmanager 
+Verify that VirtualBox & Vagrant are installed. If you see different version numbers, that are fine. 
+Copy> VBoxManage --version 
+> vagrant --version
+
+Verify that the plugin vagrant-hostmanager
+
+Note: This plugin updates the /etc/hosts file across all newly created VMs. After setting up our five 
+VMs in part 2, we'll verify its functionality. If you're unfamiliar with /etc/hosts, don't worry — we'll 
+be using this te
+
+=== SOURCE: DEVOPS INTERVIEW QUESTION AND ANSWERS 1. What is DevOps, and why is it… ===
+DEVOPS INTERVIEW QUESTION AND ANSWERS
+
+1. What is DevOps, and why is it important? 
+Ans: DevOps is a set of practices that bridges the gap between 
+development and operations teams by automating and integrating 
+processes to improve collaboration, speed up software delivery, and 
+maintain product reliability. It emphasizes continuous integration, 
+continuous deployment (CI/CD), and monitoring, ensuring faster 
+development, better quality control, and efficient infrastructure 
+management. We need DevOps to shorten development cycles, 
+improve release efficiency, and foster a culture of collaboration across 
+the software delivery lifecycle. 
+2. Can you explain the differences between Agile and DevOps? 
+Ans :Agile and DevOps both aim to improve software development, 
+but they have distinct focuses: 
+Focus: 
+Agile: Focuses on iterative development, where the project is broken 
+into small, manageable increments called sprints. It's about 
+responding to change and delivering working software frequently. 
+DevOps: Focuses on collaboration between development and 
+operations teams to streamline software delivery and deployment. It's 
+about automating processes and ensuring continuous delivery. 
+Scope: 
+Agile: Primarily addresses the development process (coding, testing). 
+DevOps: Goes beyond development, covering the entire lifecycle of 
+the application, from development to operations, including 
+deployment and monitoring. 
+Team Structure: 
+Agile: Development teams work closely with product owners and 
+stakeholders. 
+DevOps: Requires collaboration between development, operations, 
+and QA teams to ensure smooth delivery and deployment. 
+Automation: 
+Agile: Focuses on manual testing within sprints, although test 
+automation is encouraged. 
+DevOps: Heavily relies on automation for building, testing, and 
+deployment (CI/CD) to enable faster, more reliable releases. 
+Feedback Loops: 
+Agile: Feedback is provided primarily from end-users and 
+stakeholders after each sprint. 
+DevOps: Feedback is continuous, from all aspects of the system, 
+including performance monitoring and user feedback, allowing for 
+real-time adjustments.
+
+3. What are the key principles of DevOps? 
+Ans: Key Principles of DevOps 
+Automation: Automate processes like testing, integration, and deployment 
+to speed up delivery and reduce errors. 
+Collaboration: Encourage close collaboration between development, QA, 
+and operations teams. 
+Continuous Integration/Continuous Deployment (CI/CD): Ensure code 
+changes are automatically tested and deployed to production environments. 
+Monitoring and Feedback: Continuously monitor applications in 
+production to detect issues early and provide quick feedback to developers. 
+Infrastructure as Code (IaC): Manage infrastructure using versioned code 
+to ensure consistency across environments. 
+Culture of Improvement: Foster a culture of continuous learning and 
+improvement through frequent retrospectives and experimentation.
+
+4. How do Continuous Integration 
+
+=== SOURCE: DevOps & CI/CD From Basics to Deployment Automation Hands-on learning with… ===
+DevOps & CI/CD
+From Basics to Deployment
+Automation
+ Hands-on learning with
+real-world projects
+For software engineers &
+DevOps professionals
+Industry-relevant
+curriculum
+w w w . l e a r n b a y . c o
+ Introduction to DevOps
+DevOps is a set of practices that combines software
+development (Dev) and IT operations (Ops).
+Did you know?
+Companies using DevOps report 60% faster deployment
+cycles and lower failure rates.
+www.learnbay.co Page 02
+Key principles of DevOps: 
+Automation: Reducing manual processes.
+Collaboration: Bridging the gap between development and
+operations.
+Monitoring & Feedback: Ensuring reliability and performance.
+Version Control & Git
+Tracking Code Changes
+Example: Basic Git Commands
+Practice Link:
+www.learnbay.co Page 03
+Learn Git on GitHub
+git init
+git add .
+git commit -m "Initial commit"
+git push origin main
+Version control allows developers to track and
+manage code changes efficiently.
+Popular tools: Git, GitHub, GitLab, Bitbucket.
+What is CI?
+Example: GitHub Actions CI Pipeline
+www.learnbay.co Page 04
+Continuous Integration (CI) is the practice of
+automatically testing and merging code changes.
+Popular CI tools: Jenkins, GitHub Actions, GitLab
+CI/CD, Travis CI.
+Continuous Integration (CI)
+name: CI Pipelineon: [push]jobs: build:
+
+runs-on: ubuntu-latest
+
+steps:
+
+- uses: actions/checkout@v2
+
+- name: Install dependencies
+
+run: npm install
+
+- name: Run tests
+
+run: npm test
+Practice Link: Jenkins Beginner Guide
+Automating Deployment
+Example: Docker Deployment
+www.learnbay.co Page 05
+docker build -t myapp .
+docker run -p 3000:3000 myapp
+Continuous Deployment (CD) ensures that new code
+changes are automatically deployed to production.
+Common CD tools: Kubernetes, Docker, AWS
+CodeDeploy, CircleCI.
+Continuous Deployment (CD)
+Practice Link: Docker Getting Started Guide
+What is IaC?
+www.learnbay.co Page 05
+Infrastructure as Code (IaC) automates infrastructure
+provisioning using code.
+Popular IaC tools: Terraform, Ansible, CloudFormation.
+ Infrastructure as Code (IaC)
+Practice Link: Terraform Basics
+Example: Terraform Configuration
+provider "aws" {
+
+region = "us-east-1"
+}
+resource "aws_instance" "example" {
+
+ami = "ami-12345678"
+
+instance_type = "t2.micro"
+}
+www.learnbay.co Page 06
+Monitoring & Logging
+Why is monitoring important?
+Detect issues early and ensure system reliability.
+Popular monitoring tools: Prometheus, Grafana,
+ELK Stack, Datadog.
+Practice Link: Prometheus Monitoring Guide
+Example: Prometheus Monitoring Setup
+scrape_configs:
+
+- job_name: 'myapp'
+
+static_configs:
+
+- targets: ['localhost:9090']
+DevSecOps – Integrating Security into DevOps
+www.learnbay.co Page 07
+Automated security scans in CI/CD pipelines.
+Tools for security scanning: Snyk, OWASP ZAP,
+SonarQube.
+Security in DevOps
+Example: Running OWASP ZAP Security Scan
+zap-cli quick-scan http://example.com
+Practice Link: OWASP ZAP Security Guide
+
+=== SOURCE: DevOps Cheat Sheet 1. System Administration & Scripting   Linux commands  … ===
+DevOps Cheat Sheet
+
+1. System Administration & Scripting ● Linux commands ● Shell scripting ● Python
+
+2. Version Control 
+● Git ● GitHub – Cloud-based Git repository hosting ● GitLab – Git repository with built-in CI/CD pipelines ● Bitbucket – Git repository with Jira integration
+
+2. Continuous Integration (CI) & Continuous Deployment (CD) 
+● Jenkins (pipelines, declarative scripts) ● GitHub Actions (workflows,
+
+syntax) ● GitLab CI/CD (stages, jobs, runners) ● Tekton ● Circle CI ● ArgoCD (GitOps) ● Flux CD 
+3. Infrastructure as Code (IaC) 
+● Terraform
+
+● Ansible (playbooks, roles, inventory) ● CloudFormation (stacks, templates) 
+4. Containerization & Orchestration 
+● Docker (build, run, volumes, networks, compose) ● Kubernetes (K8s) 
+5. Cloud Services 
+● AWS (EC2, S3, IAM, VPC, Lambda) ● Azure (VMs, Storage, AKS, Functions) ● GCP (Compute Engine, GKE, Cloud Run) 
+6. Configuration Management 
+● Chef (recipes, cookbooks) ● Puppet (manifests, modules) ● SaltStack (states, grains) 
+7. Monitoring & Logging 
+● Prometheus & Grafana (metrics, alerts, visualization) ● ELK Stack (Elasticsearch, Logstash, Kibana) ● Datadog
+
+● New Relic 
+8. Security & Compliance 
+● SonarQube (code analysis) ● Trivy (container vulnerability scanning) ● OWASP Dependency-Check 
+9. Networking, Ports & Load Balancing 
+● Networking Basics ● Ports ● Nginx (Reverse Proxy & Load Balancing) ● Apache (reverse proxy, load balancing) ● HAProxy (Load Balancing) ● Kubernetes Ingress Controller (For Managing External Traffic) ● Practical Examples: Docker for Nginx, Apache, HAProxy, and Kubernetes Ingress 
+10. Database Cheat Sheet 
+1. SQL Databases (MySQL, PostgreSQL, MariaDB) 
+2. NoSQL Databases 
+3. Database Automation for DevOps 
+11. Storage Cheat Sheet 
+12. Helm Cheat
+
+1.
+
+System Administration & Scripting
+
+Linux commands
+
+1. File Management
+
+● ls - List directory contents. ● cd - Change directory. ● pwd - Print working directory. ● cp - Copy files or directories. ● mv - Move or rename files or directories. ● rm - Remove files or directories. ● touch - Create a new empty file. ● mkdir - Create a new directory. ● rmdir - Remove an empty directory. ● cat - Concatenate and display file contents. ● head - Display the first few lines of a file. ● tail - Display the last few lines of a file. ● chmod - Change file permissions. ● chown - Change file ownership. ● find - Search for files in a directory hierarchy. ● locate - Find files by name. ● grep - Search text using patterns. ● diff - Compare two files line by line. ● tar - Archive files. ● zip/unzip - Compress and extract files.
+
+● scp - Securely copy files over SSH.
+
+● ls : List files and directories.
+
+ls -l
+
+# Long listing with details
+
+● cd : Change directory.
+
+cd /home/swapna
+
+# Move to /home/swapna directory
+
+● pwd : Show current directory.
+
+pwd
+
+● cp : Copy files.
+
+cp file1.txt /tmp
+
+# Copy file1.txt to /tmp directory
+
+● mv : Move or rename files.
+
+mv oldname.txt newname.txt
+
+# Rename file mv file1.txt /tmp
+
+# Move to /tmp directory
+
+● r
+
+=== SOURCE: DevOps Cheat Sheet 1. System Administration & Scripting   Linux commands  … ===
+DevOps Cheat Sheet
+
+1. System Administration & Scripting ● Linux commands ● Shell scripting ● Python
+
+2. Version Control 
+● Git ● GitHub – Cloud-based Git repository hosting ● GitLab – Git repository with built-in CI/CD pipelines ● Bitbucket – Git repository with Jira integration
+
+2. Continuous Integration (CI) & Continuous Deployment (CD) 
+● Jenkins (pipelines, declarative scripts) ● GitHub Actions (workflows,
+
+syntax) ● GitLab CI/CD (stages, jobs, runners) ● Tekton ● Circle CI ● ArgoCD (GitOps) ● Flux CD 
+3. Infrastructure as Code (IaC) 
+● Terraform
+
+● CloudFormation (stacks, templates) 
+4. Containerization & Orchestration 
+● Docker (build, run, volumes, networks, compose) ● Kubernetes (K8s) 
+5. Cloud Services 
+● AWS
+
+● Azure ● GCP
+
+6. Configuration Management 
+● Ansible (playbooks, roles, inventory) ● Chef (recipes, cookbooks) ● Puppet (manifests, modules) ● SaltStack (states, grains) 
+7. Monitoring & Logging 
+● Prometheus & Grafana (metrics, alerts, visualization) ● ELK Stack (Elasticsearch, Logstash, Kibana) ● Datadog
+
+● New Relic 
+8. Security & Compliance 
+● SonarQube (code analysis) ● Trivy (container vulnerability scanning) ● OWASP Dependency-Check 
+9. Networking, Ports & Load Balancing 
+● Networking Basics ● Ports ● Nginx (Reverse Proxy & Load Balancing) ● Apache (reverse proxy, load balancing) ● HAProxy (Load Balancing) ● Kubernetes Ingress Controller (For Managing External Traffic) ● Practical Examples: Docker for Nginx, Apache, HAProxy, and Kubernetes Ingress 
+10. Database Cheat Sheet 
+1. SQL Databases (MySQL, PostgreSQL, MariaDB) 
+2. NoSQL Databases 
+3. Database Automation for DevOps 
+11. Storage Cheat Sheet 
+12. Helm Chart
+
+1.
+
+System Administration & Scripting
+
+Linux commands
+
+1. File Management
+
+● ls - List directory contents. ● cd - Change directory. ● pwd - Print working directory. ● cp - Copy files or directories. ● mv - Move or rename files or directories. ● rm - Remove files or directories. ● touch - Create a new empty file. ● mkdir - Create a new directory. ● rmdir - Remove an empty directory. ● cat - Concatenate and display file contents. ● head - Display the first few lines of a file. ● tail - Display the last few lines of a file. ● chmod - Change file permissions. ● chown - Change file ownership. ● find - Search for files in a directory hierarchy. ● locate - Find files by name. ● grep - Search text using patterns. ● diff - Compare two files line by line. ● tar - Archive files. ● zip/unzip - Compress and extract files.
+
+● scp - Securely copy files over SSH.
+
+● ls : List files and directories.
+
+ls -l
+
+# Long listing with details
+
+● cd : Change directory.
+
+cd /home/swapna
+
+# Move to /home/swapna directory
+
+● pwd : Show current directory.
+
+pwd
+
+● cp : Copy files.
+
+cp file1.txt /tmp
+
+# Copy file1.txt to /tmp directory
+
+● mv : Move or rename files.
+
+mv oldname.txt newname.txt
+
+# Rename file mv file1.txt /tmp
+
+# Move to /tmp directory
+
+● rm : Remove files or directories.
+
+rm file1.txt
+
+# Remove a file rm -rf /tmp/old_directory
+
+
+
+=== SOURCE: DevOps Cheat Sheet 1. System Administration & Scripting   Linux commands  … ===
+DevOps Cheat Sheet
+
+1. System Administration & Scripting ● Linux commands ● Shell scripting ● Python
+
+2. Version Control 
+● Git ● GitHub – Cloud-based Git repository hosting ● GitLab – Git repository with built-in CI/CD pipelines ● Bitbucket – Git repository with Jira integration
+
+2. Continuous Integration (CI) & Continuous Deployment (CD) 
+● Jenkins (pipelines, declarative scripts) ● GitHub Actions (workflows,
+
+syntax) ● GitLab CI/CD (stages, jobs, runners) ● Tekton ● Circle CI ● ArgoCD (GitOps) ● Flux CD 
+3. Infrastructure as Code (IaC) 
+● Terraform
+
+● CloudFormation (stacks, templates) 
+4. Containerization & Orchestration 
+● Docker (build, run, volumes, networks, compose) ● Kubernetes (K8s) 
+5. Cloud Services 
+● AWS
+
+● Azure ● GCP
+
+6. Configuration Management 
+● Ansible (playbooks, roles, inventory) ● Chef (recipes, cookbooks) ● Puppet (manifests, modules) ● SaltStack (states, grains) 
+7. Monitoring & Logging 
+● Prometheus & Grafana (metrics, alerts, visualization) ● ELK Stack (Elasticsearch, Logstash, Kibana) ● Datadog
+
+● New Relic 
+8. Security & Compliance 
+● SonarQube (code analysis) ● Trivy (container vulnerability scanning) ● OWASP Dependency-Check 
+9. Networking, Ports & Load Balancing 
+● Networking Basics ● Ports ● Nginx (Reverse Proxy & Load Balancing) ● Apache (reverse proxy, load balancing) ● HAProxy (Load Balancing) ● Kubernetes Ingress Controller (For Managing External Traffic) ● Practical Examples: Docker for Nginx, Apache, HAProxy, and Kubernetes Ingress 
+10. Database Cheat Sheet 
+1. SQL Databases (MySQL, PostgreSQL, MariaDB) 
+2. NoSQL Databases 
+3. Database Automation for DevOps 
+11. Storage Cheat Sheet 
+12. Helm Chart
+
+1.
+
+System Administration & Scripting
+
+Linux commands
+
+1. File Management
+
+● ls - List directory contents. ● cd - Change directory. ● pwd - Print working directory. ● cp - Copy files or directories. ● mv - Move or rename files or directories. ● rm - Remove files or directories. ● touch - Create a new empty file. ● mkdir - Create a new directory. ● rmdir - Remove an empty directory. ● cat - Concatenate and display file contents. ● head - Display the first few lines of a file. ● tail - Display the last few lines of a file. ● chmod - Change file permissions. ● chown - Change file ownership. ● find - Search for files in a directory hierarchy. ● locate - Find files by name. ● grep - Search text using patterns. ● diff - Compare two files line by line. ● tar - Archive files. ● zip/unzip - Compress and extract files.
+
+● scp - Securely copy files over SSH.
+
+● ls : List files and directories.
+
+ls -l
+
+# Long listing with details
+
+● cd : Change directory.
+
+cd /home/swapna
+
+# Move to /home/swapna directory
+
+● pwd : Show current directory.
+
+pwd
+
+● cp : Copy files.
+
+cp file1.txt /tmp
+
+# Copy file1.txt to /tmp directory
+
+● mv : Move or rename files.
+
+mv oldname.txt newname.txt
+
+# Rename file mv file1.txt /tmp
+
+# Move to /tmp directory
+
+● rm : Remove files or directories.
+
+rm file1.txt
+
+# Remove a file rm -rf /tmp/old_directory
+
+
+
+=== SOURCE: DevOps Complete Package LAMP ===== So when it comes to LAMP we are talking… ===
+DevOps Complete Package LAMP ===== So when it comes to LAMP we are talking about { Linux, Apache, MySql & PHP } LAMP is an open source Web development platform that uses Linux as the operating system, Apache as the Web server, MySQL as the relational database management system and PHP as the object-oriented scripting language. Because the platform has four layers, LAMP is sometimes referred to as a LAMP stack. Stacks can be built on different operating systems. The same setup in windows is called WAMP The same setup in mac is called MAMP Advantages Of LAMP ==================  Open Source  Easy to code with PHP  Easy to deploy an application  Develop locally  Cheap Hosting  Easy to build CMS application o Wordpress, Drupal, Joomla, Moodle etc Web Server A web server is a program which serves web pages to users in response to their requests, which are forwarded by their computers' HTTP clients(Browsers).
+
+All computers that host websites must have web server program.
+
+Purpose of Web server =================== A web server’s main purpose is to store web site files and broadcast them over the internet for you site visitors to see. In essence, a web server is simply a powerful computer that stores and transmits data via the internet. Web servers are the gateway between the average individual and the world wide web.
+
+LAMP Architecture
+
+Linux :: We already talked about linux Apache ======= An open source web server used mostly for Unix and Linux platforms. It is fast, secure and reliable. Since 1996 Apache has been the most popular web server, presently apache holds 49.5% of market share i.e, 49.5% of all the websites followed by Nginx 34% and Microsoft IIS 11%. Parameters for Apache (httpd) Packages
+
+- httpd & mod_ssl Port
+
+- 80
+
+443 Protocol
+
+-
+
+http
+
+https Server Root
+
+-
+
+/etc/httpd Main config file
+
+- /etc/httpd/conf/httpd.conf Document root
+
+- /var/www/html
+
+{all our web pages } Logs
+
+- /var/log/httpd/error_log
+
+/var/log/httpd/access_log
+
+What version of OS you have ======================== # cat /etc/redhat-release # cat /etc/os-release Checking httpd service is running or not ================================= 6.x - Whenever you have problem with httpd {troubleshooting httpd} # service httpd status # netstat -ntpl | grep 80 # ps -ef | grep httpd 7.x - Whenever you have problem with httpd {troubleshooting httpd}
+
+# systemctl status httpd
+
+# netstat -ntpl | grep 80
+
+# ps -ef | grep httpd
+
+Now when you are doing server configuration, we need to be very careful while doing server configuration, coz sometimes 
+you may do some typos and you are unaware why the server is not starting, so to confirm your config is correct use 
+following command:
+
+Check configuration file (httpd.conf) is correct or not 
+===========================================
+
+# httpd -t { 6.x and 7.x }
+
+Installing httpd service 
+===================
+
+# rpm -qa | grep httpd 
+# sudo yum -y install httpd
+
+Let’s check status of the web server:
+
+# systemctl status httpd
+
+# netstat -nt
+
+=== SOURCE: DevOps Interview Questions To view the live version of the page, click here.  … ===
+DevOps Interview Questions
+To view the live version of the
+page, click here.
+© Copyright by Interviewbit
+DevOps Interview Questions For Freshers
+1.
+
+Who is a DevOps engineer?
+2.
+
+Why DevOps has become famous?
+3.
+
+What is the use of SSH?
+4.
+
+What is configuration management?
+5.
+
+What is the importance of having configuration management in DevOps?
+6.
+
+What does CAMS stand for in DevOps?
+7.
+
+What is Continuous Integration (CI)?
+8.
+
+Why is Continuous Integration needed?
+9.
+
+What is Continuous Testing (CT)?
+10.
+
+What are the three important DevOps KPIs?
+Intermediate Interview Questions
+11.
+
+Explain the diﬀerent phases in DevOps methodology.
+12.
+
+How is DevOps diﬀerent than the Agile Methodology?
+13.
+
+Diﬀerentiate between Continuous Deployment and Continuous Delivery?
+14.
+
+What can you say about antipatterns of DevOps?
+15.
+
+Can you tell me something about Memcached?
+16.
+
+What are the various branching strategies used in the version control system?
+17.
+
+Can you list down certain KPIs which are used for gauging the success of
+DevOps?
+18.
+
+What is CBD in DevOps?
+Page 1 © Copyright by Interviewbit
+Contents
+DevOps Interview Questions
+Intermediate Interview Questions (.....Continued)
+19.
+
+What is Resilience Testing?
+20.
+
+Can you diﬀerentiate between continuous testing and automation testing?
+21.
+
+Can you say something about the DevOps pipeline?
+22.
+
+Tell me something about Ansible work in DevOps
+23.
+
+How does Ansible work?
+24.
+
+How does AWS contribute to DevOps?
+25.
+
+What can be a preparatory approach for developing a project using the DevOps
+methodology?
+DevOps Interview Questions For Experienced
+26.
+
+Can you explain the “Shi  le  to reduce failure” concept in DevOps?
+27.
+
+Do you know about post mortem meetings in DevOps?
+28.
+
+What is the concept behind sudo in Linux OS?
+29.
+
+Can you explain the architecture of Jenkins?
+30.
+
+Can you explain the “infrastructure as code” (IaC) concept?
+31.
+
+What is ‘Pair Programming’?
+32.
+
+What is Blue/Green Deployment Pattern?
+33.
+
+What is Dogpile eﬀect? How can it be prevented?
+34.
+
+What are the steps to be undertaken to configure git repository so that it runs
+the code sanity checking tooks before any commits? How do you prevent it from
+happening again if the sanity testing fails?
+35.
+
+How can you ensure a script runs every time repository gets new commits
+through git push?
+Page 2 © Copyright by Interviewbit
+What is DevOps?
+DevOps stands for Development and Operations. It is a so ware engineering practice
+that focuses on bringing together the development team and the operations team
+for the purpose of automating the project at every stage. This approach helps in
+easily automating the project service management in order to aid the objectives at
+the operational level and improve the understanding of the technological stack used
+in the production environment.
+This way of practice is related to agile methodology and it mainly focuses on team
+communication, resource management, and teamwork. The main benefits of
+following this 
+
+=== SOURCE: DevOps Project — Apr 2025 ===
+1
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+DevOps Ultimate Monitoring Project
+
+Introduction 
+In this project, we implemented a comprehensive monitoring solution using 
+Prometheus and various exporters to ensure the reliability and performance of 
+a web application hosted on AWS EC2 instances. This setup includes Node 
+Exporter for hardware and OS metrics, Blackbox Exporter for probing 
+endpoints, and Alertmanager for handling alerts. Gmail integration was also 
+configured to receive notifications for critical alerts. 
+Architecture
+
+2
+
+Project Components and Best Practices 
+Components 
+1. EC2 Instances: 
+ Instance 1: Hosts the web application, Node Exporter, and Nginx.
+
+ Instance 2: Hosts Prometheus, Blackbox Exporter, and Alertmanager . 
+2. Prometheus: Centralized monitoring tool for collecting and querying 
+metrics. 
+3. Node Exporter: Collects hardware and OS-level metrics from the web 
+server. 
+4. Blackbox Exporter: Probes endpoints to monitor uptime and response 
+time. 
+5. Alertmanager: Manages alerts sent by Prometheus based on defined 
+rules. 
+6. Gmail Integration: Sends email notifications for critical alerts. 
+Alerts 
+1. InstanceDown: Triggers when an instance is down for more than 1 
+minute. 
+2. WebsiteDown: Triggers when the website is down for more than 1 
+minute. 
+3. HostOutOfMemory: Triggers when available memory is less than 25% 
+for more than 5 minutes. 
+4. HostOutOfDiskSpace: Triggers when the root filesystem has less than 
+50% available space. 
+5. HostHighCpuLoad: Triggers when CPU load is above 80% for more than 
+5 minutes. 
+6. ServiceUnavailable: Triggers when the node exporter service is 
+unavailable for more than 2 minutes. 
+7. HighMemoryUsage: Triggers when memory usage exceeds 90% for 
+more than 10 minutes. 
+8. FileSystemFull: Triggers when any filesystem has less than 10% available 
+space for more than 5 minutes.
+
+3
+
+Best Practices 
+1. Define Clear Objectives and Metrics 
+ Identify Key Metrics: Determine which metrics are critical for the health 
+and performance of your application and infrastructure (e.g., CPU usage, 
+memory usage, response times, error rates). 
+ Set Baselines and Thresholds: Establish baseline performance levels and 
+set thresholds for alerts to distinguish between normal and abnormal 
+behavior . 
+2. Use Multiple Data Sources 
+ Combine Metrics and Logs: Use both metrics and logs to get a 
+comprehensive view of the system's health. 
+ Integrate Various Exporters: Use relevant exporters (Node Exporter, 
+Blackbox Exporter, etc.) to collect metrics from different parts of your 
+infrastructure. 
+3. Implement Robust Alerting 
+ Define Relevant Alerting Rules: Create alerting rules that cover various 
+failure scenarios and performance degradation. 
+ Avoid Alert Fatigue: Ensure alerts are actionable and avoid too many 
+false positives. Group related alerts to reduce noise. 
+ Use Multiple Notification Channels: Configure alerts to be sent via 
+multiple channels (email, SMS, chat tools)
+
+=== SOURCE: DevOps Project — Mar 2025 ===
+https://www.linkedin.com/in/prasad-suman-mohan 
+DevSecOps Demo Application Deployment Guide Introduction 
+🌐
+
+This guide will walk you through the process of setting up and deploying the DevSecOps demo application using GitHub, Docker, Kubernetes, and ArgoCD. Follow the steps below to create a seamless CI/CD pipeline that automatically deploys your application. Github link: https://github.com/iam-veeramalla/devsecops-demo.git
+
+https://www.linkedin.com/in/prasad-suman-mohan 
+Prerequisites • Node.js: Ensure you have Node.js (v14 or higher) installed. • npm or yarn: Package manager for Node.js. • GitHub Account: To clone the repository and manage secrets. • AWS Account: To launch an EC2 instance. • Docker: Containerization tool. • kubectl and kind: For managing Kubernetes clusters. • ArgoCD: For GitOps-based continuous delivery. Getting Started Step 1: Clone the Repository Clone the DevSecOps demo application repository from GitHub: git clone https://github.com/sumanprasad007/devsecops-demo.git cd devsecops-demo
+
+Step 2: Install Dependencies Install the necessary dependencies using npm or yarn: npm install
+
+https://www.linkedin.com/in/prasad-suman-mohan 
+Step 3: Start the Development Server Start the development server to test the application locally: npm run dev Open your browser and navigate to http://localhost:5173 to view the application. Step 4: Build for Production Create a production build of the application: npm run build The build artifacts will be stored in the dist/ directory. GitHub Configuration Step 5: Create a GitHub Access Token 1. Generate a GitHub personal access token with the necessary permissions. 2. Add the token to the repository settings under Secrets and variables with the name TOKEN.
+
+https://www.linkedin.com/in/prasad-suman-mohan 
+Step 6: Trigger GitHub Actions Workflow 1. Create a new version of the application and push the code to the repository. 2. This will trigger the GitHub Actions workflow, creating a new Docker image stored in the GitHub Container Registry (GHCR). 3. The kubernetes/deployment.yaml file will be updated with the new image tag. Kubernetes and ArgoCD Setup Step 7: Launch an EC2 Instance Launch an EC2 instance with the instance type t3a.medium or larger based on your requirements. Step 8: Install Docker Install Docker and log in to GHCR: sudo apt install docker.io -y sudo usermod -aG docker ubuntu docker login ghcr.io
+
+https://www.linkedin.com/in/prasad-suman-mohan 
+Step 9: Validate Docker Image Run the latest Docker image to validate the changes: docker run -d -p 80:80 ghcr.io/sumanprasad007/devsecops-demo:sha-e01062c9913b710fb823b7efe54ab5df110c4ae7 docker ps
+
+Step 10: Install kind and kubectl Install kind and kubectl for managing Kubernetes clusters: # For AMD64 / x86_64 [ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64 # For ARM64 [ $(uname -m) = aarch64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-arm64 chmod +x ./kind sudo mv ./k
+
+=== SOURCE: DevOps Project — Mar 2025 ===
+1
+
+Click here for Devsecops & Cloud Devops Bootcamp
+
+CI/CD DEVOPS PIPELINE PROJECT
+
+Deployment of Java Application on Kubernetes
+
+Introduction
+
+In the rapidly evolving landscape of software development, the adoption of DevOps 
+practices has become imperative for organizations striving for agility, efficiency, and quality 
+in their software delivery processes. The project at hand focuses on the implementation of a 
+robust DevOps Continuous Integration/Continuous Deployment (CI/CD) pipeline, 
+orchestrated by Jenkins, to streamline the development, testing, and deployment phases of 
+a software product.
+
+Architecture
+
+2
+
+Purpose and Objectives
+
+The primary purpose of this project is to automate the software delivery 
+lifecycle, from code compilation to deployment, thereby accelerating time-to-
+market, enhancing product quality, and reducing manual errors. The key 
+objectives include:
+
+• Establishing a seamless CI/CD pipeline using Jenkins to automate various 
+stages of the software delivery process. 
+• Integrating essential DevOps tools such as Maven, SonarQube, Trivy, 
+Nexus Repository, Docker, Kubernetes, Prometheus, and Grafana to 
+ensure comprehensive automation and monitoring. 
+• Improving code quality through static code analysis and vulnerability 
+scanning. 
+• Ensuring reliable and consistent deployments on a Kubernetes cluster 
+with proper load balancing. 
+• Facilitating timely notifications and alerts via email integration for 
+efficient communication and incident management. 
+• Implementing robust monitoring and alerting mechanisms to track 
+system health and performance.
+
+Tools Used
+
+1.Jenkins: Automation orchestration for CI/CD pipeline. 
+2. Maven: Build automation and dependency management. 
+3. SonarQube: Static code analysis for quality assurance. 
+4. Trivy: Vulnerability scanning for Docker images. 
+5. Nexus Repository: Artifact management and version control. 
+6. Docker: Containerization for consistency and portability. 
+7. Kubernetes: Container orchestration for deployment. 
+8. Gmail Integration: Email notifications for pipeline status. 
+9. Prometheus and Grafana: Monitoring and visualization of system metrics. 
+10.AWS : Creating virtual machines .
+
+3
+
+SEGMENT 1 :
+
+1.Setting up Virtual Machines on AWS
+
+To establish the infrastructure required for the DevOps tools setup, virtual 
+machines were provisioned on the Amazon Web Services (AWS) platform. Each 
+virtual machine served a specific purpose in the CI/CD pipeline. Here's an 
+overview of the virtual machines created for different tools:
+
+1. Kubernetes Master Node: This virtual machine served as the master node in 
+the Kubernetes cluster. It was responsible for managing the cluster's state, 
+scheduling applications, and coordinating communication between cluster 
+nodes.
+
+2. Kubernetes Worker Node 1 and Node 2: These virtual machines acted as 
+worker nodes in the Kubernetes cluster, hosting and running containerized 
+applications. They executed tasks assigned by the master node and pr
+
+=== SOURCE: DevOps Shack 500 Essential DevOps Commands Linux Commands 1. uname -a   Show… ===
+DevOps Shack
+
+500 Essential DevOps Commands
+
+Linux Commands
+
+1. uname -a – Show system information
+
+2. uptime – Show system uptime
+
+3. hostname – Show hostname
+
+4. whoami – Show current user
+
+5. ls -lah – List directory contents with permissions
+
+6. pwd – Show current directory
+
+7. cd /path – Change directory
+
+8. mkdir -p /path – Create a directory (with parent if
+
+needed)
+
+9. rm -rf /path – Remove directory recursively
+
+10. cp -r source target – Copy files/directories
+
+recursively
+
+11. mv oldname newname – Move/Rename file
+
+12. ps aux – Show running processes
+
+13. top – Show real-time system performance
+
+14. kill -9 PID – Kill a process forcefully
+
+15. pkill -f process_name – Kill process by name
+
+16. df -h – Show disk space usage
+
+17. du -sh /path – Show directory size
+
+18. netstat -tulnp – Show listening ports
+
+19. ss -tulnp – Show listening ports (alternative)
+
+20. who – Show logged-in users
+
+21. adduser username – Create a new user
+
+22. passwd username – Change user password
+
+23. usermod -aG group user – Add user to a group
+
+24. grep "text" file.txt – Search for a string in a
+
+file
+
+25. find /path -name "*.log" – Find files matching
+
+pattern
+
+26. chmod 755 file.sh – Change file permissions
+
+27. chown user:group file – Change file owner
+
+28. tar -czf archive.tar.gz directory/ – Compress
+
+files
+
+29. tar -xzf archive.tar.gz – Extract compressed file
+
+30. cat file.txt – View file contents
+
+31. tail -f /var/log/syslog – View real-time log
+
+updates
+
+32. echo "text" >> file.txt – Append text to file
+
+33. history – Show command history
+
+34. clear – Clear terminal screen
+
+35. alias ll='ls -lah' – Create an alias
+
+36. df -Th – Show file system disk space
+
+37. wc -l file.txt – Count number of lines in a file
+
+38. cut -d':' -f1 /etc/passwd – Extract first column
+
+from
+
+file
+
+39. awk '{print $1}' file.txt – Print first column of
+
+Text
+
+40. sed -i 's/old/new/g' file.txt – Replace text in a
+
+file
+
+41. crontab -e – Edit cron jobs
+
+42. cron -l – List scheduled cron jobs
+
+43. rsync -av source/ target/ – Sync files
+
+44. scp user@host:/path/to/file . – Secure copy file
+
+45. ssh user@host – SSH into a server
+
+46. exit – Logout from shell
+
+47. uptime – Show system uptime
+
+48. free -m – Show memory usage
+
+49. top – Show system performance
+
+50. vmstat – Show CPU/memory stats
+
+Git Commands
+
+51. git init – Initialize a git repository
+
+52. git clone repo_url – Clone a repository
+
+53. git status – Show changes
+
+54. git add . – Stage all changes
+
+55. git commit -m "msg" – Commit changes
+
+56. git push origin branch – Push changes
+
+57. git pull origin branch – Pull latest changes
+
+58. git checkout branch – Switch branch
+
+59. git branch -a – List all branches
+
+60. git merge branch – Merge branch into current
+
+branch
+
+61. git log --oneline – Show commit history
+
+62. git diff – Show changes
+
+63. git stash – Stash changes
+
+64. git stash pop – Apply stashed changes
+
+65. git reset --hard HEAD~1 – Reset last commit
+
+66. git revert commit_id – Revert commit
+
+67. git tag -a v1.0 -
+
+=== SOURCE: DevOps Shack Ultimate Corporate Mega DevOps Project Introduction: The Ultimate… ===
+DevOps Shack
+
+Ultimate Corporate Mega DevOps Project
+
+Introduction: The Ultimate Corporate Mega DevOps Project
+
+In today’s fast-paced tech world, delivering high-quality software rapidly and reliably is 
+paramount. The Ultimate Corporate Mega DevOps Project demonstrates a comprehensive 
+enterprise-level DevOps implementation, integrating modern tools and best practices to 
+streamline the software development lifecycle. This project is designed to mimic real-world 
+workflows, ensuring automation, scalability, and monitoring across all stages. 
+The project is structured into four distinct phases, each playing a vital role in achieving a 
+robust and production-ready system: 
+1. Phase-1: Infrastructure Setup
+
+Establishes a scalable and secure cloud infrastructure using Amazon EKS, with all 
+necessary tools like Jenkins, SonarQube, Nexus, and monitoring solutions like 
+Prometheus and Grafana integrated within the cluster. 
+2. Phase-2: Git Repository Setup
+
+Implements a clear version control strategy by organizing the codebase into three 
+repositories: 
+o CI Project Repository (source code and CI pipelines). 
+o CD Project Repository (Kubernetes deployment manifests). 
+o Terraform Repository (infrastructure as code for EKS setup). 
+3. Phase-3: CI/CD Pipelines
+
+Automates the application lifecycle with robust CI pipelines for building, testing, and 
+artifact management, and CD pipelines for deploying applications to Kubernetes 
+clusters. 
+4. Phase-4: Monitoring & Observability
+
+Implements real-time monitoring using Prometheus, Grafana, and Node Exporter to 
+track both infrastructure and application health, ensuring proactive issue detection 
+and resolution. 
+This phased approach ensures a seamless integration of DevOps practices, enabling 
+continuous delivery, enhanced security, and reliable monitoring. Each phase builds on the 
+previous, culminating in a fully operational and production-grade system. Let’s dive into the 
+details of each phase!
+
+This project is designed to integrate DevOps best practices, including infrastructure 
+automation, CI/CD pipelines, application monitoring, and security. Below is an in-depth 
+explanation of the project, phase by phase.
+
+Phase-1: Infrastructure Setup
+
+Infrastructure setup is the foundation for this project, creating a robust, scalable, and secure 
+environment to host applications and manage workflows effectively.
+
+EKS Cluster Setup
+
+Amazon Elastic Kubernetes Service (EKS) is used as the orchestration platform to run and 
+manage containerized workloads.
+
+1. Service Accounts
+
+Service accounts are essential for enabling secure communication between applications and 
+cluster resources: 
+• Jenkins Service Account: 
+o Provides Jenkins pipelines with access to Kubernetes resources like: 
+▪ Deployments, Services, and Pods (Namespace-scoped). 
+▪ PersistentVolumeClaims and ConfigMaps (Cluster-scoped). 
+o Configured using Role-Based Access Control (RBAC) for secure permissions. 
+o Enables automated deployment and resource ma
+
+=== SOURCE: DevOpsShack100Real TimeDevOpsSecurityErrors, SolutionsandRootCauseAnalysis… ===
+DevOpsShack100Real TimeDevOpsSecurityErrors, SolutionsandRootCauseAnalysis
+TrivyErrors
+1. Error: FATAL: unable to authenticate to Docker Hub○ Cause: DockerHubauthenticationcredentialsarenotprovidedorexpired.○ Solution: LogintoDockerHubusingdocker login.○ RCA: TrivyrequiresDockerHubauthenticationforprivateimages.
+2. Error: Error: failed to scan image: timeout while fetchinglayers○ Cause: Networklatencyorconnectivityissues.○ Solution: Increasethescantimeoutusing--timeoutflag.○ RCA: Slownetworkconnectionsorserver-sidedelays.
+3. Error: Failed to scan image: unsupported media type○ Cause: TheimageformatisnotsupportedbyTrivy.○ Solution: Usedocker savetoconverttheimageintoasupportedtarformat.○ RCA: Trivyworksonlywithspecificmediatypes(e.g., Dockerlayers).
+4. Error: Trivy scan results show "UNKNOWN" severity○ Cause: Missingoroutdatedvulnerabilitydatabase.○ Solution: Updatethedatabaseusingtrivy --update.○ RCA: Trivyreliesonanup-to-datedatabaseforaccuratevulnerabilityseverityclassification.
+
+5. Error: Error: insufficient permissions to scan directories○ Cause: Lackofreadpermissionsforfilesordirectories.○ Solution: EnsuretheuserrunningTrivyhassufficientfilepermissions.○ RCA: Scanningrestrictedfileswithoutproperpermissionsresultsinerrors.
+OWASPZAPErrors
+6. Error: ZAP unable to start proxy server○ Cause: Portconflictwithanotherserviceusingthesameproxyport.○ Solution: ChangetheproxyportinZAPsettings.○ RCA: Defaultport(8080)isoftenusedbyotherservices.
+7. Error: ZAP crashes during large-scale scan○ Cause: InsufficientmemoryallocatedtotheJVM.○ Solution: IncreaseJVMheapsize.○ RCA: Largescansconsumesignificantmemory.
+8. Error: ZapProxy Timeout on Selenium Integration○ Cause: SeleniumWebDriverfailstocommunicatewithZAPproxy.○ Solution: IncreasethetimeoutinWebDriversettings.○ RCA: Slownetworkconditionsormisconfiguredproxysettingsdisruptcommunication.
+9. Error: Active scan hangs at 0% progress○ Cause: Server-sideprotectionsblockingZAP'srequests.○ Solution: Addheadersoruser-agentstringstomimiclegitimatetraffic.○ RCA: WebserversidentifyandblockZAPtrafficaspotentiallymalicious.
+10.Error: ZAP reports incorrect vulnerabilities○ Cause: Falsepositivesduetomisconfiguredcontextsorbaselines.○ Solution: Adjustscanrulesandverifyresultsmanually.○ RCA: Misconfiguredbaselinesmayflagbenignissues.
+
+ProwlerErrors
+11.Error: Access Denied on AWS API calls○ Cause: InsufficientIAMpermissions.○ Solution: AttachtheSecurityAuditAWSmanagedpolicy.○ RCA: Prowlerneedsextensivepermissionstoperformchecks.
+12.Error: Check skipped: Missing AWS CLI or credentials○ Cause: AWSCLI isnotinstalledorcredentialsarenotconfigured.○ Solution: Install AWSCLI andconfigurecredentialsusingawsconfigure.○ RCA: ProwlerreliesonAWSCLI tointeractwithAWSservices.
+13.Error: Failed to execute check: invalid region○ Cause: AWSregionisnotvalidornotspecified.○ Solution: Use--regiontospecifyavalidregion.○ RCA: IncorrectregionvaluesleadtoAPI errors.
+14.Error: S3 Bucket encryption check reports incorrect status○ Cause: Prowleruses
+
+=== SOURCE: Devops Basics — Apr 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+5 Essential DevOps Mini Projects
+
+Table of Contents 
+1. Automated Deployment Pipeline with CI/CD Using Jenkins 
+• Overview 
+• Step 1: Prerequisites 
+• Step 2: Setting Up Jenkins 
+o Installation 
+o Configurations 
+• Step 3: Preparing the Application 
+o Creating and Pushing a Repository 
+• Step 4: Configuring the Jenkins Pipeline 
+o Writing the Pipeline Script 
+• Step 5: Enhancing the Pipeline 
+o Adding Webhooks 
+o Integrating Docker 
+o Deploying to a Server 
+• Step 6: Testing and Debugging 
+• Step 7: Best Practices 
+• Key Takeaways
+
+2. Infrastructure as Code (IaC) with Terraform 
+• Overview 
+• Step 1: Prerequisites
+
+3
+
+• Step 2: Creating the Terraform Configuration 
+o Setting Up the Project Directory 
+o Defining Resources: VPC, Subnets, Internet Gateway, and EC2 
+• Step 3: Initializing and Applying Terraform 
+o Initializing Terraform 
+o Validating and Applying Configuration 
+• Step 4: Verifying the Deployment 
+o Accessing Resources via the AWS Console 
+o Connecting to the EC2 Instance 
+• Step 5: Enhancements 
+o Adding Elastic Load Balancers 
+o Securing with Security Groups 
+• Step 6: Destroying the Resources 
+• Key Takeaways
+
+3. Containerized Application Deployment with Docker Compose 
+• Overview 
+• Step 1: Prerequisites 
+• Step 2: Preparing the Application 
+o Creating a Web Application 
+o Adding Database Initialization Scripts 
+• Step 3: Writing Dockerfiles 
+o Dockerfile for the Web Application 
+• Step 4: Creating the docker-compose.yml File 
+o Defining Services: App and Database 
+• Step 5: Building and Running the Application
+
+4
+
+o Building Docker Images 
+o Running the Containers 
+• Step 6: Testing and Debugging 
+• Step 7: Enhancements 
+o Adding Environment Variables 
+o Scaling Containers 
+• Step 8: Cleanup 
+• Key Takeaways
+
+4. Kubernetes Deployment for a Multi-Tier Application 
+• Overview 
+• Step 1: Prerequisites 
+• Step 2: Building the Application 
+o Creating Web and Database Components 
+o Writing Dockerfiles 
+• Step 3: Writing Kubernetes Manifests 
+o Deployment for Web Application 
+o Service for Web Application 
+o Deployment for Database 
+o Service for Database 
+• Step 4: Deploying the Application 
+o Applying Manifests 
+o Accessing the Application 
+• Step 5: Enhancements 
+o Adding Probes for Health Checks 
+o Using Persistent Volumes
+
+5
+
+o Scaling Deployments 
+• Step 6: Cleanup 
+• Key Takeaways
+
+5. Automated Configuration Management with Ansible 
+• Overview 
+• Step 1: Prerequisites 
+• Step 2: Setting Up the Ansible Inventory 
+• Step 3: Writing the Ansible Playbook 
+o Installing and Configuring Apache 
+o Deploying MySQL and Securing Installation 
+o Adding PHP and Application Deployment 
+• Step 4: Running the Playbook 
+• Step 5: Verifying the Deployment 
+o Accessing the Application 
+o Checking Service Statuses 
+• Step 6: Enhancements 
+o Adding Variables and Handlers 
+o Using Tags for Task Selection 
+• Step 7: Cleanup 
+• Key Takeaways
+
+6
+
+Introduction: Mastering DevOps with Mini 
+
+=== SOURCE: Devops Basics — Apr 2025 ===
+1
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+11 Microservice CI/CD Pipeline 
+E-Commerce Website
+
+2
+
+Why Microservices? 
+Microservices is an architectural style that structures an application as a collection of 
+small, autonomous services modeled around a business domain. Each microservice is 
+self-contained and implements a single business capability. They communicate with each 
+other over well-defined APIs.
+
+Project Overview:
+
+Project Name: 11 Microservice CI/CD Pipeline 
+Deployment Platform: AWS EKS (Elastic Kubernetes Service) 
+Application Type: E-Commerce Website
+
+Microservices Overview 
+Microservices Implemented: 
+1. Ad Sense Service 
+2. Cart Service 
+3. Checkout Service 
+4. Currency Service 
+5. Email Service 
+6. Frontend Service 
+7. External Frontend (for load balancing) 
+8. Payment Service 
+9. Product Catalogue Service 
+10. Recommendation Service 
+Reasons for Choosing Microservices: 
+1. Scalability: 
+Microservices allow individual services to scale independently based on their 
+specific demand. For instance, the Cart Service can be scaled during high traffic 
+periods without affecting other services. 
+2. Resilience:
+
+3
+
+In a microservices architecture, the failure of one service does not necessarily 
+impact the entire system. Each service can be designed to handle failures 
+gracefully, thereby improving the overall resilience of the application. 
+3. Development Speed: 
+Development teams can work on different services simultaneously without 
+waiting for other teams. This parallel development accelerates the overall 
+development process and allows for quicker releases. 
+4. Technology Diversity: 
+Each microservice can be developed using the most suitable technology stack for its specific needs. 
+For example, the Product Catalogue Service can use a NoSQL database for better performance, while 
+the Checkout Service might use a relational database for transaction consistency. 
+5. Isolation and Maintenance:
+
+Microservices encapsulate their own logic, making it easier to understand, 
+develop, test, and maintain. Changes in one service do not directly affect 
+others, reducing the risk and complexity of updates. 
+Project Components and Pipeline 
+CI/CD Pipeline Using Jenkins: 
+Jenkinsfiles: Each microservice has its own Jenkinsfile defining the steps for 
+building, testing, and deploying the service. 
+Docker: Microservices are containerized using Docker, allowing for consistent 
+environments from development to production. 
+AWS EKS: The microservices are deployed on AWS EKS, a managed Kubernetes 
+service, which orchestrates and manages the lifecycle of the containers.
+
+4
+
+Phase 1 : Infrastructure Setup 
+Create a user in AWS IAM with any name 
+Attach Policies to the newly created user. 
+below policies: 
+ AmazonEC2FullAccess 
+ AmazonEKS_CNI_Policy 
+ AmazonEKSClusterPolicy 
+ AmazonEKSWorkerNodePolicy 
+ AWSCloudFormationFullAccess 
+ IAMFullAccess 
+One more inline policy we need to create with content as below: 
+{
+
+"Version": "20
+
+=== SOURCE: Devops Basics — Apr 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course
+
+DevOps Shack
+
+Corporate DevOps Workbook
+
+Introduction
+
+Welcome to the Corporate DevOps Workbook—your go-to resource for 
+mastering daily DevOps operations. Whether you're a DevOps engineer, SRE, 
+or system administrator, this guide provides a comprehensive reference for 
+managing infrastructure, automating deployments, and troubleshooting issues.
+
+This workbook covers critical commands, workflows, and best practices across 
+industry-standard tools such as:
+
+✅ Git – Version Control & Collaboration
+
+✅ Docker – Containerization & Image Management
+
+✅ Kubernetes – Container Orchestration & Scaling
+
+✅ Terraform – Infrastructure as Code (IaC)
+
+✅ Azure DevOps – CI/CD Pipelines & Automation
+
+✅ Linux – System Administration & Networking Why 
+This Workbook?
+
+🔹 Quick & Easy Access – A single source for the most used DevOps 
+commands.
+
+🔹 Practical Use Cases – Commands are structured with real-world 
+applications.
+
+🔹 Troubleshooting & Optimization – Common issues and solutions for 
+DevOps workflows.
+
+🔹 Security & Best Practices – Safe usage guidelines for each tool to avoid 
+critical mistakes.
+
+Below is a quick reference table featuring the Top 40 Most Used DevOps 
+Whether you're working on deployments, infrastructure provisioning, or 
+troubleshooting, this workbook will help you increase efficiency and reduce 
+downtime. Let's dive in! 🚀
+
+3
+
+Top 40 Most Used DevOps Commands (Quick Reference)
+
+🔹 Git (Version Control)
+
+Command Description
+
+git status Check the status of working directory
+
+git pull origin 
+<branch>
+
+Fetch and merge latest changes from remote
+
+git add . Stage all modified files for commit
+
+git commit -m 
+"message"
+
+Commit staged changes with a message
+
+git push origin 
+<branch>
+
+Push local commits to remote repository
+
+git checkout -b 
+<branch>
+
+Create and switch to a new branch
+
+git merge <branch> Merge specified branch into the current branch
+
+git rebase <branch> Reapply commits on top of another branch
+
+git reset --soft
+
+<commit>
+
+Undo commits but keep changes staged
+
+git reset --hard 
+<commit>
+
+WARNING: Reset to a previous commit, losing all 
+changes
+
+4
+
+🐳 Docker (Containers & Images)
+
+Command Description
+
+docker ps List running containers
+
+docker ps -a List all containers (running & stopped)
+
+docker images List all available Docker images
+
+docker run -d -p 8080:80 
+<image>
+
+Run a container in detached mode with 
+port mapping
+
+docker exec -it 
+<containerid> bash
+
+Open shell inside a running container
+
+docker logs <container-id> View logs of a running container
+
+docker stop <containerid> Stop a running container
+
+docker rm <container-id> WARNING: Remove a stopped container
+
+docker rmi <image> WARNING: Delete a Docker image
+
+docker system prune -a WARNING: Remove unused images, 
+containers, and networks
+
+5
+
+☸ Kubernetes (K8s)
+
+Command Description
+
+kubectl get pods List all running pods
+
+kubectl describe pod 
+<podname>
+
+Get detailed information about a pod
+
+kubectl logs <pod-name> View logs of
+
+=== SOURCE: Devops Basics — Apr 2025 ===
+1
+
+2
+
+DevOps Shack 
+DevOps Error Troubleshooting Guide 
+Introduction 
+This guide, "DevOps Troubleshooting: A Comprehensive Guide," is designed to 
+be your go-to resource for addressing the most common and challenging errors 
+across a wide array of DevOps tools. Structured tool by tool, the book explores 
+the top 10 errors for each major technology, providing detailed explanations, 
+root causes, and actionable solutions to help you overcome these challenges 
+with confidence. 
+By learning from these errors, you’ll not only become adept at troubleshooting 
+but also gain insights into building more resilient, automated, and efficient 
+systems. As you dive into this book, remember: every error is an opportunity to 
+learn, innovate, and enhance your expertise in the ever-evolving world of 
+DevOps. 
+Welcome to the journey of mastering DevOps troubleshooting—let’s get 
+started!
+
+3
+
+Table of Contents
+
+1. Git Errors 
+1.1 "fatal: not a git repository (or any of the parent directories): .git" 
+1.2 "error: failed to push some refs" 
+1.3 "Permission denied (publickey)" 
+1.4 "Merge conflict in [file]" 
+1.5 "Detached HEAD state" 
+1.6 "fatal: remote origin already exists" 
+1.7 "Large file exceeds limit" 
+1.8 "Submodule update failed" 
+1.9 "fatal: cannot lock ref" 
+1.10 "Untracked files prevent switching branches"
+
+2. Jenkins Errors 
+2.1 "Jenkins service not starting" 
+2.2 "Build stuck in the queue" 
+2.3 "Plugins fail to load" 
+2.4 "Pipeline script syntax error" 
+2.5 "Build fails due to missing environment variables" 
+2.6 "Unauthorized webhook trigger" 
+2.7 "Job not found after restart" 
+2.8 "Out of disk space" 
+2.9 "Build artifacts not archiving" 
+2.10 "Node disconnected unexpectedly"
+
+3. Docker Errors 
+3.1 "Cannot connect to the Docker daemon" 
+3.2 "Port is already in use" 
+3.3 "No space left on device" 
+3.4 "ImagePullBackOff" in Kubernetes
+
+4
+
+3.5 "Permission denied on bind mount" 
+3.6 "Container restart loop" 
+3.7 "Failed to build Docker image" 
+3.8 "Error response from daemon: conflict" 
+3.9 "Docker network not reachable" 
+3.10 "Volume mount not working"
+
+4. Kubernetes Errors 
+4.1 "ImagePullBackOff" 
+4.2 "CrashLoopBackOff" 
+4.3 "Node Not Ready" 
+4.4 "PersistentVolumeClaim Pending" 
+4.5 "Pod is stuck in Pending state" 
+4.6 "RBAC: Access Denied" 
+4.7 Service Unreachable 
+4.8 "Resource Quota Exceeded" 
+4.9 "Evicted Pods" 
+4.10 Deployment Rollout Fails
+
+5. Ansible Errors 
+5.1 "Host unreachable" 
+5.2 "Syntax error in playbook" 
+5.3 "Undefined variable" 
+5.4 "Command not found on target node" 
+5.5 "Permission denied" 
+5.6 Module not found 
+5.7 "Failed to find group_vars" 
+5.8 Playbook runs indefinitely 
+5.9 "Handler not triggered" 
+5.10 Dynamic inventory script failure
+
+6. Terraform Errors 
+6.1 "Provider plugin not found" 
+6.2 "State file lock error"
+
+5
+
+6.3 "Error acquiring the state lock" 
+6.4 Resource already exists 
+6.5 "Plan does not match changes" 
+6.6 "Invalid index" in Terraform output 
+6.7 "Module not found" 
+6.8 Authentication failure 
+6.9 "Timeout waitin
+
+=== SOURCE: Devops Basics — Apr 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack
+
+Zero Downtime Deployment 
+with Deployment Strategies
+
+Table of Contents
+
+1. Introduction & Importance 
+o What is Zero Downtime? 
+o Business impact of downtime 
+2. Deployment Strategies 
+o Blue-Green, Canary, Rolling Updates 
+o Feature Toggles & Shadow Deployments 
+3. Application Architecture 
+o Stateless apps, graceful shutdowns 
+o Backward-compatible changes 
+4. CI/CD Pipeline & Automation 
+o GitHub Actions, Jenkins, GitLab CI 
+o Pre-deployment checks & automated releases 
+5. Infrastructure Setup 
+o Load balancers, containers (Docker/K8s) 
+o Auto-scaling, service discovery 
+6. Database Management 
+o Expand-and-contract migrations 
+o Dual writes and backward-compatible schema 
+7. Monitoring & Rollbacks 
+o Health checks, observability
+
+3
+
+o Auto/manual rollback mechanisms 
+8. Best Practices & Case Study 
+o Real-world implementation example 
+o Zero downtime deployment checklist
+
+4
+
+1. Introduction & Importance of Zero Downtime 
+Deployment 
+What is Zero Downtime Deployment? 
+Zero Downtime Deployment refers to the process of updating an application or 
+service without causing any interruption to its availability. In other words, users 
+can continue interacting with the application seamlessly while updates are 
+being deployed behind the scenes. This approach is crucial for modern, high-
+availability systems—especially those serving global users 24/7. 
+Downtime, even if it's for a few minutes, can lead to a poor user experience, 
+loss of revenue, customer dissatisfaction, and in some sectors like finance or 
+healthcare, even critical failures. 
+Traditional deployment methods often involve stopping the current version of 
+an application, replacing it with the new one, and then restarting the system. 
+During this window, services become temporarily unavailable. This method 
+might work in development or small-scale applications, but it's unacceptable in 
+production environments where availability is a priority. 
+Why Zero Downtime Matters 
+1. User Experience 
+Customers expect services to be available at all times. Whether it’s an e-
+commerce checkout, a banking transaction, or booking a flight—any disruption 
+could result in frustration and lost trust. In competitive industries, users may 
+switch to a rival's service after even a single bad experience. 
+2. Global User Base 
+Applications today are used globally. There’s no longer a perfect "off-hour" to 
+deploy an update. For instance, 3 AM in New York is prime time in parts of Asia. 
+Zero Downtime Deployment ensures that no matter the time zone, users don’t 
+face service interruptions. 
+3. Revenue Protection 
+Even short downtimes can cause financial losses. Imagine a payment gateway 
+going down during a flash sale. Lost transactions directly impact the bottom
+
+5
+
+line. In B2B applications, it can also affect service-level agreements (SLAs) and 
+result in penalties. 
+4. Operational Efficiency 
+Zero Downtime strategies often require automati
+
+=== SOURCE: Devops Basics — Feb 2025 ===
+1
+
+2
+
+DevOps Shack 
+DevOps Error Troubleshooting Guide 
+Introduction 
+In the fast-paced world of software development and IT operations, DevOps 
+has emerged as a critical approach to bridging the gap between development 
+and operations teams. By fostering collaboration, automation, and continuous 
+delivery, DevOps empowers organizations to deliver high-quality software 
+faster and more reliably. However, with great power comes great complexity. 
+As the DevOps ecosystem grows to encompass a multitude of tools and 
+technologies—such as Git, Jenkins, Docker, Kubernetes, Ansible, Terraform, and 
+monitoring stacks—teams face an increasing number of challenges, errors, and 
+roadblocks. 
+Whether you're a seasoned DevOps engineer or just starting your journey, 
+troubleshooting is an inevitable and essential part of the role. From 
+configuration issues and permission errors to deployment failures and system-
+level bugs, these problems can disrupt workflows, impact productivity, and 
+even delay critical software releases. Understanding how to identify, analyze, 
+and resolve these issues is not just a skill—it’s a necessity. 
+This guide, "DevOps Troubleshooting: A Comprehensive Guide," is designed to 
+be your go-to resource for addressing the most common and challenging errors 
+across a wide array of DevOps tools. Structured tool by tool, the book explores 
+the top 10 errors for each major technology, providing detailed explanations, 
+root causes, and actionable solutions to help you overcome these challenges 
+with confidence. 
+By learning from these errors, you’ll not only become adept at troubleshooting 
+but also gain insights into building more resilient, automated, and efficient 
+systems. As you dive into this book, remember: every error is an opportunity to 
+learn, innovate, and enhance your expertise in the ever-evolving world of 
+DevOps. 
+Welcome to the journey of mastering DevOps troubleshooting—let’s get 
+started!
+
+3
+
+Table of Contents
+
+1. Git Errors 
+1.1 "fatal: not a git repository (or any of the parent directories): .git" 
+1.2 "error: failed to push some refs" 
+1.3 "Permission denied (publickey)" 
+1.4 "Merge conflict in [file]" 
+1.5 "Detached HEAD state" 
+1.6 "fatal: remote origin already exists" 
+1.7 "Large file exceeds limit" 
+1.8 "Submodule update failed" 
+1.9 "fatal: cannot lock ref" 
+1.10 "Untracked files prevent switching branches"
+
+2. Jenkins Errors 
+2.1 "Jenkins service not starting" 
+2.2 "Build stuck in the queue" 
+2.3 "Plugins fail to load" 
+2.4 "Pipeline script syntax error" 
+2.5 "Build fails due to missing environment variables" 
+2.6 "Unauthorized webhook trigger" 
+2.7 "Job not found after restart" 
+2.8 "Out of disk space" 
+2.9 "Build artifacts not archiving" 
+2.10 "Node disconnected unexpectedly"
+
+3. Docker Errors 
+3.1 "Cannot connect to the Docker daemon" 
+3.2 "Port is already in use" 
+3.3 "No space left on device" 
+3.4 "ImagePullBackOff" in Kubernetes 
+3.5 "Permission denied on bind mount" 
+3.6 "Container restart loop"
+
+4
+
+3.7 "Fa
+
+=== SOURCE: Devops Basics — Mar 2025 ===
+1
+Untitled
+🔥 Essential Port Numbers for DevOps Engineers (with Explanations & Debugging
+Tips)
+As a DevOps Engineer, knowing key port numbers is essential for networking, security,
+and troubleshooting. Here's a detailed breakdown of commonly used ports and how to
+debug them!
+🔹 Web & HTTP(S)
+Debugging Commands:
+curl -I http://your-server-ip:80 # Check if HTTP service is running
+curl -I https://your-server-ip:443 # Check HTTPS connection
+netstat -tulnp | grep :80 # Check if a process is using port 80
+🔹 SSH & Remote Access
+Debugging Commands:
+ssh user@your-server-ip # Test SSH connection
+telnet your-server-ip 22 # Check if SSH is reachable
+netstat -tulnp | grep :22 # Verify SSH service is running
+🔹 Database Ports
+Debugging Commands:
+80 (HTTP) → Default port for web traffic, used for serving web pages.•
+443 (HTTPS) → Secure version of HTTP using SSL/TLS encryption.•
+8080 (Alternate HTTP) → Often used for local development or proxy servers.•
+8443 (Alternate HTTPS) → HTTPS alternative, sometimes used for secure
+applications.
+•
+22 (SSH) → Secure Shell for remote server access.•
+3389 (RDP) → Remote Desktop Protocol for Windows remote access.•
+3306 (MySQL/MariaDB) → Default MySQL/MariaDB database port.•
+5432 (PostgreSQL) → Default port for PostgreSQL database.•
+1433 (SQL Server) → Used by Microsoft SQL Server.•
+1521 (Oracle Database) → Oracle Database Listener port.•
+27017 (MongoDB) → Default MongoDB connection port.•
+2
+mysql -h your-server-ip -P 3306 -u user -p # Connect to MySQL
+pg_isready -h your-server-ip -p 5432 # Check PostgreSQL status
+netstat -tulnp | grep :3306 # Verify if MySQL is running
+🔹 DevOps & CI/CD Tools
+Debugging Commands:
+curl http://your-server-ip:8081 # Check Nexus Repository
+curl http://your-server-ip:5000/v2/ # Check Docker Registry
+🔹 Kubernetes & Containers
+Debugging Commands:
+kubectl cluster-info # Verify API Server is running
+kubectl get nodes # Check node status
+etcdctl endpoint status # Verify etcd health
+🔹 Monitoring & Logging
+Debugging Commands:
+curl http://your-server-ip:9090 # Check Prometheus
+curl http://your-server-ip:3000 # Check Grafana
+curl -X GET http://your-server-ip:9200 # Check Elasticsearch health
+🔹 Cloud & DevOps Services
+8081 (Nexus Repository) → Used for artifact management.•
+8082 (JFrog Artifactory) → JFrog's binary repository manager.•
+5000 (Docker Registry) → Used for private Docker registries.•
+6443 (Kubernetes API Server) → Controls Kubernetes cluster operations.•
+10250 (Kubelet API) → Communication between nodes and API server.•
+2379-2380 (etcd Cluster) → Kubernetes’ key-value store backend.•
+9090 (Prometheus) → Used for metrics scraping and monitoring.•
+3000 (Grafana) → Web-based visualization dashboard.•
+5601 (Kibana) → Elasticsearch dashboard for log analysis.•
+9200 (Elasticsearch) → RESTful search and analytics engine.•
+1514 (Syslog) → Collects system logs from network devices.•
+4505-4506 (SaltStack) → Used by SaltStack for remote execution.•
+3
+Debugging Commands:
+docker -H tcp://your-server-ip:2375 in
+
+=== SOURCE: Devops Basics — Mar 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+SSL/TLS Certificate Setup and Management 
+in DevOps: A Practical Guide 
+Table of Contents 
+1. Introduction 
+1.1 Overview of CI/CD in DevOps 
+1.2 Importance of SSL/TLS in Secure Deployments 
+1.3 Choosing the Right SSL/TLS Management Approach 
+2. Setting Up a CI/CD Pipeline 
+2.1 Selecting a CI/CD Platform (GitHub Actions, GitLab CI/CD, Azure DevOps, 
+etc.) 
+2.2 Defining CI/CD Stages (Build, Test, Deploy) 
+2.3 Automating Deployments with Infrastructure as Code (IaC) 
+3. Generating & Configuring SSL/TLS Certificates 
+3.1 Choosing Between Self-Signed, Let’s Encrypt, and CA-Issued Certificates 
+3.2 Setting Up an SSL Certificate with Let’s Encrypt (Certbot) 
+3.3 Automating Certificate Generation in CI/CD 
+4. Deploying SSL/TLS Certificates in a Web Application 
+4.1 Configuring SSL for Web Servers (NGINX, Apache, IIS) 
+4.2 Applying SSL/TLS in Cloud Services (AWS, Azure, Kubernetes) 
+4.3 Securing API Endpoints with HTTPS 
+5. Automating SSL/TLS Management 
+5.1 Using Let’s Encrypt for Auto-Renewal 
+5.2 Storing and Managing Certificates Securely (Azure Key Vault, AWS 
+Certificate Manager) 
+5.3 Integrating SSL Management in CI/CD Pipelines 
+6. Monitoring & Troubleshooting SSL/TLS Certificates
+
+3
+
+6.1 Setting Up Certificate Expiry Alerts 
+6.2 Using OpenSSL & SSL Labs for Debugging 
+6.3 Fixing Common SSL/TLS Issues in Deployments 
+7. Best Practices for SSL/TLS in DevOps 
+7.1 Enforcing TLS 1.2/1.3 and Strong Cipher Suites 
+7.2 Implementing HSTS, OCSP Stapling, and Certificate Pinning 
+7.3 Automating Security Audits in the CI/CD Pipeline 
+8. Conclusion 
+8.1 Summary of CI/CD & SSL/TLS Integration 
+8.2 Future Trends in SSL/TLS Automation 
+8.3 Final Recommendations
+
+4
+
+1. Introduction 
+1.1 Overview of SSL/TLS 
+SSL (Secure Sockets Layer) and its successor TLS (Transport Layer Security) are 
+cryptographic protocols designed to provide secure communication over the 
+internet. They encrypt data transmitted between clients (browsers, 
+applications) and servers, ensuring confidentiality, integrity, and 
+authentication. TLS 1.2 and TLS 1.3 are the widely used secure versions today. 
+1.2 Importance of SSL/TLS in DevOps 
+In modern DevOps workflows, SSL/TLS plays a critical role in securing web 
+applications, APIs, and cloud environments. The key benefits include: 
+ Data Encryption – Prevents unauthorized access and man-in-the-middle 
+(MITM) attacks. 
+ Authentication – Ensures that the client is communicating with the 
+intended server . 
+ Data Integrity – Protects against tampering during transmission. 
+ Regulatory Compliance – Helps meet security standards like GDPR, PCI-
+DSS, and HIPAA. 
+SSL/TLS certificates are essential in DevOps pipelines to maintain secure 
+deployments, protect customer data, and build trust. 
+1.3 Choosing the Right SSL/TLS Management Approach 
+Managing SSL/TLS certificates in DevOps environments can be automated and 
+streamlined using various tools and services. The best approach de
+
+=== SOURCE: Devops Basics — Mar 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+Blue-Green Deployment: Comprehensive 
+Guide 
+What is Blue-Green Deployment? 
+Blue-Green Deployment is a software release strategy that minimizes 
+downtime and risk by maintaining two nearly identical production 
+environments—Blue and Green. One environment (Blue) serves live user 
+traffic, while the other (Green) is used for testing and staging new releases. 
+Once the new version is verified, traffic is switched from the Blue environment 
+to the Green environment, making it the new live system. If issues arise, traffic 
+can quickly revert to the previous stable version. 
+How It Works 
+1. Initial Setup: The Blue environment is active, serving all traffic. The 
+Green environment exists but remains idle. 
+2. Deployment to Green: A new application version is deployed to the 
+Green environment and tested. 
+3. Validation and Testing: Automated and manual tests ensure the Green 
+environment is functional and meets quality standards. 
+4. Traffic Switch: Once validated, traffic is redirected from Blue to Green 
+using a load balancer or DNS switch. 
+5. Monitoring: The new version is observed for any unexpected issues. 
+6. Rollback (If Needed): If problems arise, traffic is quickly switched back to 
+the Blue environment. 
+Key Advantages 
+ Zero Downtime: Users experience a seamless transition. 
+ Safe Rollbacks: Quick recovery to the last working version if issues occur . 
+ Improved Testing: The Green environment allows real-world testing 
+before release.
+
+3
+
+ Better User Experience: No interruptions or service degradation. 
+This deployment model is widely used in cloud environments (AWS, Azure, 
+Kubernetes) where infrastructure automation simplifies switching between 
+environments. However, it requires duplicate resources, which can increase 
+costs. Despite this, Blue-Green Deployment is a powerful strategy for 
+organizations that prioritize high availability, rapid rollbacks, and continuous 
+delivery.
+
+2. Benefits of Blue-Green Deployment 
+Blue-Green Deployment offers several advantages, especially for businesses 
+and applications that require high availability, seamless updates, and minimal 
+downtime. Here are the key benefits: 
+1. Zero Downtime Deployment 
+One of the biggest advantages of Blue-Green Deployment is that it enables 
+deployments without any service interruptions. Since the new version is 
+deployed in the Green environment while the Blue environment remains 
+active, users experience no downtime during the transition. 
+2. Instant Rollbacks for Faster Recovery 
+If a newly deployed version has issues, switching back to the previous stable 
+version (Blue) is as simple as directing traffic back to it. This eliminates the risk 
+of extended outages caused by faulty deployments. 
+3. Safer Testing in Production 
+The Green environment allows real-world testing without affecting live users. 
+Teams can perform: 
+ Functional and regression testing 
+ Load and performance testing 
+ Se
+
+=== SOURCE: Devops Basics — Mar 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course
+
+DevOps Shack
+
+GitHub Comprehensive Guide
+
+Ultimate GitHub Actions CI/CD Pipeline Guide
+
+Introduction to GitLab CI/CD 
+1. What is CI/CD? 
+CI/CD stands for Continuous Integration and Continuous Delivery (or 
+Deployment), and it's one of the cornerstones of modern DevOps practices. It 
+helps teams deliver software more frequently, reliably, and with better quality. 
+The practice has evolved from a need to streamline the traditional software 
+development lifecycle (SDLC), which was often plagued by long integration 
+cycles, difficult testing, and error-prone manual deployments. 
+Continuous Integration (CI) 
+CI is the practice of automatically integrating code changes from multiple 
+contributors into a shared repository several times a day. Each integration is 
+verified by an automated build and test process, allowing teams to detect 
+problems early. 
+Key aspects of CI include: 
+• Developers push code frequently to a central repository. 
+• Automated tools build and test the code. 
+• Failures are reported immediately, enabling quick resolution. 
+Continuous Delivery (CD) 
+CD extends CI by automatically preparing code changes for release to 
+production. It ensures that software can be reliably released at any time. This 
+includes automated testing, staging, and release processes. 
+Continuous Deployment
+
+3
+
+This is a step beyond continuous delivery. In continuous deployment, every 
+change that passes all stages of the production pipeline is automatically 
+deployed to users, without manual intervention. 
+2. Why CI/CD is Crucial in Modern Development 
+The modern software development landscape demands speed, agility, and 
+quality. Here’s why CI/CD is crucial: 
+• Faster Time to Market: Automating build, test, and deployment 
+significantly reduces the time from development to release. 
+• Improved Code Quality: Frequent integration and automated testing 
+help identify and fix issues earlier. 
+• Reduced Risk: Smaller, incremental changes are easier to test, review, 
+and deploy. 
+• Enhanced Collaboration: CI/CD encourages developers to work together 
+more closely, resulting in more cohesive software. 
+• Supports Agile and DevOps Practices: It aligns perfectly with the 
+iterative nature of Agile development and the automation focus of 
+DevOps. 
+3. GitLab’s Role in CI/CD 
+GitLab is a complete DevOps platform delivered as a single application. It 
+provides built-in CI/CD capabilities that are tightly integrated with its version 
+control system, issue tracking, and security tools. This all-in-one approach 
+eliminates the need to integrate multiple tools and simplifies DevOps 
+workflows. 
+GitLab’s Key CI/CD Features: 
+• Native support for pipelines via .gitlab-ci.yml 
+• Built-in Docker registry and Kubernetes integration 
+• Visual pipeline or and pipeline graphs 
+• Auto DevOps for intelligent pipeline generation 
+• Secret management and variable injection 
+• Extensive API and webhook support
+
+4
+
+4. Real-World Use C
+
+=== SOURCE: Each question is accompanied with an answer so that you can prepare for job… ===
+Each question is accompanied with an answer so that you can prepare for job interview in short time.
+We have compiled this list after attending dozens of technical interviews in top-notch companies like- Airbnb, Netflix, Amazon etc.
+Often, these questions and concepts are used in our daily work. But these are most helpful when an Interviewer is trying to test your deep
+knowledge of DevOps.
+Once you go through them in the first pass, mark the questions that you could not answer by yourself. Then, in second pass go through only the
+difficult questions.
+After going through this book 2-3 times, you will be well prepared to face a technical interview for a DevOps Engineer position.
+
+DevOps Interview Questions
+
+DevOps
+
+1.
+
+What are the popular DevOps tools that you use?
+
+We use following tools for work in DevOps:
+
+I
+. 
+Jenkins
+
+: This is an open source automation server used as a continuous integration tool. We can build,
+deploy and run automated tests with Jenkins.
+II
+. 
+GIT
+
+: It is a version control tool used for tracking changes in files and software.
+III
+. 
+Docker
+
+: This is a popular tool for containerization of services. It is very useful in Cloud based deployments.
+IV
+. 
+Nagios
+
+: We use Nagios for monitoring of IT infrastructure.
+V
+. 
+Splunk
+
+: This is a powerful tool for log search as well as monitoring production systems.
+VI
+. 
+Puppet
+
+: We use Puppet to automate our DevOps work so that it is reusable.
+
+2.
+
+What are the main benefits of DevOps?
+
+DevOps is a very popular trend in Software Development. Some of the main benefits of DevOps are as follows:
+
+I
+. 
+Release Velocity
+
+: DevOps practices help in increasing the release velocity. We can release code to
+production more often and with more confidence.
+
+II
+. 
+Development Cycle
+
+: With DevOps, the complete Development cycle from initial design to production
+deployment becomes shorter.
+
+III
+. 
+Deployment Rollback
+
+: In DevOps, we plan for any failure in deployment rollback due to a bug in code or
+issue in production. This gives confidence in releasing feature without worrying about downtime for rollback.
+
+IV
+. 
+Defect Detection
+
+: With DevOps approach, we can catch defects much earlier than releasing to production.
+It improves the quality of the software.
+
+V
+. 
+Recovery from Failure
+
+: In case of a failure, we can recover very fast with DevOps process.
+
+VI
+. 
+Collaboration
+
+: With DevOps, collaboration between development and operations professionals increases.
+
+VII
+. 
+Performance-oriented
+
+: With DevOps, organization follows performance-oriented culture in which teams
+become more productive and more innovative.
+
+3.
+
+What is the typical DevOps workflow you use in your organization?
+The typical DevOps workflow in our organization is as follows:
+
+I
+. 
+We use Atlassian Jira for writing requirements and tracking tasks.
+II
+. 
+Based on the Jira tasks, developers checkin code into GIT version control system.
+III
+. 
+The code checked into GIT is built by using Apache Maven.
+IV
+. 
+The build process is 
+
+=== SOURCE: End to End DevOps Project | CICD Requirements : CI/CD pipeline System:… ===
+End to End DevOps Project | CICD
+
+Requirements : CI/CD pipeline System: 
+Pre-requisites 
+• Login to GitHub, Docker Hub and AWS Accouts 
+• Launch EC2 instances 3: Jenkins Master, Agent Machine and EKS Machine
+
+Note: 
+ It is possible take t3.medium for cpu purposes 
+ Security Group: create new group with open All traffic- No recommended in Prod 
+environment, its just for practice 
+ Default VPC , RAM 15GB 
+Setup and Configuration: 
+Jenkins Master Server: 
+sudo apt update 
+sudo apt install openjdk-17-jre 
+java -version 
+sudo wget -O /usr/share/keyrings/jenkins-keyring.asc
+
+https://pkg.jenkins.io/debian-
+stable/jenkins.io-2023.key 
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]
+
+https://pkg.jenkins.io/debian-
+stable binary/ | sudo tee
+
+/etc/apt/sources.list.d/jenkins.list > /dev/null
+
+sudo apt-get update 
+sudo apt-get install jenkins 
+sudo systemctl enable jenkins 
+sudo systemctl status Jenkins 
+Optional: 
+open file : sudo vim /etc/ssh/sshd_config - remove comment for below keys 
+PubkeyAuthentication yes
+
+AuthorizedKeysFile
+
+.ssh/authorized_keys .ssh/authorized_keys2
+
+sudo service sshd reload 
+Generate ssh key : ssh-keygen
+
+# Execute it when you setup agent machine 
+Copy id_rsa.pub file content to agent - <User>/.ssh/authorized_keys (do not remove exisiting 
+content just add it to new line)
+
+Agent Machine Setup: 
+sudo apt update 
+sudo apt install openjdk-17-jre 
+sudo apt-get install docker.io 
+docker --version 
+sudo usermod -aG docker $USER 
+Optional: 
+sudo init 6
+
+open file : sudo vim /etc/ssh/sshd_config remove comment for below values
+
+PubkeyAuthentication yes
+
+AuthorizedKeysFile
+
+.ssh/authorized_keys .ssh/authorized_keys2 
+sudo service sshd reload
+
+• Open Jenkins UI : http:<Public_IP_of_jenkinsmaster>:8080 
+• Copy initial password from cat /var/lib/jenkins/secrets/initialAdminPassword and install 
+suggested plugins 
+• Install Below plugins 
+1]Docker 
+2]Docker Commons 
+3]Docker Pipeline 
+4]Docker API 
+5]docker-build-step 
+6]CloudBees Docker Build and Publish 
+7]Maven Integration Pipeline 
+8]Maven Integration 
+9]Eclipse Temurin installer 
+10]Maven Integration Pipeline 
+11]Maven Integration 
+12] Eclipse Temurin installer 
+13]onarQube Scanner 
+14]Sonar Quality Gates 
+15]Quality Gates 
+Master/Slave configuration: 
+####### This is the one method ############################## 
+Manage jenkins - nodes - Build in node- configuration - no of executor - change to 0 and save it
+
+Create new node- name(jenkins-Agent) - Number of executors 2
+
+Remote root directory: /root/jenkins1 
+Usage: Use this node as much as possible 
+Launch Method : Launch agents via SSH () 
+Host: Jenkins-Agent private IP
+
+Credentials : add jenkins
+
+kind: ssh Username with private key
+
+ID: Jenkins-Agent
+
+Description: Jenkins-Agent
+
+Username: root (as i generated ssh key for this user)
+
+credentials :
+
+Host Key Verification Strategy : non verifying
+
+#########This is another method ####################### 
+Manage jenkins - nodes - Build in node- configuration - no of executor 
+
+=== SOURCE: End-to-End CI/CD Pipeline for Java Spring Boot on Kubernetes 1. This project… ===
+  End-to-End CI/CD Pipeline for Java Spring Boot on Kubernetes
+1.
+This project demonstrates a fully automated CI/CD pipeline for deploying a
+Java-based Spring Boot
+ application on a 
+Kubernetes cluster
+. It leverages
+industry-standard DevOps tools to ensure a seamless workflow from
+development to production.
+  
+GitHub
+ – Version control for source code management 
+  
+Jenkins
+ – Automating the build, test, and deployment process 
+  
+Maven
+ – Managing dependencies and building the application 
+  
+SonarQube
+ – Ensuring code quality and security 
+  
+Docker
+ – Containerizing the application for consistency 
+  
+DockerHub
+ – Hosting and distributing Docker images 
+  
+ArgoCD
+ – Enabling GitOps-driven continuous deployment 
+  
+Shell Scripting
+ – Automating various pipeline tasks
+This streamlined pipeline automates 
+code integration, testing, security
+scanning, containerization, and deployment
+—ensuring a fast, reliable, and
+scalable delivery process!
+This documentation was effortlessly generated with 
+Flowshare Free
+ by miraminds.
+ JENKINS END TO END CICD Implementation Page 3 of 13
+Launching an EC2 Instance
+2.
+We will be using t2.large family as the free tier instance(t2.micro) resources
+won't be enough for this practical
+STEPS TO INSTALL JENKINS
+This documentation was effortlessly generated with 
+Flowshare Free
+ by miraminds.
+ JENKINS END TO END CICD Implementation Page 4 of 13
+3.
+1. Install Java :
+sudo apt update
+sudo apt install openjdk-17-jre
+2. Verify if Java is installed:
+java -version
+3. Installing Jenkins:
+curl -fsSL https://pkg.jenkins.io/debian/jenkins.io-2023.key | sudo tee \
+/usr/share/keyrings/jenkins-keyring.asc > /dev/null
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+https://pkg.jenkins.io/debian binary/ | sudo tee \
+/etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update
+sudo apt-get install jenkins
+This documentation was effortlessly generated with 
+Flowshare Free
+ by miraminds.
+ JENKINS END TO END CICD Implementation Page 5 of 13
+Lets verify if Jenkins is installed properly
+4.
+command:
+ps -ef | grep jenkins
+Jenkins is running on port “8080”
+This documentation was effortlessly generated with 
+Flowshare Free
+ by miraminds.
+ JENKINS END TO END CICD Implementation Page 6 of 13
+Adding the required inbound rules
+5.
+By default Jenkins runs on port “8080” so will be adding that rule
+We will also be using sonarqube and that runs on port “9000” so we are adding
+that rule as well
+This documentation was effortlessly generated with 
+Flowshare Free
+ by miraminds.
+ JENKINS END TO END CICD Implementation Page 7 of 13
+Access Jenkins
+6.
+To access jenkins:
+<ec2-instance-ip>:8080
+by default the login id will be “admin”
+and to retrieve the password we will have to go to this path :
+/var/lib/jenkins/secrets/initialAdminPassword
+This documentation was effortlessly generated with 
+Flowshare Free
+ by miraminds.
+ JENKINS END TO END CICD Implementation Page 8 of 13
+Logging into Jenkins
+7.
+We should save password somewhere as we won'
+
+=== SOURCE: End-to-End DevOps Project: Deploying a Scalable Application Using AWS, Docker,… ===
+End-to-End DevOps Project: Deploying a 
+Scalable Application Using AWS, Docker, 
+Kubernetes, Git, Terraform, Ansible, and 
+Monitoring with Grafana & Prometheus 
+Project Overview 
+This project focuses on deploying a scalable web application using AWS cloud 
+infrastructure, Docker for containerization, Kubernetes for orchestration, Terraform for 
+infrastructure provisioning, Ansible for configuration management, Git for version control, 
+and Prometheus & Grafana for monitoring.
+
+Tech Stack 
+• Cloud Provider: AWS 
+• Version Control: Git, GitHub 
+• Infrastructure as Code (IaC): Terraform 
+• Configuration Management: Ansible 
+• Containerization: Docker 
+• Orchestration: Kubernetes (EKS) 
+• CI/CD Pipeline: Jenkins 
+• Monitoring & Logging: Prometheus & Grafana
+
+Project Workflow 
+1. Provision Infrastructure on AWS using Terraform 
+2. Configure Servers using Ansible 
+3. Containerize Application using Docker 
+4. Deploy Containers to Kubernetes (EKS) 
+5. Implement CI/CD Pipeline using Jenkins & Git 
+6. Monitor Performance using Prometheus & Grafana
+
+Step 1: Infrastructure Provisioning with Terraform 
+Terraform is used to create AWS infrastructure, including an EC2 instance, VPC, EKS 
+Cluster, and necessary IAM roles. 
+Terraform Code to Set Up AWS Infrastructure 
+provider "aws" {
+
+region = "us-east-1" 
+}
+
+resource "aws_vpc" "dev_vpc" {
+
+cidr_block = "10.0.0.0/16" 
+}
+
+resource "aws_subnet" "dev_subnet" {
+
+vpc_id
+
+= aws_vpc.dev_vpc.id
+
+cidr_block
+
+= "10.0.1.0/24"
+
+availability_zone = "us-east-1a" 
+}
+
+resource "aws_eks_cluster" "dev_cluster" {
+
+name
+
+= "dev-cluster"
+
+role_arn = aws_iam_role.eks_role.arn
+
+vpc_config {
+
+subnet_ids = [aws_subnet.dev_subnet.id]
+
+} 
+} 
+Run the Terraform script: 
+terraform init 
+terraform apply -auto-approve
+
+Step 2: Configuration Management with Ansible 
+Ansible is used to configure the Kubernetes nodes and install necessary dependencies. 
+Ansible Playbook to Install Docker & Kubernetes 
+- hosts: all
+
+become: yes
+
+tasks:
+
+- name: Install Docker
+
+apt:
+
+name: docker.io
+
+state: present
+
+- name: Install Kubernetes Packages
+
+apt:
+
+name: ["kubelet", "kubeadm", "kubectl"]
+
+state: present 
+Run the playbook: 
+ansible-playbook setup.yaml -i inventory
+
+Step 3: Containerizing Application with Docker 
+A Node.js application is containerized using Docker. 
+Dockerfile 
+FROM node:14 
+WORKDIR /app 
+COPY package.json . 
+RUN npm install 
+COPY . . 
+CMD ["node", "server.js"] 
+EXPOSE 3000 
+Build and push the Docker image: 
+docker build -t myapp:latest . 
+docker tag myapp:latest myrepo/myapp:latest 
+docker push myrepo/myapp:latest
+
+Step 4: Deploying to Kubernetes (EKS) 
+A Kubernetes Deployment and Service are created for our application. 
+Kubernetes Deployment File 
+apiVersion: apps/v1 
+kind: Deployment 
+metadata:
+
+name: myapp 
+spec:
+
+replicas: 3
+
+selector:
+
+matchLabels:
+
+app: myapp
+
+template:
+
+metadata:
+
+labels:
+
+app: myapp
+
+spec:
+
+containers:
+
+- name: myapp
+
+image: myrepo/myapp:latest
+
+ports:
+
+- containerPort: 3000 
+Apply the deployment: 
+kubectl apply -
+
+=== SOURCE: Eric Enning @ https://www.linkedin.com/in/eebk37/ DevOps CheatSheet Docker… ===
+Eric Enning @ https://www.linkedin.com/in/eebk37/
+DevOps CheatSheet
+Docker Cheat Sheet Helm Cheat Sheet
+Kubernetes Cheat Sheet Terraform Cheat Sheet
+Linux Cheat Sheet Git Cheat Sheet
+AWS Cheat Sheet HTTP Cheat Sheet
+Eric Enning @ https://www.linkedin.com/in/eebk37/
+
+AWS Cheat Sheet
+Installation
+See https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+For autocompletion see https://docs.aws.amazon.com/cli/latest/userguide/cli-conﬁgure-completion.html.
+Global ﬂags
+Flag Description
+--profile <name> Run a command using the speciﬁed proﬁle
+--output <style> Format output as (json/text/table/yaml)
+--help Show help
+--endpoint-url <url> Override default API endpoint
+--region Override default region
+--version Show version of AWS CLI
+Conﬁguration
+Command Description
+aws configure Conﬁgure AWS
+aws configure sso Conﬁgure AWS IAM Identity Center credentials
+aws configure list Show current conﬁguration data
+aws configure set <key> <value> Set a conﬁguration value
+aws configure get <key> Show a conﬁguration value
+Proﬁles
+Command Description
+aws configure --profile <name> Create a new proﬁle
+aws configure list-profiles Show available proﬁles
+Account information
+Command Description
+aws sts get-caller-identity Retrieve account information
+
+Identity and Access Management (IAM)
+Command Description
+aws iam list-users List users
+aws iam list-groups List groups
+aws iam list-roles List roles
+aws iam list-policies List policies
+aws iam create-user --user-name <name> Create a user
+aws iam create-group --group-name
+<name> Create a group
+aws iam create-role --role-name <name>
+--assume-role-policy-document <policy> Create a role
+aws iam create-policy --policy-name
+<name> --policy-document <policy> Create a policy
+Elastic Compute Cloud (EC2)
+Command Description
+aws ec2 describe-instances List instances
+aws ec2 run-instances --image-id <id>
+--instance-type <type> Create an instance
+aws ec2 terminate-instances
+--instance-ids <id> Terminate an instance
+aws ec2 start-instances --instance-ids
+<id> Start an instance
+aws ec2 stop-instances --instance-ids
+<id> Stop an instance
+Elastic Kubernetes Service (EKS)
+Command Description
+aws eks list-clusters List clusters
+aws eks describe-cluster --name <name> Describe a cluster
+aws eks create-cluster --name <name> Create a cluster
+aws eks delete-cluster --name <name> Delete a cluster
+Relational Database Service (RDS)
+Command Description
+aws rds describe-db-clusters List clusters
+aws rds describe-db-instances List instances
+aws rds create-db-cluster-snapshot Create a snapshot of a cluster
+Simple Storage Service (S3)
+Command Description
+aws s3 ls List buckets
+aws s3 ls s3://<bucket> List objects in a bucket
+aws s3 mb s3://<bucket> Create a bucket
+aws s3 rb s3://<bucket> Delete a bucket
+aws s3 cp <src> <dest> Copy a ﬁle from/to S3
+aws s3 rm s3://<bucket>/<object> Delete an object
+aws s3 sync s3://bucket <dir> Sync a bucket to a local directory
+aws s3 sync <dir> s3://bucket Sync a local directory to an S3 bucket
+Other co
+
+=== SOURCE: From Scratch to Production: Deploying EKS Clusters and Applications with CI/CD… ===
+From Scratch to Production: Deploying EKS Clusters and Applications with CI/CD using Jenkins and 
+Terraform
+
+Streamlining EKS Deployment and CI/CD: A Step-by-Step Guide to Automating Application Delivery 
+with Jenkins and Terraform 
+Welcome to this step-by-step guide on deploying an EKS cluster and application with complete 
+CI/CD! 
+Are you looking to streamline your application delivery process and automate your infrastructure 
+deployment? Look no further! In this project, I'll take you through the process of setting up an EKS 
+cluster, deploying an application, and creating a CI/CD pipeline using Jenkins and Terraform. 
+We'll start with the basics and gradually dive deeper into the technical details, so you'll find this 
+guide helpful whether you're a beginner or an experienced DevOps engineer. By the end of this 
+article, you'll have a fully functional EKS cluster and a simple containerized application up and 
+running, with a CI/CD pipeline that automates the entire process from code to production. 
+Let's get started and explore the world of EKS, CI/CD, and automation 
+What we'll build 
+We are going to build and deploy a lot of things. Here is the outline for our project: 
+I. Setting up Jenkins Server with Terraform 
+• Creating an EC2 instance with Terraform. 
+• Installing necessary tools: Java, Jenkins, AWS CLI, Terraform CLI, Docker, Sonar, Helm, Trivy, 
+Kubectl. 
+• Configuring Jenkins server. 
+II. Creating EKS Cluster with Terraform
+
+• Writing Terraform configuration files for EKS cluster creation in a private subnet. 
+• Deploying EKS cluster using Terraform. 
+III. Deploying NGinx Application with Kubernetes 
+• Writing Kubernetes manifest files (YAML) for the NGinx application. 
+• Deploying NGinx application to EKS cluster. 
+IV. Automating Deployment with Jenkins CI/CD 
+• Creating Jenkins pipeline for automating EKS cluster creation and Nginx application 
+deployment. 
+• Integrating Terraform and Kubernetes with the Jenkins pipeline. 
+• Configuring continuous integration and deployment (CI/CD). 
+What we'll need 
+To embark on our CI/CD adventure, we'll need a trusty toolkit: 
+Terraform — To create configuration files for the EC2 instance which will be used as a Jenkins server 
+and EKS Cluster in a VPC. 
+Shell Script — To install command line tools in the EC2 instance. 
+Jenkins file — To create a pipeline in the Jenkins Server. 
+Kubernetes Manifest files — To create a simple NGINX application in the EKS cluster. 
+Source Code 
+You can download the complete source code inside this repository. 
+Prerequisites 
+Before creating and working with the project, let's set up some dev tools first - 
+1. It's better to have an IDE to develop your project. I am using Visual Studio Code for the same. 
+You can install it from the following link based on the operating 
+system— https://code.visualstudio.com/download 
+2. Install the CLI tools — AWS-CLI, and Terraform-CLI. 
+3. Make sure you have an AWS Free Tier Account. And then create a user in IAM Console and 
+
+
+=== SOURCE: GITLAB CI/CD PIPELINES 2025 HANDLING CI/CD PIPELENES VISHAL MACHAN LINKDEIN:… ===
+GITLAB CI/CD 
+PIPELINES
+
+2025 
+HANDLING CI/CD PIPELENES 
+VISHAL MACHAN 
+LINKDEIN: VISHAL MACHAN | MAIL ID: vishalmachan15@gmail.com
+
+Page | 1
+
+BY VISHAL MACHAN 
+How do you handle deployment rollbacks in GitLab CI/CD pipelines, and what steps would you take to troubleshoot a 
+failed pipeline?
+
+1. Version Control for Infrastructure & Application Code 
+1.1 Infrastructure Code (Terraform, CloudFormation, CDK) 
+A. Maintain Git branches (e.g., main, staging, rollback-<version>). 
+B. Use Terraform state locking (e.g., AWS S3 with DynamoDB locking). 
+C. Store state files in a remote backend (e.g., S3, Azure Blob). 
+D. Version Control for CloudFormation & AWS CDK 
+E. Best Practices 
+1.2 Application Code (Docker, ECS, Kubernetes): 
+1.2.1 Application Code Rollback (Docker, ECS, Kubernetes) 
+A. Using GitLab Releases/Tags to Track Deployments 
+B. Docker Rollback 
+C. Rollback in Kubernetes (Helm, kubectl) 
+D. Rollback in ECS with Terraform 
+1.2.2 Troubleshooting Rollback Failures 
+A. Rollback Failures in Docker/ECR: 
+B. Rollback Failures in Kubernetes: 
+C. Terraform Rollback Failures: 
+1.2.3 Best Practices for Rollback in GitLab CI/CD Pipelines
+
+a. Version Control: Tagging and Release Management 
+b. Automate Rollbacks on Failure 
+c. Monitoring & Alerting for Deployment Failures 
+d. Post-Deployment Validation 
+e. Pipeline Checks & Quality Gates 
+1.2.4 different scenarios: 
+1. Docker + Kubernetes (EKS) Deployment with Rollback 
+2. AWS ECS Fargate Deployment with Rollback 
+3. Terraform-based AWS Infrastructure Deployment 
+1.2.5 GitLab CI/CD pipeline for deploying Terraform and AWS CDK infrastructure securely. 
+1. Terraform GitLab CI/CD Pipeline 
+2. AWS CDK GitLab CI/CD Pipeline 
+1.2.6 Conclusion 
+1. With this GitLab CI/CD pipeline, you can automate infrastructure deployment while ensuring validation, approvals, and 
+rollback mechanisms. 
+1. AWS CodePipeline for Terraform 
+2. AWS Code Pipeline for AWS CDK 
+3. GitHub Actions for Terraform 
+4. GitHub Actions for AWS CDK 
+2. Configuring Terraform to Use S3 and DynamoDB 
+3. Initializing Terraform with the Backend 
+4. Ensuring State Locking Works with DynamoDB 
+5. Running Terraform with Remote Backend 
+6. Advanced Considerations 
+7. Final Notes 
+• S3 + DynamoDB backend is ideal for team environments where multiple users or CI/CD pipelines are working on the same 
+infrastructure. 
+• For single user or small projects, local state can work, but using S3 for shared state and DynamoDB for locking is highly 
+recommended for collaboration and stability.
+
+Page | 2
+
+BY VISHAL MACHAN 
+Step 1. Automating the Terraform Backend Setup (S3 + DynamoDB) 
+Step 1: Create S3 Bucket and DynamoDB Table Using CloudFormation 
+Step 2: Automate Terraform Deployment in CI/CD 
+Option 1: Using AWS CodePipeline 
+1. Create CodePipeline with Terraform 
+Steps in CodePipeline: 
+1. Source Stage: Pull Terraform code from AWS CodeCommit or GitHub. 
+2. Build Stage: Run Terraform commands through AWS CodeBuild. 
+3. Deploy Stage: Apply the Terraform plan via
+
+=== SOURCE: General DevOps 1. Question: What is DevOps? Answer: DevOps is a set of… ===
+General DevOps 
+1. Question: What is DevOps?
+
+Answer: DevOps is a set of practices that combines software development 
+(Dev) and IT operations (Ops) to shorten the systems development life cycle 
+and provide continuous delivery with high software quality. 
+2. Question: Explain the core principles of DevOps.
+
+Answer: The core principles of DevOps include: 
+o Automation: Automating repetitive tasks to increase efficiency and reduce 
+human errors. 
+o Continuous Integration and Continuous Delivery (CI/CD): Ensuring code 
+changes are automatically tested and deployed to production. 
+o Collaboration and Communication: Enhancing communication between 
+development and operations teams. 
+o Infrastructure as Code (IaC): Managing infrastructure using code and 
+software development techniques. 
+o Monitoring and Logging: Continuously monitoring applications and 
+infrastructure to ensure high availability. 
+3. Question: How does DevOps improve the software development process?
+
+Answer: DevOps improves the software development process by fostering 
+collaboration between development and operations teams, automating 
+workflows, ensuring continuous integration and delivery, and enhancing 
+monitoring and feedback loops, which leads to faster and more reliable 
+software releases. 
+4. Question: What is the difference between Agile and DevOps?
+
+Answer: Agile is a methodology focused on iterative development, 
+emphasizing collaboration, customer feedback, and small, rapid releases. 
+DevOps extends Agile principles to include operations, aiming to automate 
+and integrate the processes between software development and IT teams to 
+enable continuous delivery. 
+5. Question: What are the benefits of using DevOps?
+
+Answer: Benefits of using DevOps include faster time to market, improved 
+collaboration between teams, enhanced software quality, increased 
+deployment frequency, better scalability and availability, and reduced costs. 
+300 + Devops Scenario based questions
+CI/CD Pipelines 
+6. Question: What is Continuous Integration?
+
+Answer: Continuous Integration (CI) is the practice of merging all developer 
+working copies to a shared mainline several times a day. This helps detect and 
+locate errors quickly and improve software quality. 
+7. Question: What is Continuous Delivery?
+
+Answer: Continuous Delivery (CD) is the practice of keeping the codebase in a 
+deployable state, enabling frequent and automated deployment to production 
+or staging environments. 
+8. Question: Describe a typical CI/CD pipeline.
+
+Answer: A typical CI/CD pipeline includes the following stages: 
+o Source Stage: Code is committed to the version control system. 
+o Build Stage: Code is compiled and built. 
+o Test Stage: Automated tests are executed. 
+o Deploy Stage: Application is deployed to staging or production 
+environments. 
+o Monitor Stage: Application and infrastructure are monitored. 
+9. Question: What is the purpose of a build server in CI/CD?
+
+Answer: A build server is used to automate the proce
+
+=== SOURCE: How to Deploy 10 Applications at a Time?   Use Kubernetes to run multiple… ===
+How to Deploy 10 Applications at a Time?
+• Use Kubernetes to run multiple applications as pods in a cluster .
+• Docker Compose works well for local environments with multiple 
+containers.
+• Terraform/Ansible can automate deployments across multiple instances.
+• AWS ECS/Fargate helps in managing multiple containerized applications.
+What is Continuous Integration, Continuous 
+Delivery, and Continuous Deployment?
+• Continuous Integration (CI) → Frequent code 
+merges, automated testing (e.g., GitHub Actions, 
+Jenkins).
+• Continuous Delivery (CD) → Code is always in a 
+deployable state, but deployment is manual.
+• Continuous Deployment (CD) → Fully automated 
+deployment after passing all tests.
+What is the Difference Between ALB and NLB?
+• ALB (Application Load Balancer) works at Layer 7 
+(HTTP/HTTPS). Supports routing based on paths, 
+headers, hostnames.
+• NLB (Network Load Balancer) works at Layer 4 
+(TCP/UDP). Best for high-performance, low-latency 
+applications.
+How to Integrate an S3 Bucket with an EC2 
+Instance?
+• 1. Attach an IAM Role with S3 access to your EC2 
+instance.
+• 2. Install AWS CLI on EC2: sudo apt install awscli
+• 3. Configure S3 access: aws configure
+• 4. Mount S3 bucket using s3fs or directly access via 
+aws s3 cp commands.
+How Does an End-User Request Reach the 
+Application?
+• DNS Resolution → Domain resolves to an IP (Route 53, 
+Cloudflare).
+• Load Balancer → Directs traffic (ALB/NLB).
+• Web Server → Processes requests (Nginx, Apache).
+• Application Layer → Runs business logic (Node.js, Python, Java).
+• Database & Storage → Retrieves/stores data (RDS, S3).
+• Response Back to User → The result is sent back via the same 
+route.
+What is the Difference Between Observability and 
+Monitoring?
+• Monitoring → Collects predefined metrics and logs 
+(e.g., CPU usage, request count).
+• Observability → Involves logs, metrics, and traces 
+to debug why something happened (e.g., 
+OpenT elemetry, Grafana).
+How Can You Secure a CI/CD Pipeline?
+• Implement secrets management (Vault, AWS Secrets 
+Manager).
+• Scan for vulnerabilities in code & containers (Trivy, Snyk).
+• Enable multi-step approvals for production deployments.
+• Use signed artifacts to prevent tampering.
+What Are Terraform Workspaces?
+• Terraform workspaces allow multiple environments 
+(dev, staging, prod) within the same configuration.
+• Example Commands:
+
+terraform workspace new dev
+
+terraform workspace new prod
+
+terraform workspace select dev
+
+=== SOURCE: Interview Ouestions > Devops — Apr 2025 ===
+1. What are all the types of applications you have deployed? 
+● Answer: Web applications (e.g., Java Spring Boot, Node.js), microservices architectures, 
+databases (e.g., MySQL, MongoDB), message brokers (e.g., Apache Kafka), monitoring tools 
+(e.g., Prometheus, Grafana), CI/CD pipelines (e.g., Jenkins), and containerized applications 
+using Docker and Kubernetes. 
+2. How have you injected the secrets in ConfigMaps? 
+● Answer: Secrets should not be injected in ConfigMaps as ConfigMaps are not designed for 
+sensitive data. Instead, Kubernetes Secrets should be used. Secrets can be injected into 
+pods via environment variables or mounted as files. 
+3. How do you find which pod is taking more system resources across nodes 
+using kubectl? 
+● Answer: Use kubectl top pod --all-namespaces to list resource usage by pods. 
+Combine it with kubectl describe pod <pod-name> to get detailed resource usage. 
+4. How do you know which worker node is consuming more resources across 
+the clusters using kubectl? 
+● Answer: Use kubectl top nodes to see resource consumption across nodes. This will 
+show CPU and memory usage on each node. 
+5. What are the steps for configuring Prometheus and Grafana for monitoring 
+Kubernetes clusters? 
+● Answer: 
+1. Deploy Prometheus using Helm or a custom YAML configuration. 
+2. Set up Kubernetes service discovery for Prometheus. 
+3. Deploy Grafana and configure it to use Prometheus as a data source. 
+4. Import Kubernetes monitoring dashboards in Grafana. 
+5. Set up alerting rules in Prometheus as needed. 
+6. If 20 pods are running, how do you visualize the metrics of these pods in 
+Grafana? 
+● Answer: Configure Grafana to use Prometheus as the data source. Use existing Kubernetes 
+dashboards or create custom dashboards to visualize metrics for all pods. 
+7. What is Apache Kafka? 
+● Answer: Apache Kafka is a distributed event streaming platform used for building real-time 
+data pipelines and streaming applications. It’s designed to handle large volumes of data in a 
+distributed, fault-tolerant manner. 
+8. How do you set up a Docker Hub private registry and integrate it with a CI/CD 
+pipeline? What is the procedure? 
+● Answer: 
+1. Create a private repository on Docker Hub. 
+2. Configure CI/CD pipeline to authenticate with Docker Hub using credentials. 
+3. Build Docker images in CI pipeline and push them to the private repository. 
+4. Pull images from the private registry during the CD process. 
+9. What is the difference between a hard link and a soft link? 
+● Answer: 
+○ Hard Link: A direct reference to the file’s data on the disk. Deleting the original file 
+does not affect the hard link. 
+○ Soft Link (Symbolic Link): A pointer to the original file’s path. If the original file is 
+deleted, the soft link becomes broken. 
+10. What is the use of the break command in shell scripting? In what scenarios 
+have you used it?
+
+- **Answer:** The `break` command is used to exit a loop prematurely. It is commonly used when 
+a specific condition is
+
+=== SOURCE: Interview Ouestions > Devops — Feb 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+DevOps Interview Guide 
+Introduction 
+DevOps is a rapidly evolving field that merges development and operations to 
+improve the efficiency, quality, and speed of delivering software products. As 
+organizations strive to streamline their processes and adapt to the fast-paced 
+tech landscape, various specialized roles within DevOps have emerged. Each of 
+these roles requires a unique set of skills and tools, as well as specific 
+experience in automating processes, ensuring system reliability, managing 
+infrastructure, and enhancing the overall software lifecycle. 
+The roles in DevOps vary significantly in their focus areas, but all are essential 
+for automating and optimizing the deployment pipeline, managing cloud 
+infrastructure, ensuring application reliability, and fostering collaboration 
+between development and operations teams. These professionals play a critical 
+part in improving the performance and security of systems, while also 
+implementing practices that allow for faster delivery and better scalability. 
+From DevOps Engineers who focus on automating and streamlining 
+deployments to Kubernetes Engineers who specialize in container orchestration 
+and management, each role is crucial in creating a seamless software 
+development lifecycle. With the advent of cloud technologies and modern 
+tools, such as Kubernetes, Terraform, and CI/CD systems, these professionals 
+help shape the infrastructure and operations that power today’s cutting-edge 
+applications. 
+The increasing demand for cloud solutions and the automation of 
+infrastructure has led to a growth in specialized roles such as Cloud DevOps 
+Engineers, CI/CD Engineers, and Site Reliability Engineers (SREs). These roles 
+ensure that systems are scalable, secure, and running efficiently in highly 
+dynamic and distributed environments. Whether managing infrastructure as 
+code, optimizing cloud costs, or ensuring system uptime, each role brings its 
+expertise to the table to meet the needs of organizations transitioning to cloud-
+native architectures.
+
+3
+
+As organizations adopt more complex infrastructures and technologies, 
+professionals with expertise in these specific DevOps areas are becoming 
+indispensable. The roles are not only highly technical but also critical in 
+ensuring smooth operations, system reliability, and the agility needed to keep 
+up with business and technological demands. 
+1. Career Path & Growth Opportunities
+
+Entry-Level (0-2 years): 
+ Junior DevOps Engineer 
+ System Administrator 
+Mid-Level (3-6 years): 
+ DevOps Engineer 
+ CI/CD Engineer 
+ Cloud Engineer 
+Senior-Level (7-10+ years): 
+ Lead DevOps Engineer 
+ SRE (Site Reliability Engineer) 
+ Cloud Architect 
+Leadership Roles: 
+ DevOps Manager 
+ Head of DevOps 
+ CTO (for startups)
+
+2. Certification & Learning Path 📜 
+DevOps & Cloud: 
+ AWS Certified DevOps Engineer 
+ Google Professional DevOps Engineer 
+ Azure DevOps Expert
+
+4
+
+Kubern
+
+=== SOURCE: Interview Ouestions > Devops — Feb 2025 ===
+50 DevOps Interview Questions 
+1. General DevOps Concepts 
+1. What is DevOps, and why is it important? 
+2. How does DevOps differ from Agile and traditional IT operations? 
+3. What are the key benefits of DevOps? 
+4. What are some key DevOps tools you have worked with? 
+5. Explain the DevOps lifecycle. 
+2. Linux & Shell Scripting 
+6. What are some common Linux commands used in DevOps? 
+7. How do you schedule a cron job in Linux? 
+8. What is the difference between grep, sed, and awk? 
+9. How do you check system performance in Linux? 
+10. How would you write a Bash script to automate a task? 
+3. Version Control (Git & GitHub/GitLab) 
+11. What is Git, and why is it used in DevOps? 
+12. Explain the difference between Git merge and Git rebase. 
+13. What is a Git branching strategy? 
+14. How do you resolve merge conflicts in Git? 
+15. Explain the purpose of a Git commit, push, pull, and fetch. 
+4. CI/CD (Jenkins, GitHub Actions, GitLab CI/CD) 
+16. What is Continuous Integration (CI), and why is it important? 
+17. What is Continuous Deployment (CD), and how does it differ from 
+Continuous Delivery? 
+18. How would you set up a CI/CD pipeline? 
+19. What are some common CI/CD tools, and how do they compare? 
+20. How do you handle rollback in a CI/CD pipeline? 
+5. Cloud Computing (AWS, Azure, GCP) 
+21. What are the benefits of cloud computing in DevOps? 
+22. What are the main services provided by AWS for DevOps? 
+23. What is the difference between EC2, ECS, and EKS in AWS? 
+24. What is IAM, and how does it help in security? 
+25. How would you deploy an application in the cloud? 
+6. Containers & Orchestration (Docker & Kubernetes) 
+26. What is Docker, and how does it work? 
+27. Explain the difference between a Docker image and a Docker container. 
+28. What is Kubernetes, and why is it used? 
+29. What is a Kubernetes Pod, and how does it work? 
+30. What is the difference between a Deployment and a StatefulSet in 
+Kubernetes? 
+7. Infrastructure as Code (Terraform, Ansible) 
+31. What is Infrastructure as Code (IaC), and why is it important? 
+32. How does Terraform differ from Ansible? 
+33. What are Terraform modules, and how do they work? 
+34. Explain the difference between terraform plan and terraform apply. 
+35. How would you manage secrets in Terraform? 
+8. Monitoring & Logging (Prometheus, Grafana, ELK Stack) 
+36. What is monitoring in DevOps, and why is it necessary? 
+37. What is the difference between Prometheus and Grafana? 
+38. How would you set up an alert in Prometheus? 
+39. What is the ELK Stack, and what is it used for? 
+40. How do you debug performance issues in a production system? 
+9. Security in DevOps (DevSecOps) 
+41. What is DevSecOps, and how does it integrate into DevOps? 
+42. What are some best practices for securing CI/CD pipelines? 
+43. What tools do you use for security scanning in DevOps? 
+44. How would you handle secrets management in DevOps? 
+45. How do you ensure compliance with security policies in DevOps 
+workflows? 
+10. Troublesho
+
+=== SOURCE: Interview Ouestions > Devops — Mar 2025 ===
+HTTPS://TOPMATE.IO/SUSHILPATTEBAHADUR/
+
+General DevOps 
+1. Question: What is DevOps? 
+Answer: DevOps is a set of practices that combines software development 
+(Dev) and IT operations (Ops) to shorten the systems development life cycle 
+and provide continuous delivery with high software quality. 
+2. Question: Explain the core principles of DevOps. 
+Answer: The core principles of DevOps include: 
+3. Question: How does DevOps improve the software development process?
+Answer: DevOps improves the software development process by fostering 
+collaboration between development and operations teams, automating 
+workflows, ensuring continuous integration and delivery, and enhancing 
+monitoring and feedback loops, which leads to faster and more reliable 
+software releases. 
+4. Question: What is the difference between Agile and DevOps? 
+Answer: Agile is a methodology focused on iterative development, 
+emphasizing collaboration, customer feedback, and small, rapid releases. 
+DevOps extends Agile principles to include operations, aiming to automate 
+and integrate the processes between software development and IT teams to 
+enable continuous delivery. 
+5. Question: What are the benefits of using DevOps? 
+Answer: Benefits of using DevOps include faster time to market, improved 
+collaboration between teams, enhanced software quality, increased 
+deployment frequency, better scalability and availability, and reduced costs. 
+o 
+o 
+o 
+o 
+o 
+Automation: Automating repetitive tasks to increase efficiency and reduce
+human errors. 
+Continuous Integration and Continuous Delivery (CI/CD): Ensuring code 
+changes are automatically tested and deployed to production. 
+Collaboration and Communication: Enhancing communication between 
+development and operations teams. 
+Infrastructure as Code (IaC): Managing infrastructure using code and 
+software development techniques. 
+Monitoring and Logging: Continuously monitoring applications and 
+infrastructure to ensure high availability. 
+CI/CD Pipelines 
+Version Control Systems 
+11. Question: What is Git, and how is it used in DevOps? 
+Answer: Git is a distributed version control system used to track changes in 
+source code during software development. It enables multiple developers to 
+work on the same project simultaneously and helps manage code versions. 
+12. Question: Explain the concept of branching and merging in Git. 
+o 
+9. Question: What is the purpose of a build server in CI/CD? 
+Answer: A build server is used to automate the process of building, testing, 
+and deploying code. It ensures that every code change is built and tested in a 
+consistent environment, reducing the risk of integration issues. 
+10. Question: What are some popular CI/CD tools? 
+Answer: Popular CI/CD tools include Jenkins, GitLab CI, CircleCI, Travis CI, 
+Bamboo, and TeamCity. 
+6. Question: What is Continuous Integration? 
+Answer: Continuous Integration (CI) is the practice of merging all developer 
+working copies to a shared mainline several times a day. This 
+
+=== SOURCE: PROJECT IMPLEMENTING A CI/CD PIPELINE WITH INTEGRATED SECURITY AND QUALITY… ===
+PROJECT 
+IMPLEMENTING A CI/CD PIPELINE WITH INTEGRATED SECURITY 
+AND QUALITY CHECKS
+
+TRIVY : 
+TRIVY IS AN OPEN-SOURCE SECURITY SCANNER DEVELOPED BY AQUA SECURITY. IT CHECKS FOR VULNERABILITIES IN 
+CONTAINER IMAGES, FILESYSTEMS, GIT REPOSITORIES, VIRTUAL MACHINES, AND KUBERNETES CONFIGURATIONS2. 
+TRIVY SCANS FOR OS PACKAGES, SOFTWARE DEPENDENCIES, KNOWN VULNERABILITIES (CVES), SENSITIVE 
+INFORMATION, SECRETS, AND SOFTWARE LICENSES. IT SUPPORTS MULTIPLE PROGRAMMING LANGUAGES, 
+OPERATING SYSTEMS, AND PLATFORMS2. 
+OWASP : 
+THE OWASP (OPEN WEB APPLICATION SECURITY PROJECT) IS A NON-PROFIT FOUNDATION THAT WORKS TO IMPROVE 
+THE SECURITY OF SOFTWARE. IT OFFERS A VARIETY OF TOOLS, RESOURCES, AND GUIDELINES TO HELP DEVELOPERS 
+CREATE SECURE APPLICATIONS. KEY PROJECTS INCLUDE THE OWASP TOP TEN LIST, ZAP (ZED ATTACK PROXY), AND 
+DEPENDENCY-CHECK, WHICH IDENTIFY AND MITIGATE VULNERABILITIES IN WEB APPLICATIONS. OWASP AIMS TO 
+ENHANCE AWARENESS AND COLLABORATION WITHIN THE COMMUNITY TO BUILD MORE SECURE SOFTWARE 
+SOLUTIONS. 
+STEP-1: LAUNCH AN EC2 INSTANCE WITH T2.LARGE AND MINIMUM OF 20GB STORAGE
+
+STEP-2: CONNECT THE SERVER
+
+1. CREATE A FILE WITH .SH EXTENSION (jenkins.sh) 
+2. GO TO INSERT MODE BY CLICKING I AND COPY PASTE THE BELOW SCRIPT THEN SAVE AND EXIT THE FILE WITH 
+(click on escape then :wq)
+
+#STEP-1: INSTALLING GIT
+
+yum install git -y
+
+#STEP-2: GETTING THE REPO (jenkins.io --> download -- > redhat) 
+sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo 
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+
+#STEP-3: DOWNLOAD JAVA17 AND JENKINS 
+yum install java-17-amazon-corretto -y 
+yum install jenkins –y 
+#STEP-4: RESTARTING JENKINS (when we download service it will on stopped state) 
+systemctl start jenkins.service 
+systemctl status jenkins.service 
+STEP-3: AFTER COMPLETION OF SCRIPT EXECUTION AND CONNECT TO DASHBOARD COPY THE PUBLIC IP ADDRESS OF 
+THE SERVER AND AND MAKE A PASTE ON THE NEW TAB WITH JENKINS PORT NUMBER (8080) PUBLIC_IP:8080
+
+1. TO UNLOCK THE JENKINS: cat /var/lib/jenkins/secrets/initialAdminPassword
+
+2. INSTALL SUGGESTED PLUGINS ADD USER NAME, PASSWORD AND MAIL ID CONNECT TO DASHBOARD
+
+3. ENTER THE REQUIRED DETAILS AND YOU WILL ENTER TO JENKINS DASHBOARD 
+4. CLICK ON NEW ITEM THEN SELECT PIPELINE JOB AND CLICK ON OKK
+
+STEP-4: INSTALL DOCKER AND START AND CHECK THE STATUS OF DOCKER 
+TO INSTALL DOCKER : yum install docker –y 
+TO START DOCKER : systemctl start docker 
+TO CHECK THE STATUS OF DOCKER : systemctl status docker
+
+STEP-5: INSTALL SONARQUBE USING DOCKER IMAGE AND CHECK THE DOCKER CONTAINER HAS CREATED 
+TO INSTALL SONARQUBE BY DOCKER IMAGE : docker run –d --name sonar –p 9000:9000 sonarqube:lts-community 
+TO CHECK SONARDOCKER CONTAINER : docker ps
+
+TO CONNECT TO DASHBOARD COPY THE PUBLIC IP ADDRESS OF THE SERVER AND AND MAKE A PASTE ON THE NEW 
+TAB WITH SONARQUBE PORT NUMBER (9000) PUBLIC_IP:9000
+
+1. AFTER GOING TO DASHBOARD IT WILL ASK USERNAME AND PASSWORD AND USERN
+
+=== SOURCE: Payment-app project Deploy payment app microservices application where each… ===
+Payment-app project
+
+Deploy payment app microservices application where each microservice is hosted in a Docker
+
+container, with CI/CD via Jenkins, Nexus for artifact management, SonarQube for code quality
+
+scanning, Redis for session management, and log monitoring using ELK (Elasticsearch,
+
+Logstash, Kibana) and Prometheus, and Grafana for monitoring and visualizing metrics.
+
+Workflow:
+
+1. Code Checkout: Fetch the latest code from the repository.
+
+2. Code Quality Check: Analyze source code using SonarQube.
+
+3. Frontend Build: Build the Angular project for production.
+
+4. Backend Build: Set up Python backend with required dependencies.
+
+5. Build Docker Images: Create Docker images for frontend and backend with the latest tags.
+
+6. Push to Nexus: Upload built Docker images to the Nexus repository.
+
+7. Deploy Services: Deploy frontend, backend, database, Redis, and ELK using Docker
+
+Compose.
+
+8. Monitor Services: Set up Prometheus and Grafana for metrics visualization.(setup alert rule
+
+for alerts)
+
+9. Logging: Forward container logs to ELK for centralized logging.
+
+10. Caching: setup Redis for session management
+
+Jenkins pipeline:
+
+pipeline {
+
+agent any
+
+tools {
+
+nodejs 'node_lts' // Make sure NodeJS is configured in Jenkins
+
+}
+
+environment {
+
+DOCKER_REGISTRY = '6*.*. .97:8085' // Nexus Docker repo URL
+
+DOCKER_CREDENTIALS = credentials( 'nexus-credentials' ) // Nexus
+
+credentials
+
+GIT_REPO = 'https://github.com/ ***********************.git'
+
+GIT_BRANCH = 'main'
+
+DEPLOY_DIR = '/home/ubuntu/bank/payment_application' // EC2
+
+deployment directory
+
+}
+
+stages {
+
+stage( 'Checkout' ) {
+
+steps {
+
+git branch: 'main' , changelog: false, credentialsId:
+
+'git_banking_cred' , poll: false, url: "${GIT_REPO}"
+
+}
+
+}
+
+stage( 'SonarQube Analysis' ) {
+
+steps {
+
+script {
+
+def scannerHome = tool 'SonarScanner' // SonarScanner
+
+configured in Global Tools
+
+withSonarQubeEnv( 'SonarQube' ) { // Configured SonarQube
+
+environment
+
+withCredentials([string(credentialsId:
+
+'sonar_token2' , variable : 'SONAR_TOKEN' )]) {
+
+sh "${scannerHome}/bin/sonar-scanner
+
+-Dsonar.projectKey=banking-app -Dsonar.sources=.
+
+-Dsonar.login=${SONAR_TOKEN}"
+
+}
+
+}
+
+}
+
+}
+
+}
+
+stage( 'Frontend Build' ) {
+
+steps {
+
+echo 'Building Angular frontend...'
+
+dir( 'micro-services/frontend' ) {
+
+sh 'npm install && npm run build --prod'
+
+}
+
+}
+
+}
+
+=== SOURCE: THEULTIMATECICD. DEVOPSPIPELINEPROJECT PHASE-1 | SetupInfra… ===
+THEULTIMATECICD. DEVOPSPIPELINEPROJECT
+
+PHASE-1 | SetupInfra
+TocreateanUbuntuEC2instanceinAWS, followthesesteps:
+1. SignintotheAWSManagement Console:
+o GototheAWSManagement Consoleat https://aws.amazon.com/console/.o SigninwithyourAWSaccount credentials.
+2. NavigatetoEC2:
+o Onceloggedin, navigatetotheEC2dashboardbytyping"EC2" inthesearchbarat thetoporbyselecting"Services" andthen"EC2" underthe"Compute" section.
+3. LaunchInstance:
+o Clickonthe"Instances" linkintheEC2dashboardsidebar.o Clickthe"LaunchInstance" button.
+4. ChooseanAmazonMachineImage(AMI):
+o Inthe"Step1: ChooseanAmazonMachineImage(AMI)" section, select"Ubuntu" fromthelist of availableAMIs.o ChoosetheUbuntuversionyouwant touse. Forexample, "UbuntuServer24.04LTS".o Click"Select".
+5. ChooseanInstanceType:
+o Inthe"Step2: ChooseanInstanceType" section, select theinstancetypethat ﬁtsyourrequirements. Thedefault option(usuallyat2.microinstance) issuitablefortestingandsmall workloads.o Click"Next: ConﬁgureInstanceDetails".
+
+6. ConﬁgureInstanceDetails:
+o Optionally, conﬁgureinstancedetailssuchasnetworksettings, subnets,IAMrole, etc. Youcanleavethesesettingsasdefault fornow.o Click"Next: AddStorage".7. AddStorage:
+o Specifythesizeof theroot volume(default isusuallyﬁnefortestingpurposes).o Click"Next: AddTags".
+8. AddTags:
+o Optionally, addtagstoyourinstanceforbetterorganizationandmanagement.o Click"Next: ConﬁgureSecurityGroup".
+9. ConﬁgureSecurityGroup:
+o Inthe"Step6: ConﬁgureSecurityGroup" section, conﬁgurethesecuritygrouptoallowSSHaccess(port 22) fromyourIPaddress.o Youmayalsowant toallowotherportsbasedonyourrequirements(e.g., HTTP, HTTPS) asinthispic
+o Click"ReviewandLaunch".
+10. ReviewandLaunch:
+o Reviewtheconﬁgurationof yourinstance.o Click"Launch".
+11. Select KeyPair:
+o Inthepop-upwindow, select anexistingkeypairorcreateanewone.o Checktheacknowledgment box.
+
+o Click"LaunchInstances".
+12. AccessYourInstance:
+o UseMobaxterm
+SetupK8-Clusterusingkubeadm[K8Version-->1.28.1]
+1. UpdateSystemPackages[OnMaster&WorkerNode]
+sudo apt-get update
+2. Install Docker[OnMaster&WorkerNode]
+sudo apt install docker.io -ysudo chmod 666 /var/run/docker.sock
+3. Install RequiredDependenciesforKubernetes[OnMaster&WorkerNode]
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupgsudo mkdir -p -m 755 /etc/apt/keyrings
+4. AddKubernetesRepositoryandGPGKey[OnMaster&WorkerNode]
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpgecho 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg]https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee/etc/apt/sources.list.d/kubernetes.list
+5. UpdatePackageList[OnMaster&WorkerNode]
+sudo apt update
+6. Install KubernetesComponents[OnMaster&WorkerNode]
+sudo apt install -y kubeadm=1.28.1-1.1 kubelet=1.28.1-1.1 kubectl=1.28.1-1.1
+kubeadm - Going to setup a Kubernetes clusterkubelet - Responsible for creating pods which we are going to deploy applicationskubectl - will work as cl
+
+=== SOURCE: Task: DevSecOpsCI/CD: DeployingaSecureNetflixClone Prerequisites  … ===
+Task: DevSecOpsCI/CD: DeployingaSecureNetflixClone
+Prerequisites
+● AWSaccountsetup● BasicknowledgeofAWSservices● UnderstandingofDevSecOpsprinciples● FamiliaritywithDocker, Jenkins,Java,SonarQube,AWSCLI,Kubectl,andTerraform,Trivy● AccountonTMDBandaAPIkey
+Steps:
+Step1: CreateanEC2Instance.
+● CreatinganEC2instancewithUbuntuAMI, t2.x2large, and30GBstorage
+● AssigninganIAMrolewithAdminaccessfor learningpurposes
+
+ForpermissionpolicyselectAdministratorAccess(Justforlearningpurpose),clickNext.
+GotoEC2Dashboardandselect theinstance.
+ClickonActions–>Security–>ModifyIAMrole.
+
+Step2: Installationof RequiredToolsontheInstance
+GiveNecessarypermissionfor thescriptsfor execution.
+1. Script 1for Java,Jenkins,Docker
+
+2. Script 2for Terraform,kubectl,Awscli
+seewhether it’sinstalleddocker, Terraform, Awscli, Kubectl or not.docker --version,aws--version,terraform--version,kubectl version
+
+Step3: NowruntheSonarqubecontainer.
+sudochmod777/var/run/docker.sockdocker run-d--namesonar -p9000:9000sonarqube:lts-community
+Step4: JenkinsSetup
+NowcopythepublicIPaddressof ec2andpasteit intothebrowser
+Ec2-ip:8080#youwill Jenkinsloginpage
+sudocat /var/lib/jenkins/secrets/initialAdminPassword
+
+Now, install thesuggestedplugins.
+Createanadminuser
+
+Clickonsaveandcontinue.
+JenkinsDashboard
+Step5: NowCopythepublicIPagainandpasteit intoanewtabinthebrowser with9000
+ec2-ip:9000 #runssonar container
+Enter usernameandpassword, clickonloginandchangepassword
+usernameadminpasswordadmin
+ThisisSonar Dashboard.
+
+Step 6: Install NecessaryPluginsonjenkins.
+GotoJenkinsdashboard–>ManageJenkins–>Plugins
+Step7: CreateaPipelinefor setupingtheEKSusingTerraforminjenkins.
+NowcomebacktoManageJenkins–>Tools
+AddtheterraforminTools
+
+=== SOURCE: The State of DevOps T ools A Primer DevOps tools are continuously evolving.… ===
+The 
+State of
+DevOps
+T ools 
+A Primer
+DevOps tools are continuously evolving. 
+Here are the essentials you need to know now.
+by Don McVittie
+
+and Alan Shimel
+
+DevOps practices are rapidly changing how enterprises and 
+software producers bring their applications and digital services 
+to market. Those watching the DevOps market have seen it 
+grow, with new processes and toolsets to support software 
+delivery and infrastructure management. The market is changing 
+so quickly that anyone who takes their eyes off it for a moment 
+finds the tools available, and their capabilities, have changed.
+That’s the first reason why the DevOps tools market is so 
+fascinating to watch. The second reason is its rapid growth. 
+According to a recent report from by KBV Research, the 
+global DevOps market will hit $8.8 billion by 2023, growing at 
+a compound annual rate of 18 percent. That far outpaces the 
+growth of the broader IT market. And, according to Forrester 
+Research, 50 percent of organizations have implemented 
+DevOps, reaching what Forrester calls “Escape Velocity.”
+This report, designed to be a primer on the current state of 
+the DevOps tools market, isn’t meant to be a definitive guide 
+to every DevOps tool available. We hope to set the DevOps 
+toolset baseline and clear confusion by providing an overview 
+of the tool categories that currently are widely used in 
+DevOps organizations, as well as where they fit in the DevOps 
+environment. The report also provides an overview of tools that 
+are either coming of age or worthy of consideration, even if not 
+as evenly deployed — yet.
+2
+
+3
+Source Code Management .......4
+GitHub ..........................................................6
+BitBucket ....................................................7
+Perforce Helix .........................................8
+Artifact Repositories ..............10
+Sonatype Nexus Repository .....12
+JFrog Artifactory ................................13
+Continuous Integration
+
+Servers ......................................14
+Jenkins ......................................................16
+CircleCI .......................................................18
+GitLab .........................................................18
+Travis CI .....................................................19
+Continuous Delivery ...............20
+IBM UrbanCode ..................................22
+Atlassian Bamboo .............................23
+CloudBees Jenkins Solutions ..24
+CodeShip .................................................26
+Application Release
+
+Automation ..............................28
+OpenMake Software .......................30
+XebiaLabs ...............................................33
+Puppet ......................................................34
+Electric Cloud .......................................35
+CA Automic ..........................................36
+Infrastructure Automation .....38
+Chef ............................................................40
+AWS Opsworks ....................
+
+=== SOURCE: Top 100 DevOps Engineer Interview Questions & Answers for 2025 1. DevOps… ===
+Top 100 DevOps Engineer Interview Questions & 
+Answers for 2025 
+1. DevOps Fundamentals 
+1. What is DevOps? 
+DevOps is a software development methodology that integrates development (Dev) and operations 
+(Ops) to improve collaboration, automation, and efficiency. 
+2. What are the key principles of DevOps? 
+o Collaboration 
+o Automation 
+o Continuous Integration & Deployment 
+o Monitoring & Feedback 
+o Security & Compliance 
+3. How does DevOps differ from Agile? 
+Agile focuses on software development processes, while DevOps extends it to operations, ensuring 
+faster and reliable delivery. 
+4. What are the key benefits of DevOps? 
+o Faster software releases 
+o Improved collaboration 
+o Higher efficiency and scalability 
+o Better system reliability
+
+5. What are the key DevOps tools? 
+o CI/CD: Jenkins, GitLab CI, GitHub Actions 
+o Containerization: Docker, Podman 
+o Orchestration: Kubernetes, OpenShift 
+o Monitoring: Prometheus, Grafana 
+o Configuration Management: Ansible, Puppet, Chef 
+o Version Control: Git 
+2. Version Control & Git 
+6. What is Git? 
+Git is a distributed version control system for tracking source code changes. 
+7. Difference between Git and GitHub/GitLab? 
+Git is a VCS, whereas GitHub/GitLab are web-based platforms providing repositories with 
+collaboration features. 
+8. What is the difference between git pull and git fetch? 
+o git fetch: Downloads changes but doesn’t merge. 
+o git pull: Fetches and merges changes into the working branch. 
+9. Explain Git branching strategies. 
+o Feature Branching: Develop features in isolated branches. 
+o Gitflow: Uses main, develop, feature, release, and hotfix branches. 
+o Trunk-based development: Continuous integration into main. 
+10. How do you resolve a merge conflict in Git? 
+o Identify conflicts using git status. 
+o Manually edit the conflicting files. 
+o Add (git add) and commit (git commit -m "Resolved conflict") the resolved files. 
+3. CI/CD (Jenkins, GitLab CI/CD, GitHub Actions) 
+11. What is Continuous Integration (CI)? 
+CI automates code integration from multiple developers into a shared repository. 
+12. What is Continuous Deployment (CD)? 
+CD automates software delivery from testing to production. 
+13. Explain Jenkins Pipeline. 
+o A Declarative Pipeline defines the entire CI/CD process in Jenkinsfile. 
+o A Scripted Pipeline provides greater flexibility but requires Groovy scripting. 
+14. How do you secure Jenkins? 
+o Use Role-Based Access Control (RBAC). 
+o Encrypt secrets using Jenkins credentials. 
+o Use HTTPS and limit plugin vulnerabilities. 
+15. What are GitHub Actions and their advantages? 
+o A CI/CD automation tool integrated with GitHub. 
+o Advantages: Easy setup, built-in marketplace, YAML-based workflows. 
+4. Configuration Management (Ansible, Puppet, Chef) 
+16. What is Configuration Management in DevOps? 
+Managing system configurations to ensure consistency and scalability. 
+17. How does Ansible differ from Puppet and Chef? 
+o Ansible: Agentless, YAML-based, push model. 
+o
+
+=== SOURCE: Top DevOps Interview Questions These are the top questions you might face in a… ===
+Top DevOps Interview Questions 
+These are the top questions you might face in a DevOps job interview: 
+General DevOps Interview Questions 
+This category will include questions that are not related to any particular DevOps stage. 
+Questions here are meant to test your understanding about DevOps rather than focusing 
+on a particular tool or a stage. 
+Q1. What is the need for DevOps? 
+According to me, this answer should start by explaining the general market trend. Instead 
+of releasing big sets of features, companies are trying to see if small features can be 
+transported to their customers through a series of release trains. This has many 
+advantages like quick feedback from customers, better quality of software etc. which in 
+turn leads to high customer satisfaction. To achieve this, companies are required to: 
+1. Increase deployment frequency 
+2. Lower failure rate of new releases 
+3. Shortened lead time between fixes 
+4. Faster mean time to recovery in the event of new release crashing 
+DevOps fulfills all these requirements and helps in achieving seamless software 
+delivery. You can give examples of companies like Etsy, Google and Amazon which have 
+adopted DevOps to achieve levels of performance that were unthinkable even five years 
+ago. They are doing tens, hundreds or even thousands of code deployments per day while 
+delivering world class stability, reliability and security. 
+If I have to test your knowledge on DevOps, you should know the difference between 
+Agile and DevOps. The next question is directed towards that. 
+Q2. How is DevOps different from Agile / SDLC? 
+I would advise you to go with the below explanation: 
+Agile is a set of values and principles about how to produce i.e. develop software. 
+Example: if you have some ideas and you want to turn those ideas into working software, 
+you can use the Agile values and principles as a way to do that. But, that software might 
+only be working on a de veloper’s laptop or in a test environment. You want a way to 
+quickly, easily and repeatably move that software into production infrastructure, in a safe 
+and simple way. To do that you need DevOps tools and techniques. 
+You can summarize by saying Agile software development methodology focuses on the 
+development of software but DevOps on the other hand is responsible for development 
+as well as deployment of the software in the safest and most reliable way possible. Here’s 
+a blog that will give you more information on the evolution of DevOps. 
+Now remember, you have included DevOps tools in your previous answer so be prepared 
+to answer some questions related to that. 
+Q3. Which are the top DevOps tools? Which tools have you worked 
+on? 
+The most popular DevOps tools are mentioned below: 
+ Git : Version Control System tool 
+ Jenkins : Continuous Integration tool 
+ Selenium : Continuous Testing tool 
+ Puppet, Chef, Ansible : Configuration Management and Deployment tools 
+ Nagios : Continuous Monitoring tool 
+ Docker : Containerizat
+
+=== SOURCE: Using Webhooks in CI/CD: Automating Code Updates 1. What are Webhooks? A… ===
+Using Webhooks in CI/CD: Automating Code 
+Updates
+
+1. What are Webhooks? 
+A webhook is a method of enabling real-time communication between 
+applications. It allows one system to notify another automatically when a 
+specific event occurs.
+
+In CI/CD, webhooks trigger automated workflows when developers push 
+code changes, merge branches, or create pull requests. 
+Key Characteristics of Webhooks: 
+✔ Event-driven: They respond to predefined events like code pushes or build 
+completions. 
+✔ Real-time: They provide instant updates without polling the server. 
+✔ Lightweight: They use HTTP callbacks (POST requests) for communication.
+
+2. How Webhooks Work in CI/CD Pipelines? 
+Webhooks are used in CI/CD pipelines to automate builds, tests, and 
+deployments whenever a developer pushes code changes.
+
+How Webhooks Work (Step-by-Step)? 
+1️ A developer pushes code → to GitHub, GitLab, or Bitbucket. 
+2️ Webhook triggers → The CI/CD tool (like Jenkins, GitHub Actions, or 
+GitLab CI/CD) receives an HTTP POST request. 
+3️ Pipeline Execution → The CI/CD system pulls the latest code and starts the 
+build process. 
+4️ Automated Testing → The pipeline runs unit, integration, or security tests. 
+5️ Deployment → If the tests pass, the code is deployed automatically to staging 
+or production.
+
+Example: 
+A webhook in GitHub triggers a Jenkins build when a new commit is pushed. 
+Jenkins pulls the latest changes and deploys them to an AWS EC2️ instance.
+
+3. Setting Up Webhooks in CI/CD
+
+A. Webhooks in GitHub (for Jenkins, GitHub Actions, or AWS 
+CodePipeline)
+
+Steps to Set Up a GitHub Webhook: 
+1️ Go to GitHub Repository → Navigate to Settings → Webhooks 
+2️ Click "Add webhook" 
+3️ Enter Payload URL → This is the endpoint of your CI/CD tool (e.g., Jenkins 
+or AWS CodePipeline). 
+• Example: http://jenkins-server:8080/github-webhook/ 
+4️⃣ Choose Events to Trigger (e.g., push, pull request, merge) 
+5️⃣ Set Content-Type to application/json 
+6️⃣ Save Webhook
+
+Now, whenever code is pushed, the webhook triggers Jenkins/GitHub 
+Actions.
+
+B. Webhooks in Jenkins (Using GitHub Integration)
+
+Steps to Configure Webhook in Jenkins 
+1️ Install Git Plugin in Jenkins (Manage Jenkins → Plugins → Install Git 
+Plugin). 
+2️ Create a New Job in Jenkins and select Freestyle or Pipeline. 
+3️ In Source Code Management, select Git and add your GitHub repository. 
+4️ Go to Build Triggers → Check "GitHub hook trigger for GITScm 
+polling". 
+5️ Save and build the job.
+
+Jenkins will now automatically pull the latest code whenever a webhook 
+is triggered.
+
+C. Webhooks in GitLab CI/CD 
+1️ Go to GitLab Repo → Settings → Integrations 
+2️ Add a new Webhook URL (CI/CD tool endpoint) 
+3️ Choose Triggers (Push, Merge, Issue events, etc.) 
+4️ Save and test the webhook
+
+Whenever a developer pushes code, GitLab CI/CD pipelines start 
+automatically!
+
+4. Webhook-Based CI/CD Workflow
+
+Scenario: Automating Deployment with GitHub, Jenkins, and AWS 
+EC2
+
+Goal: Automatically deploy an application to an AWS EC2️ instance 
+
+=== SOURCE: by Gene Kim Co-author of The Visible Ops Handbook and the upcoming books, The… ===
+by Gene Kim
+Co-author of The Visible Ops Handbook and the upcoming books, 
+The DevOps Cookbook and When IT Fails: A Business Novel
+The Top 11 Things You Need To Know About DevOps - v1.0 - www.itrevolution.com
+presents
+Top 11 Things You Need 
+to Know About DevOps
+About the Author
+Gene Kim is a multiple award winning CTO, researcher and 
+author. He was founder and CTO of Tripwire for 13 years. He 
+has written two books, including The Visible Ops Handbook, and 
+is now writing When IT Fails: A Business Novel and The DevOps 
+Cookbook. Gene is a huge fan of IT operations, and how it can 
+enable developers to maximize throughput of features from “code 
+complete” to “in production,” without causing chaos and 
+disruption to the IT environment. He has worked with some of 
+the top Internet companies on improving deployment flow and 
+increasing the rigor around IT operational processes. In 2007, 
+ComputerWorld added Gene to the “40 Innovative IT People 
+Under The Age Of 40” list, and was given the Outstanding Alumnus Award by the Department of 
+Computer Sciences at Purdue University for achievement and leadership in the profession.
+The Top 11 Things You Need To Know About DevOps - v1.0 - www.itrevolution.com
+Table of Contents
+1.What is DevOps and where did it come from?
+2.How does DevOps differ from Agile?
+3.How does DevOps differ from ITIL or ITSM?
+4.How does DevOps fit with VisibleOps?
+5.What are the unpinning principles of DevOps?
+6.What are the areas of DevOps patterns?
+7.What is the value of DevOps?
+8.How does Infosec and QA integrate into a DevOps work stream?
+9.My DevOps Favorite Pattern #1
+10.My DevOps Favorite Pattern #2
+11.My DevOps Favorite Pattern #3
+The Top 11 Things You Need To Know About DevOps - v1.0 - www.itrevolution.com
+1. What is DevOps and where did it come from?
+The term “DevOps” typically refers to the emerging professional movement that advocates a 
+collaborative working relationship between Development and IT Operations, resulting in the fast 
+flow of planned work (i.e., high deploy rates), while simultaneously increasing the reliability, 
+stability, resilience and security of the production environment. 
+Why Development and IT Operations? Because that is typically the value stream that is 
+between the business (where requirements are defined) and the customer (where value is 
+delivered).
+
+The origins of the DevOps movement are commonly placed around 2009, as the convergence 
+of numerous adjacent and mutually reinforcing movements:
+•The Velocity Conference movement, especially the seminal “10 Deploys A Day” presentation 
+given by John Allspaw and Paul Hammond
+
+•The “infrastructure as code” movement (Mark Burgess and Luke Kanies), the “Agile 
+infrastructure” movement (Andrew Shafer) and the Agile system administration movement 
+(Patrick DeBois) 
+•The Lean Startup movement by Eric Ries 
+•The continuous integration and release movement by Jez Humble
+•The widespread availability of cloud and PaaS (platform as a service) technologies (e.g

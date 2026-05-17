@@ -1,0 +1,1260 @@
+DOMAIN: scripting-python
+DOCS WITH TEXT: 9
+
+=== SOURCE: M o s t A s k e d P y t h o n Python Interview Questions Ev er y one learns… ===
+M o s t A s k e d
+P y t h o n
+Python
+Interview Questions
+
+Ev er y one learns uniquely.
+Mast er Pyt hon concept s b y t hr ough t hese 
+impor tantint er view questions.
+T ak e t he help of t his doc, and crack y our Pyt hon 
+r ounds lik e a pr o.
+*Disc laimer *
+TABLE OF CONTENTS
+/92r/925 Basic data types in Python 4-5
+/9f5/925 OOPS concept in Python 6-7
+/966/925 String handling functions 8-9
+/985/925 Control statements, functions in Python 10-11
+/9168/925 Special data types in Python 12-13
+/91f4/925 Lambda functions, list comprehension 14-16
+/9164/925 Libraries used for data science: Pandas, 
+NumPy , Seaborn, Matplotlib
+17-19
+/9186/925 Types of plots in Seaborn and Matplotlib 
+and their uses
+20-22
+/926f/925 Library for machine learning: Scikit-learn 23-25
+P Y T H O N
+What are the basic data types in Python?Q.1
+The basic data types in Python are/ pF
+ represents whole numbers./ aa
+Float: represents decimal numbers./ aa
+String: represents a sequence of characters./ aa
+Boolean: represents either True or False./ aa
+List: represents an ordered collection of elements.
+/ Fa Integer:
+/ Fa
+/ Fa
+/ Fa
+/ Fa
+Ans:
+How do you convert a string to an integer in 
+Python?
+Q.2
+You can use the int() function to convert a string to an 
+integer. For example:
+Ans:
+num_str = 
+num_int = (num_str)
+"10" 
+int
+Basic data types in Python:
+T o pic 1
+P Y T H O N
+Ho w do y ou check t he data type of a v ariable 
+in Pyt hon?
+Q . 3
+Y ou can use t he ‘type()’ function t o check t he 
+data type of a v ariable. F or e xample:
+Ans:
+num = 
+( (num))
+
+10 
+print type # Output: <class 'int'>
+What is t he diff er ence betw een a list and a 
+tuple in Pyt hon?
+Q .4
+A list is mutable, which means y ou can modify it s 
+element s, while a tuple is immutable, meaning it s 
+element s cannot be changed aft er cr eation.
+Ans:
+Ho w do y ou cr eat e an empty dictionar y in 
+Pyt hon?
+Q . 5
+Y ou can cr eat e an empty dictionar y using eit her t he 
+curly braces {} or t he dict() function. F or 
+e xample:
+Ans:
+empty_dict = {} 
+empty_dict = ()
+dict
+
+P Y T H O N
+OOPS c on c ept in P y th on:
+What is OOPS and ho w is it implement ed in 
+Pyt hon?
+Q . 1
+Object -Orient ed Pr ogramming (OOPS) is a 
+pr ogramming paradigm t hat uses object s t o 
+r epr esent r eal-w orld entities. In Pyt hon, OOPS is 
+implement ed t hr ough classes and object s. Classes 
+ar e blueprint s f or cr eating object s, and object s ar e 
+instances of a class.
+Ans:
+What ar e t he f our principles of OOPS?Q .2
+Ans: The f our principles of OOPS ar e:l-p)p
+l-puo Encapsulation: bundling of data and met hods t hat 
+operat e on t hat data wit hin a singleunit ( class).l-p)p
+l-puo Inheritance: ability of a class t o inherit pr oper ties 
+and met hods fr om it s par ent class.l-p)p
+l-puo P olymorphism: ability of an object t o tak e on 
+diff er ent f orms or beha viors based on t hecont e xt.l-p)p
+l-puo Abstr action: r epr esenting essential f eatur es and 
+hiding unnecessar y details t o simplifyt he 
+comple xity .
+T o pic 2
+P Y T H O N
+What 
+
+=== SOURCE: Python For Beginner   What is Python? Python is a high-level, interpreted… ===
+Python For Beginner
+
+● What is Python?
+
+Python
+
+is
+
+a
+
+high-level,
+
+interpreted
+
+programming
+
+language
+
+known
+
+for
+
+its
+
+simplicity
+
+and
+
+readability.
+
+It
+
+is
+
+widely
+
+used
+
+in
+
+web
+
+development,
+
+data
+
+analysis,
+
+machine
+
+learning,
+
+automation,
+
+and
+
+more.
+ ● Why Learn Python? ○ Beginner-friendly syntax ○ Extensive libraries and frameworks ○ Strong community support ○ Versatile for various applications
+
+Setting Up Python on Linux and Windows: Step-by-Step
+
+Guide
+
+1. Install Python
+
+On Windows
+
+● Download Python ○ Visit python.org and download the Windows installer. ○ Choose the appropriate version (32-bit or 64-bit) based on your
+
+system.
+ ● Install Python ○ Run the installer. ○ Check the box "Add Python to PATH" to make Python accessible
+
+from
+
+the
+
+Command
+
+Prompt.
+ ○ Choose Customize Installation for optional features like pip, IDLE,
+
+and
+
+development
+
+tools.
+ ○ Complete the installation process. ● Verify Installation
+
+○ Open Command Prompt.
+
+Run:
+
+python
+
+--version
+
+pip --version
+
+On Linux
+
+Update System Packages
+
+sudo
+
+apt
+
+update
+
+&&
+
+sudo
+
+apt
+
+upgrade
+
+-y
+
+#
+
+For
+
+Debian/Ubuntu
+
+● Install Python
+
+For Debian/Ubuntu:
+
+sudo
+
+apt
+
+install
+
+python3
+
+python3-pip
+
+-y
+
+For Red Hat/CentOS:
+
+sudo
+
+yum
+
+install
+
+python3
+
+python3-pip
+
+-y
+
+Verify Installation
+
+python3
+
+--version
+
+pip3 --version
+
+2. Choose an Editor
+
+Recommended Editors for Both Linux and Windows
+
+● VS Code (Visual Studio Code) ○ Download from code.visualstudio.com.
+
+○ Install the Python Extension for debugging, syntax highlighting, and
+
+more.
+
+Command to install on Linux (Debian/Ubuntu):
+
+sudo
+
+apt
+
+install
+
+code
+
+● PyCharm ○ Download from jetbrains.com/pycharm. ○ Offers a free Community Edition.
+
+● Jupyter Notebook
+
+Install via pip:
+
+pip
+
+install
+
+notebook
+
+Launch:
+
+jupyter
+
+notebook
+
+3. Verify Python and Pip Installation
+
+On Windows
+
+Open Command Prompt and run:
+
+python
+
+--version
+
+pip --version
+
+On Linux
+
+Open a terminal and run:
+
+python3
+
+--version
+
+pip3 --version
+
+4. Set Up Virtual Environments (Optional but
+
+Recommended)
+
+On Windows
+
+Create a virtual environment:
+
+python
+
+-m
+
+venv
+
+myenv
+
+Activate the environment:
+
+myenv\Scripts\activate
+
+Deactivate with:
+
+deactivate
+
+On Linux
+
+Create a virtual environment:
+
+python3
+
+-m
+
+venv
+
+myenv
+
+Activate the environment:
+
+source
+
+myenv/bin/activate
+
+Deactivate with:
+
+deactivate
+
+5. Install Essential Libraries
+
+Use pip to install Python libraries.
+
+Example Commands
+
+Install libraries:
+
+pip
+
+install
+
+numpy
+
+pandas
+
+matplotlib
+
+Upgrade pip:
+
+python
+
+-m
+
+pip
+
+install
+
+--upgrade
+
+pip
+
+#
+
+Windows
+
+python3 -m pip install --upgrade pip
+
+# Linux
+
+6. Additional Tips
+
+● Linux Users ○ Use a package manager like apt or yum to install Python
+
+dependencies.
+
+Install build tools if needed:
+
+sudo
+
+apt
+
+install
+
+build-essential
+
+-y
+
+● Windows Users ○ Use PowerShell or Command Prompt for Python commands. ○ Use Windows Subsystem for Linux (WSL) for a Linux-like
+
+development
+
+environment.
+
+Script Mode: Save a file as script.py and run it with:
+
+python
+
+script.
+
+=== SOURCE: Python Programming Python Programming for Beginners By Adam Stewart ===
+Python Programming
+Python Programming for Beginners
+
+By Adam Stewart
+
+Copyright © 2016 by Adam Stewart
+All rights reserved. No part of this publication may be reproduced, distributed, or transmitted in
+any form or by any means, including photocopying, recording, or other electronic or mechanical
+methods, without the prior written permission of the publisher, except in the case of brief
+quotations embodied in critical reviews and certain other noncommercial uses permitted by
+copyright law.
+
+T able of Contents
+
+Introduction
+Chapter 1: Learning About Python
+The Origins of Python
+Why Use Python?
+Chapter 2: The Benefits and Negatives of Python
+The Benefits of Python
+The Negatives of Python
+Chapter 3: Common Terms You Should Know with Python
+Chapter 4: Getting Started with Python
+Text Editor
+Getting IDLE
+Chapter 5: Learning the Basics of Python Programming
+Chapter 6: A Bit More on Comments
+Chapter 7: V ariables and What They Do in Python
+Conclusion
+Introduction
+
+Getting started in coding can be tough. You may have looked at a few of the
+most popular coding languages, such as C++ or Java and been a bit scared by
+what you saw . The pages may have been filled to the brim with letters and
+symbols that you just didn’t understand, and you became frustrated and just
+wanted to walk away. Many people are scared of programing and feel like it is
+just too hard for them. But with the Python programming language, you will
+find that it can be easier than ever to learn about coding and to even read it like
+a professional.
+
+This guidebook is going to give you some of the basics that you need to get
+started with Python programming. W e will start out a bit talking about what
+Python programming is as well as some of the steps that you should take in
+order to download the program, if it isn’t already present on your computer, and
+give you some more information to really understand why this program is so
+great. W e will then move on to some keywords that will be useful to you when
+starting out with the program and even talk about the benefits and the
+drawbacks of using Python for all your coding and programing needs.
+
+The rest of the guidebook is devoted to talking about some of the different
+things that you can do within the Python program as well as some examples of
+how each of these would work. W e talk about adding comments into the code,
+working with strings and integers, and even spend some time working with
+variables so that they will show up right in the program. It is a great idea to
+experiment a bit with the process. Python makes it easy to test out your strings
+so that you can figure out what is going to work and what needs some more
+practice.
+
+Getting started in programing can seem like a challenge. You may worry that
+you aren’t going to be able to figure it all out and all of those crazy programing
+languages may have scared you away in the first place. This guidebook is
+going to spend some time looking at the Python language and exploring how
+easy it can be t
+
+=== SOURCE: Python Tutorial Release 3.7.0 Guido van Rossum and the Python development team… ===
+Python Tutorial
+Release 3.7.0
+Guido van Rossum
+and the Python development team
+September 02, 2018
+Python Software Foundation
+Email: docs@python.org
+
+CONTENTS
+1 Whetting Y our Appetite 3
+2 Using the Python Interpreter 5
+2.1 Invoking the Interpreter . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+2.2 The Interpreter and Its Environment . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+3 An Informal Introduction to Python 9
+3.1 Using Python as a Calculator . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+3.2 First Steps Towards Programming . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+4 More Control Flow T ools 19
+4.1 if Statements . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+4.2 for Statements . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 19
+4.3 The range() Function . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 20
+4.4 break and continue Statements, and else Clauses on Loops . . . . . . . . . . . . . . . . . . 21
+4.5 pass Statements . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+4.6 Deﬁning Functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 22
+4.7 More on Deﬁning Functions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 24
+4.8 Intermezzo: Coding Style . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 29
+5 Data Structures 31
+5.1 More on Lists . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+5.2 The del statement . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 35
+5.3 Tuples and Sequences . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+5.4 Sets . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 37
+5.5 Dictionaries . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 38
+5.6 Looping Techniques . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 39
+5.7 More on Conditions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 40
+5.8 Comparing Sequences and Other Types . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 40
+6 Modules 43
+6.1 More on Modules . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+6.2 Standard Modules . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 46
+6.3 The dir() Function . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 47
+6.4 Packages . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 48
+7 Input and Output 53
+7.1 Fancier Output Formatting . . . . . . . . . . . . . . . . . . . . .
+
+=== SOURCE: Python commands for DevOps 1. File Operations   Read a file: python with… ===
+Python commands for DevOps 
+1. File Operations 
+ Read a file: 
+python
+
+with open('file.txt', 'r') as file:
+
+content = file.read()
+
+print(content) 
+ Write to a file: 
+python
+
+with open('output.txt', 'w') as file:
+
+file.write('Hello, DevOps!')
+
+2. Environment Variables 
+ Get an environment variable: 
+python
+
+import os
+
+db_user = os.getenv('DB_USER') 
+print(db_user) 
+ Set an environment variable: 
+python
+
+import os
+
+os.environ['NEW_VAR'] = 'value'
+
+3. Subprocess Management 
+ Run shell commands: 
+python
+
+import subprocess
+
+result = subprocess.run(['ls', '-l'], capture_output=True, text=True) 
+print(result.stdout)
+
+4. API Requests 
+ Make a GET request: 
+python
+
+import requests
+
+response = requests.get('https://api.example.com/data') 
+print(response.json())
+
+5. JSON Handling 
+ Read JSON from a file: 
+python
+
+import json
+
+with open('data.json', 'r') as file:
+
+data = json.load(file)
+
+print(data) 
+ Write JSON to a file: 
+python
+
+import json
+
+data = {'name': 'DevOps', 'type': 'Workflow'} 
+with open('output.json', 'w') as file:
+
+json.dump(data, file, indent=4)
+
+6. Logging 
+ Basic logging setup: 
+python
+
+import logging
+
+logging.basicConfig(level=logging.INFO) 
+logging.info('This is an informational message')
+
+7. Working with Databases 
+ Connect to a SQLite database: 
+python
+
+import sqlite3
+
+conn = sqlite3.connect('example.db') 
+cursor = conn.cursor() 
+cursor.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER 
+PRIMARY KEY, name TEXT)') 
+conn.commit() 
+conn.close() 
+8. Automation with Libraries 
+ Using Paramiko for SSH connections: 
+python
+
+import paramiko
+
+ssh = paramiko.SSHClient() 
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
+ssh.connect('hostname', username='user', password='password')
+
+stdin, stdout, stderr = ssh.exec_command('ls') 
+print(stdout.read().decode()) 
+ssh.close() 
+9. Error Handling 
+ Try-except block: 
+python
+
+try:
+
+# code that may raise an exception
+
+risky_code() 
+except Exception as e:
+
+print(f'Error occurred: {e}')
+
+10. Docker Integration 
+ Using the docker package to interact with Docker: 
+python
+
+import docker
+
+client = docker.from_env() 
+containers = client.containers.list() 
+for container in containers:
+
+print(container.name)
+
+11. Working with YAML Files 
+ Read a YAML file: 
+python
+
+import yaml
+
+with open('config.yaml', 'r') as file:
+
+config = yaml.safe_load(file)
+
+print(config) 
+ Write to a YAML file: 
+python
+
+import yaml
+
+data = {'name': 'DevOps', 'version': '1.0'} 
+with open('output.yaml', 'w') as file:
+
+yaml.dump(data, file) 
+12. Parsing Command-Line Arguments 
+ Using argparse: 
+python
+
+import argparse
+
+parser = argparse.ArgumentParser(description='Process some integers.') 
+parser.add_argument('--num', type=int, help='an integer for the accumulator')
+
+args = parser.parse_args() 
+print(args.num)
+
+13. Monitoring System Resources 
+ Using psutil to monitor system resources: 
+python
+
+import psutil
+
+print(f"CPU Usage: {psutil.cpu_percent()}%") 
+print(f"Memory Usage: {psutil.virtual_memory().percent}%")
+
+1
+
+=== SOURCE: Python — Apr 2025 ===
+1
+
+2
+
+Click here for DevSecOps & Cloud DevOps Course 
+DevOps Shack 
+DevOps Guide for Python 
+1. Introduction 
+Python has established itself as one of the most widely used languages in 
+DevOps due to its powerful scripting capabilities and ease of automation. It 
+plays a crucial role in infrastructure automation, CI/CD pipelines, cloud 
+management, and system administration. 
+Why Python is Popular in DevOps? 
+1. Versatility & Simplicity: Python’s easy-to-read syntax allows DevOps 
+engineers to write efficient automation scripts without a steep learning 
+curve. 
+2. Cross-Platform Support: Python runs seamlessly on Linux, Windows, and 
+macOS, making it an ideal choice for managing diverse IT environments. 
+3. Rich Ecosystem of Libraries: Python offers specialized libraries like boto3 
+for AWS automation, paramiko for SSH-based tasks, and subprocess for 
+shell scripting. 
+4. Integration with DevOps Tools: Many DevOps tools, such as Ansible, 
+Kubernetes, and Jenkins, support Python for scripting and plugin 
+development. 
+Python’s Impact on DevOps Adoption 
+A JetBrains survey reports that 38% of Python usage is in DevOps, 
+automation, and system administration, highlighting its significance in 
+managing modern infrastructure and workflows. 
+Python helps DevOps teams with:
+
+Scripting: Automating repetitive tasks like log management, server 
+provisioning, and software deployment.
+
+Automation: Streamlining infrastructure provisioning, configuration 
+management, and CI/CD workflows.
+
+3
+
+Platform Engineering: Developing custom tools and internal platforms for 
+DevOps teams to enhance efficiency. 
+With its adaptability and strong community support, Python remains an 
+essential language for DevOps professionals aiming to improve automation 
+and operational efficiency.
+
+2. CI/CD, Infrastructure Provisioning & Configuration 
+Management 
+Python plays a vital role in Continuous Integration (CI), Continuous 
+Deployment (CD), infrastructure provisioning, and configuration 
+management. While many open-source tools like Terraform, Ansible, Jenkins, 
+and Kubernetes are available, Python extends their capabilities by enabling 
+custom automation where native functionality is insufficient. 
+Why Python for CI/CD & Infrastructure Automation? 
+• Bridges Gaps in Native DevOps Tools – Python can enhance existing 
+DevOps tools by adding custom scripts for deployment automation. 
+• API-Driven Automation – Python scripts can fetch secrets, interact with 
+cloud APIs, and manage deployments dynamically. 
+• Configuration Management – Custom Python modules can extend tools 
+like Ansible when default modules are unavailable. 
+Real-World Use Cases of Python in CI/CD & Infrastructure
+
+Automating Secret Retrieval in CI/CD Pipelines: 
+Before a deployment, Python can fetch authentication tokens from an API or a 
+secret manager. 
+import requests
+
+def get_auth_token():
+
+url = "https://api.example.com/get-token"
+
+response = requests.get(url)
+
+return response.json().get("token")
+
+4
+
+auth_toke
+
+=== SOURCE: Python — Mar 2025 ===
+#Guido van Rossum: 1991
+print("hello world")
+print('hello world')
+hello world
+hello world
+import sys
+sys.version
+'3.10.9 (tags/v3.10.9:1dd9be6, Dec 6 2022, 20:01:21) [MSC v.1934 64 
+bit (AMD64)]'
+#Variable
+x=8
+
+#int
+y=89.56
+
+#float
+name="Noor"
+
+#string
+sentence=' I am mr Noor'
+
+#string
+#let's print the data type and values of variables. (comment)
+print(type(x))
+print(type(sentence))
+print(x,' ',y,' ',name,' ',sentence)
+<class 'int'>
+<class 'str'>
+8
+
+89.56
+
+Noor
+
+I am mr Noor
+'''this is
+a multi line comment
+every one should know it'''
+""" this is
+a multi line comment
+every one should know it"""
+' this is\na multi line comment\nevery one should know it'
+#typecasting
+x=89
+y=12.89
+z='234'
+print(type(x))
+print(type(y))
+print(type(z))
+<class 'int'>
+<class 'float'>
+<class 'str'>
+x1=float(x)
+y1=int(y)
+z1=int(z)
+print(type(x))
+print(type(y))
+print(type(z))
+<class 'int'>
+<class 'float'>
+<class 'str'>
+'''
+A variable name must start with a letter or the underscore character
+A variable name cannot start with a number
+A variable name can only contain alpha-numeric characters and 
+underscores (A-z, 0-9, and _ )
+Variable names are case-sensitive (age, Age and AGE are three 
+different variables)
+A variable name cannot be any of the Python keywords.
+'''
+thisvar=3
+this_var=89
+_thisvar=90
+thisVar=45
+Thisvar=92
+THISVAR=83
+print(thisvar,' ',this_var,' ',_thisvar,' ',thisVar,' ',Thisvar,' 
+',THISVAR)
+3
+
+89
+
+90
+
+45
+
+92
+
+83
+2myvar = "John"
+my-var = "John"
+my var = "John"
+print(2myvar)
+print(my-var)
+print(my var)
+
+Cell In[12], line 1
+
+2myvar = "John"
+
+^
+SyntaxError: invalid decimal literal
+a,b,c='noor','aina','rehmat'
+print(a,' ',b,' ',c)
+noor
+
+aina
+
+rehmat
+a=b=c='noor'
+print(a,' ',b,' ',c)
+noor
+
+noor
+
+noor
+f=['noor','Has','bet','kam']
+a,b,c,d=f
+print(a,' ',b,' ',c,' ',d)
+noor
+
+Has
+
+bet
+
+kam
+x = "Python "
+y = "is "
+z = "great language."
+print(x+y+z)
+Python is great language.
+x=89
+y=90
+print(x+y)
+179
+x=89
+y=20
+z="noor"
+print(x,y,z)
+89 20 noor
+#global Variables
+a=90
+def function():
+
+b=89
+
+print('value of a and b is :',a,b)
+function()
+def func2():
+
+print("value of a is ",a)
+
+print(b)
+func2()
+value of a and b is : 90 89
+value of a is 90
+Has
+a=90
+def function():
+
+global b
+
+b=89
+
+print('value of a and b is :',a,b)
+function()
+def func2():
+
+print("value of a is ",a)
+
+print(b)
+value of a and b is : 90 89
+'''
+Text Type: str
+Numeric Types: int, float, complex
+Sequence Types: list, tuple, range
+Mapping Type: dict
+Set Types: set, frozenset
+Boolean Type: bool
+Binary Types: bytes, bytearray, memoryview
+None Type: NoneType
+'''
+a="my own words"
+print(type(a))
+print(a)
+<class 'str'>
+my own words
+b=8
+c=75.234
+d=7+8j
+print(type(b))
+print(type(c))
+print(type(d))
+print(b)
+print(c)
+print(d)
+<class 'int'>
+<class 'float'>
+<class 'complex'>
+8
+75.234
+(7+8j)
+x1=["apple", "banana", "cherry"]
+print(type(x1))
+<class 'list'>
+x2=("apple", "banana", "cherry")
+print(type(x2))
+<class 'tuple'>
+x = {"name" : "noor", "age" : 36}
+print(type(x))
+<class 'dict'>
+x = {"apple", "banana", "cherry"}
+print(type(x))
+<cl
+
+=== SOURCE: Python — Mar 2025 ===
+140+
+
+Basic 
+Python 
+Programs 
+This resource can assist you in 
+preparing for your interview
+
+Piush Kumar Sharma 
+11/26/23, 4:53 AM Basic Python Program - Jupyter Notebook
+localhost:8888/notebooks/Piush Kumar Sharma/Basic Python Program.ipynb 1/95
+Program 1
+Write a Python program to print "Hello Python".
+In [1]:
+Program 2
+Write a Python program to do arithmetical operations addition and division.
+In [2]:
+In [3]:
+Program 3
+Write a Python program to find the area of a triangle.
+In [4]:
+Hello Python
+Enter the first number for addition: 5
+Enter the second number for addition: 6
+sum: 5.0 + 6.0 = 11.0
+Enter the dividend for division: 25
+Enter the divisor for division: 5
+Division: 25.0 / 5.0 = 5.0
+Enter the length of the base of the triangle: 10
+Enter the height of the triangle: 15
+The area of the triangle is: 75.0
+print("Hello Python")
+# Addition
+num1 = float(input("Enter the first number for addition: "))
+num2 = float(input("Enter the second number for addition: "))
+sum_result = num1 + num2
+print(f"sum: {num1} + {num2} = {sum_result}")
+# Division
+num3 = float(input("Enter the dividend for division: "))
+num4 = float(input("Enter the divisor for division: "))
+if num4 == 0:
+
+print("Error: Division by zero is not allowed.")
+else:
+
+div_result = num3 / num4
+
+print(f"Division: {num3} / {num4} = {div_result}")
+# Input the base and height from the user
+base = float(input("Enter the length of the base of the triangle: "))
+height = float(input("Enter the height of the triangle: "))
+# Calculate the area of the triangle
+area = 0.5 * base * height
+# Display the result
+print(f"The area of the triangle is: {area}")
+1
+1
+2
+3
+4
+5
+1
+2
+3
+4
+5
+6
+7
+8
+1
+2
+3
+4
+5
+6
+7
+
+11/26/23, 4:53 AM Basic Python Program - Jupyter Notebook
+localhost:8888/notebooks/Piush Kumar Sharma/Basic Python Program.ipynb 2/95
+Program 4
+Write a Python program to swap two variables.
+In [5]:
+Program 5
+Write a Python program to generate a random number.
+In [6]:
+Program 6
+Write a Python program to convert kilometers to miles.
+In [7]:
+Program 7
+Write a Python program to convert Celsius to Fahrenheit.
+Enter the value of the first variable (a): 5
+Enter the value of the second variable (b): 9
+Original values: a = 5, b = 9
+Swapped values: a = 9, b = 5
+Random number: 89
+Enter distance in kilometers: 100
+100.0 kilometers is equal to 62.137100000000004 miles
+# Input two variables
+a = input("Enter the value of the first variable (a): ")
+b = input("Enter the value of the second variable (b): ")
+# Display the original values
+print(f"Original values: a = {a}, b = {b}")
+# Swap the values using a temporary variable
+temp = a
+a = b
+b = temp
+# Display the swapped values
+print(f"Swapped values: a = {a}, b = {b}")
+import random
+print(f"Random number: {random.randint(1, 100)}")
+kilometers = float(input("Enter distance in kilometers: "))
+
+# Conversion factor: 1 kilometer = 0.621371 miles
+conversion_factor = 0.621371
+
+miles = kilometers * conversion_factor
+
+print(f"{kilometers} kilometers is equal to {miles} miles")
+1
+2
+3
+4
+5
+6
+7
+
+
+=== SOURCE: Tajamul Khan @Tajamulkhann Python: A high-level, general-purpose language.… ===
+Tajamul Khan
+@Tajamulkhann
+Python: A high-level, general-purpose
+language.
+Language Type: Interpreted and
+dynamically typed.
+Founder: Created by Guido van
+Rossum, 1991.
+Interpreter: Executes code line by line.
+Uses: Used in Data Science, Web
+Development, AI, etc.
+Syntax: Simple and beginner-friendly.
+Cross-Platform: Works on Windows,
+macOS, Linux.
+Open-Source: Free to use, modify, and
+redistribute.
+Extensive Libraries: Includes tools for
+scientific computing, Web
+development, Machine Learning,
+Generative AI etc.
+@Tajamulkhann
+List: An ordered, mutable collection of
+elements.
+lst = [1, 2, 3, 4]
+Tuple: An ordered, immutable collection
+of elements.
+tpl = (1, 2, 3, 4)
+Dictionary: A collection of key-value
+pairs.
+dct = {"a": 1, "b": 2}
+Sets: An unordered collection of unique
+elements. 
+st = {1, 2, 3}
+@Tajamulkhann
+Variables: store data values.
+x = 10
+Indentation: defines blocks of code in
+Python.
+if True:
+
+print("Indentation matters!")
+Comments: explain code and are
+ignored by the interpreter
+# This is a single-line comment
+""" This is a multi-line comment """
+@Tajamulkhann
+Numeric: Represent numbers
+(integer, float, complex).
+a = 10 # int 
+b = 3.14 # float 
+c = 2 + 3j # complex
+String: A sequence of characters.
+s = "Hello"
+Boolean: Represents True or False.
+is_active = True
+@Tajamulkhann
+If-Else Statements: Conditional
+statements to execute specific code
+blocks.
+if x > 0:
+
+print("Positive") 
+else:
+
+print("Negative")
+For Loops: Iterate over a sequence.
+for i in range(5):
+
+print(i)
+While Loops: Repeat a block of code
+while a condition is true.
+while x > 0:
+
+print(x)
+
+x -= 1
+@Tajamulkhann
+Self-defined Functions: Functions that
+are defined by the user to perform
+specific tasks.
+def function_name(parameters):
+
+return value
+Lambda Functions: Anonymous one-line
+functions defined using the lambda
+keyword.
+square = lambda x: x**2
+Inbuilt Functions: Functions that are
+built into Python and available for
+immediate use.
+print("Hello World!")
+print(type(10))
+@Tajamulkhann
+Reading Files: Open and read contents
+from a file.
+with open("file.txt", "r") as f: 
+content = f.read() 
+print(content)
+Writing Files: Open and read contents
+from a file.
+with open("file.txt", "r") as f: 
+content = f.read() 
+print(content)
+@Tajamulkhann

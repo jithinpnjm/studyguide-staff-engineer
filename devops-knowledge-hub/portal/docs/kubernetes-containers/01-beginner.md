@@ -171,6 +171,200 @@ kubectl get secret my-secret -o yaml
 
 ---
 
+### Desired State And Reconciliation
+
+Kubernetes is best understood as a **desired-state control system**. You declare what should exist, and Kubernetes continuously tries to make reality match.
+
+```text
+Desired state -> control loops -> actual running workloads
+```
+
+If the desired replica count is 3 and the actual count is 2, a controller creates another Pod. This loop runs for every controller: Deployments, ReplicaSets, StatefulSets, DaemonSets, Jobs, and custom operators.
+
+Practical implications:
+
+- `kubectl apply` writes desired state, it does not run a one-shot script.
+- A workload that "disappears" usually means a controller decided to delete it (rollout, scale, eviction).
+- Drift between Git and the cluster is the GitOps problem — solved by Argo CD / Flux re-reconciling.
+
+---
+
+## Memory Palace: Kubernetes Is A City
+
+Use this analogy when stuck on what a component does. When something breaks, ask: is the problem in government, building, roads, apartments, storage, or the public phone system?
+
+| Kubernetes Concept | City Analogy | Real Meaning |
+|---|---|---|
+| Cluster | Entire city | Whole Kubernetes environment |
+| Control Plane | City government | Makes decisions |
+| Node | Building | Worker machine |
+| Pod | Apartment | Smallest runnable unit |
+| Container | Resident | Running application |
+| Deployment | Housing manager | Maintains desired replicas |
+| ReplicaSet | Apartment counter | Ensures pod count |
+| Service | Public phone number | Stable access point |
+| Ingress | City gate | External HTTP access |
+| Namespace | District | Logical separation |
+| ConfigMap | Notice board | Non-secret config |
+| Secret | Vault | Sensitive config |
+| PVC | Reserved warehouse space | Persistent storage |
+| Scheduler | Housing allocator | Chooses node |
+| kubelet | Building supervisor | Runs pods on node |
+| CNI | Roads | Pod networking |
+| HPA | Demand planner | Auto scales workloads |
+
+---
+
+## Pods Are Ephemeral — Treat Them As Replaceable
+
+A Pod is the smallest deployable unit. Usually one application container, sometimes helper sidecars. Pods are not pets:
+
+- they can die
+- they can be recreated
+- they can move to another node
+- their IP can change
+
+Never depend on a specific Pod IP or Pod name from outside. Use a Service for stable access. State that needs to survive a Pod restart must live in a PersistentVolume, external database, or object store.
+
+Containers in the same Pod share:
+
+- IP address
+- port space
+- localhost
+- network interfaces
+- mounted volumes (if mounted into both)
+
+This means two containers in the same Pod **cannot bind the same port**.
+
+---
+
+## Ingress (City Gate) — Where External HTTP Enters
+
+```text
+Internet -> Cloud Load Balancer -> Ingress Controller -> Service -> Pod
+```
+
+Ingress commonly handles:
+
+- hostnames (multiple sites on one IP)
+- paths (`/api` vs `/static`)
+- TLS termination
+- routing to Services
+
+You need an Ingress Controller running (NGINX, Traefik, AWS ALB controller, GCP GCE controller, etc.) for an `Ingress` object to do anything. The object on its own is just configuration.
+
+---
+
+## Deployment Hierarchy
+
+```text
+Deployment -> ReplicaSet -> Pods
+```
+
+A Deployment manages ReplicaSets. Each rollout creates a new ReplicaSet; the old one is scaled down. This is why `kubectl rollout undo` works: the previous ReplicaSet is still around.
+
+A Deployment gives you:
+
+- desired replica count
+- rolling updates
+- rollback
+- failed Pod replacement
+
+```bash
+kubectl get deploy
+kubectl rollout status deploy/web
+kubectl rollout history deploy/web
+kubectl rollout undo deploy/web
+```
+
+---
+
+## Service Discovery And Endpoints
+
+A Service selects Pods using **labels**. If the Service's selector does not match Pod labels, the Service has no useful backend — traffic is dropped.
+
+The mechanism:
+
+1. Service `selector: { app: api }` is defined.
+2. Pods with label `app: api` and `Ready: True` are added to the Service's `EndpointSlice`.
+3. `kube-proxy` (or eBPF/Cilium) translates ClusterIP traffic to one of those endpoints.
+
+```bash
+kubectl get svc
+kubectl describe svc api
+kubectl get endpointslice -l kubernetes.io/service-name=api
+```
+
+Common outage: **Service exists but has no endpoints**. Causes:
+
+- selector mismatch (typo, wrong namespace label)
+- Pods not Ready (readiness probe failing)
+- Pods terminating
+
+---
+
+## kubectl Essentials — What Each Verb Actually Answers
+
+| Command | What it answers |
+|---|---|
+| `kubectl get` | What objects exist right now |
+| `kubectl describe` | Details + recent Events |
+| `kubectl logs` | What the app printed |
+| `kubectl logs --previous` | What the app printed before the last crash |
+| `kubectl exec` | Shell into a running container |
+| `kubectl get events` | What the cluster tried to do |
+
+```bash
+kubectl get pods
+kubectl get deploy
+kubectl get svc
+kubectl get nodes
+kubectl get events -A --sort-by=.lastTimestamp
+kubectl describe pod POD
+kubectl logs POD --previous
+kubectl exec -it POD -- sh
+```
+
+A senior reflex: when in doubt, run `kubectl describe` and read the Events section before opening logs. Events tell you what Kubernetes itself observed.
+
+---
+
+## The Linux Connection (Why Linux Knowledge Matters)
+
+Kubernetes desired state becomes Linux reality on each node.
+
+| Kubernetes | Linux underneath |
+|---|---|
+| Pod | namespaces (pid, net, mnt, uts, ipc) |
+| requests/limits | cgroups |
+| Service | iptables / IPVS / eBPF |
+| volume | mounts / filesystems |
+| container | process |
+| node pressure | CPU / memory / disk pressure |
+
+Weak Linux knowledge limits Kubernetes troubleshooting. When `kubectl describe` shows no clear cause, the answer is often in `journalctl -u kubelet`, `dmesg`, `iptables-save`, `conntrack`, or `df`.
+
+---
+
+## Container Lifecycle Thinking
+
+```text
+build -> push -> pull -> run -> observe -> stop -> remove
+```
+
+Reliability depends on every stage, not only `docker run` / `kubectl apply`. Common production failures map to lifecycle stages:
+
+- **build**: secrets leaked into image layers, wrong base image arch
+- **push**: registry auth, rate limits
+- **pull**: ImagePullBackOff, missing imagePullSecrets
+- **run**: PID 1 signal handling, missing config
+- **observe**: no logs / no metrics, can't tell what's wrong
+- **stop**: SIGTERM ignored, slow shutdown, hanging child processes
+
+A container's writable layer is **ephemeral**. Never treat it as durable production storage — use volumes.
+
+---
+
 ## Namespaces
 
 Namespaces divide a cluster into logical sections for different teams or environments.

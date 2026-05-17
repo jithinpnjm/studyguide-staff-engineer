@@ -619,3 +619,512 @@ docker-compose logs -f app     # Follow logs for a service
 docker-compose scale app=3     # Scale a service
 docker-compose exec app bash   # Shell into a service container
 ```
+
+---
+
+## Startup Probe — The Missing Third Probe
+
+The startup probe protects slow-starting containers from being killed by an over-eager liveness probe. Once the startup probe succeeds, Kubernetes hands off to liveness/readiness.
+
+| Probe | Question | Failure action |
+|---|---|---|
+| `startupProbe` | Has the app finished booting? | Restarts container if never succeeds |
+| `readinessProbe` | Can this Pod receive traffic? | Removes from Service endpoints (no restart) |
+| `livenessProbe` | Is the app stuck and should restart? | Restarts container |
+
+Common production bug: `initialDelaySeconds: 30` on readinessProbe for an app that warms in 25 seconds — the pod becomes Ready after the first check at 30s without ever validating warm-up. A `startupProbe` polls aggressively until ready, then hands off to the cheaper readiness schedule.
+
+```yaml
+containers:
+- name: api
+  image: my-api:1.0
+  startupProbe:
+    httpGet: { path: /ready, port: 8080 }
+    failureThreshold: 30
+    periodSeconds: 2          # 30 * 2s = 60s max startup window
+  readinessProbe:
+    httpGet: { path: /ready, port: 8080 }
+    periodSeconds: 10
+    failureThreshold: 3       # require 3 failures before removing from endpoints
+  livenessProbe:
+    httpGet: { path: /healthz, port: 8080 }
+    initialDelaySeconds: 30
+    periodSeconds: 20
+    failureThreshold: 3
+```
+
+### Bad Probe Patterns That Cause Outages
+
+- **Liveness probe checking a dependency** (DB, cache). When the dependency is down, every pod restarts in a storm.
+- **Liveness timeout shorter than the app's P99 under load**. Pods get restart-killed during traffic spikes, deepening the problem (death spiral).
+- **Readiness probe is too shallow** — passes a `/` endpoint while the real handler is broken. Traffic flows to pods that 500.
+- **Missing readiness probe entirely** — pods are added to the Service the moment the container starts, before the app can serve.
+
+---
+
+## Quality of Service (QoS) Classes
+
+The QoS class is **derived** from the requests/limits relationship and controls eviction order under node pressure.
+
+| Class | Condition | Eviction priority |
+|---|---|---|
+| `Guaranteed` | `requests == limits` for every CPU and memory request | Evicted last |
+| `Burstable` | `requests < limits`, or only some resources set | Evicted second |
+| `BestEffort` | No requests and no limits at all | Evicted first |
+
+```bash
+kubectl get pod <name> -o jsonpath='{.status.qosClass}'
+```
+
+Use `Guaranteed` for latency-sensitive or critical workloads (inference servers, control-plane components). Use `Burstable` for general workloads. Avoid `BestEffort` in shared clusters — those pods are the first thing the kubelet evicts under memory pressure.
+
+To make a pod `Guaranteed`:
+
+```yaml
+resources:
+  requests: { memory: "1500Mi", cpu: "250m" }
+  limits:   { memory: "1500Mi", cpu: "250m" }
+```
+
+---
+
+## Requests vs Limits — What Each One Actually Controls
+
+| Field | Used by | Effect |
+|---|---|---|
+| `requests` | Scheduler | Reserves capacity for placement; HPA uses for utilization math |
+| `limits` | Runtime (cgroups) | Hard cap at runtime; enforced by kernel |
+
+Runtime behavior:
+
+- **CPU limit exceeded** → CFS throttling (latency spike, not killed). Visible as `container_cpu_cfs_throttled_seconds_total`.
+- **Memory limit exceeded** → OOMKill (`exit 137`). The kernel kills the process.
+- **No requests** → scheduler can pack the node beyond useful capacity; HPA breaks (cannot compute %).
+- **Requests too high** → node looks full while pods barely use anything (the "noisy reservation" trap).
+
+The scheduler uses **requests**, not actual usage. A node showing 43% real memory but 96% requested memory is full from a scheduling perspective.
+
+---
+
+## PriorityClass And Preemption
+
+`PriorityClass` ranks pods. Higher-priority pods can **preempt** (evict) lower-priority ones if the cluster cannot otherwise schedule them.
+
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: inference-critical
+value: 100000
+globalDefault: false
+description: "For latency-sensitive inference pods"
+```
+
+```yaml
+# Pod that requests preemption rights
+spec:
+  priorityClassName: inference-critical
+```
+
+Use cases:
+
+- Inference traffic preempts long-running training jobs.
+- Control-plane add-ons (CNI, CoreDNS) keep priority over user workloads.
+- Critical batch can preempt best-effort batch.
+
+Kubernetes ships two defaults: `system-cluster-critical` and `system-node-critical`. Do not bind those to application workloads.
+
+---
+
+## Topology Spread Constraints
+
+Distribute replicas across zones, nodes, or other topology keys for failure isolation.
+
+```yaml
+topologySpreadConstraints:
+- maxSkew: 1
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: DoNotSchedule
+  labelSelector:
+    matchLabels: { app: my-app }
+```
+
+`maxSkew: 1` means no zone can have more than one extra replica compared to the least-loaded zone. `whenUnsatisfiable: DoNotSchedule` is strict; `ScheduleAnyway` is best-effort.
+
+Without spread constraints, a Deployment with 10 replicas can end up entirely on one zone — a single AZ failure becomes an outage.
+
+---
+
+## Pod Disruption Budgets (PDB)
+
+A PDB protects replicated workloads from voluntary disruption (node drain, cluster upgrade, autoscaler scale-down).
+
+```yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: { name: api-pdb }
+spec:
+  minAvailable: 2        # or maxUnavailable: 1 — never both
+  selector:
+    matchLabels: { app: api }
+```
+
+Important rules:
+
+- A PDB cannot protect a single replica from downtime.
+- PDB does **not** protect against involuntary disruption (node hardware failure, spot reclamation).
+- `kubectl drain` respects PDB; if draining would violate it, drain blocks until pods elsewhere catch up.
+
+---
+
+## CNI Overview And kube-proxy Modes
+
+Every Kubernetes node has a **CNI plugin** that configures pod networking. The CNI:
+
+- creates the pod's network interface (`veth` pair)
+- assigns the pod an IP from the cluster CIDR
+- sets routes
+- configures the datapath (overlay vs native routing)
+- enforces NetworkPolicy if supported
+
+Popular CNIs:
+
+| CNI | Datapath | Notable |
+|---|---|---|
+| Flannel | VXLAN overlay | Simple, no NetworkPolicy |
+| Calico | BGP or VXLAN | NetworkPolicy via iptables/eBPF |
+| Cilium | eBPF | Replaces kube-proxy, Hubble observability |
+| AWS VPC CNI | Native ENIs | Pod IP from VPC subnet |
+| Azure CNI | Native | Similar to AWS |
+| GKE Dataplane v2 | eBPF | Google-managed Cilium |
+
+### kube-proxy Implementations
+
+| Mode | How it works | Tradeoffs |
+|---|---|---|
+| `iptables` | NAT rules created per Service | Default, scales poorly at >10k services |
+| `IPVS` | Kernel load-balancing tables | Better at large scale, more load-balancing algorithms |
+| `eBPF` (Cilium) | Programmable kernel datapath | No iptables/IPVS, best scale, requires Cilium |
+
+```bash
+# Inspect kube-proxy mode
+kubectl -n kube-system get pods -l k8s-app=kube-proxy
+kubectl -n kube-system logs <kube-proxy-pod> | grep -i mode
+
+# Inspect iptables service translation
+iptables-save | grep KUBE-SVC
+iptables-save | grep KUBE-SEP
+
+# Cilium inspection
+cilium service list
+cilium endpoint list
+hubble observe --follow
+```
+
+---
+
+## EndpointSlices
+
+In Kubernetes 1.21+ `EndpointSlice` replaces the older `Endpoints` object as the source of truth for kube-proxy and Cilium. A single Service can have multiple slices when it has more than 100 endpoints.
+
+```bash
+kubectl get endpointslice -l kubernetes.io/service-name=my-svc -o yaml
+```
+
+Topology-aware routing (`service.kubernetes.io/topology-mode: auto`) instructs kube-proxy to prefer same-zone endpoints, reducing cross-AZ traffic cost.
+
+---
+
+## CoreDNS Basics
+
+CoreDNS resolves Service names. Every Service is reachable at:
+
+```text
+<svc>.<ns>.svc.cluster.local -> Service ClusterIP -> Pod
+```
+
+```bash
+kubectl get pods -n kube-system -l k8s-app=kube-dns
+kubectl logs -n kube-system deploy/coredns
+kubectl exec -it <pod> -- cat /etc/resolv.conf
+kubectl exec -it <pod> -- nslookup kubernetes.default
+```
+
+Common DNS failures:
+
+- CoreDNS at CPU limit
+- NetworkPolicy blocks UDP/TCP 53 to `kube-dns`
+- `ndots: 5` causes external name lookups to amplify into multiple cluster-domain queries
+- Upstream resolver (the node's `/etc/resolv.conf`) is unreachable
+
+Mitigations: scale CoreDNS with an HPA, install **NodeLocal DNSCache** as a DaemonSet, lower `ndots` in pod `dnsConfig`.
+
+---
+
+## Kustomize — Environment Overlays
+
+Avoid copy-pasted YAML per environment. Kustomize uses a `base/` plus `overlays/<env>/` structure.
+
+```text
+manifests/
+  base/
+    deployment.yaml
+    service.yaml
+    kustomization.yaml
+  overlays/
+    dev/
+      kustomization.yaml
+      patch-replicas.yaml
+    prod/
+      kustomization.yaml
+      patch-replicas.yaml
+```
+
+```yaml
+# overlays/prod/kustomization.yaml
+resources:
+- ../../base
+patches:
+- path: patch-replicas.yaml
+images:
+- name: my-app
+  newTag: v1.9.1
+namespace: production
+```
+
+```bash
+kubectl apply -k overlays/prod
+kustomize build overlays/prod | kubectl diff -f -
+```
+
+Copy-pasted YAML per environment creates silent drift. Treat the base as the contract and overlays as environment-specific deltas only.
+
+---
+
+## Security Context Essentials
+
+Production workloads should minimize privilege. Defaults to set on every container:
+
+```yaml
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 2000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: app
+    securityContext:
+      allowPrivilegeEscalation: false
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop: ["ALL"]
+```
+
+A compromised privileged workload becomes a node-level compromise; security context is part of reliability, not just security.
+
+---
+
+## Manifest Review Checklist
+
+Before approving any manifest, check:
+
+- selector matches Pod labels
+- image tag/digest is immutable (no `:latest`)
+- readiness probe exists and tests the real serving path
+- liveness probe does not check a dependency
+- requests AND limits are set
+- rollout strategy (`maxUnavailable`, `maxSurge`) preserves capacity
+- securityContext is hardened (non-root, no privilege escalation, capabilities dropped)
+- PDB exists for critical replicated services
+- ConfigMap and Secret are separated from the image
+- NetworkPolicy matches the trust model
+- `kubernetes.io/change-cause` annotation is set for rollout audit
+
+```bash
+kubectl apply --dry-run=server -f file.yaml
+kubectl diff -f file.yaml
+kubeconform manifest.yaml
+kube-score score manifest.yaml
+conftest test manifest.yaml
+```
+
+Validation catches syntax. Review catches operational risk.
+
+---
+
+## Container Runtime Stack (CRI → containerd → runc)
+
+Modern Kubernetes nodes do not run Docker. The path is:
+
+```text
+kubelet -> CRI -> containerd (or CRI-O) -> runc -> Linux kernel
+```
+
+- **CRI** (Container Runtime Interface) is the gRPC contract kubelet speaks.
+- **containerd** is the daemon that pulls images, manages snapshots, and supervises containers.
+- **runc** is the OCI-compliant low-level binary that actually creates the namespaces and starts the process.
+
+On a node, `crictl` is more useful than the Docker CLI:
+
+```bash
+crictl ps                  # list containers
+crictl images              # list images on this node
+crictl logs <id>           # container logs
+crictl inspect <id>        # full spec
+crictl exec -it <id> sh    # shell in
+crictl pull <image>        # pull image
+```
+
+`docker` does not exist on production nodes — `crictl` is what you reach for during node-level debugging.
+
+---
+
+## Dockerfile Best Practices
+
+- Use **small trusted base images** (`alpine`, `distroless`, language-specific slim).
+- **Pin versions** in `FROM` and in package installs.
+- Use **multi-stage builds** to keep build tooling out of the runtime image.
+- Run as **non-root** (`USER 1000`).
+- Use **explicit entrypoints** with the exec form `["..."]`, never shell form.
+- Add a `.dockerignore`.
+- Avoid baking **secrets** into layers (they remain forever, even if deleted in a later layer).
+
+Layer cache order from most stable to most frequently changing:
+
+1. base image
+2. OS deps
+3. language deps (`go mod download`, `pip install`, `npm ci`)
+4. application code
+
+If you `COPY . .` at the top, every code change invalidates the dependency install layer and the build is slow forever.
+
+---
+
+## Multi-Arch Builds With buildx
+
+To run the same image on `amd64` and `arm64` (cheaper Graviton nodes), build a multi-arch manifest:
+
+```bash
+docker buildx create --use --name multiarch
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t myrepo/myapp:1.0 \
+  --push .
+```
+
+A common production bug is `exec format error` — pulling an `amd64` image onto an `arm64` node. Multi-arch images solve this.
+
+BuildKit (the engine behind `buildx`) also offers parallel build stages, build secrets (`--secret`), and cache mounts (`--cache-from`, `--cache-to`).
+
+---
+
+## PID 1 And Graceful Shutdown
+
+A container's entry process becomes **PID 1**. It must:
+
+- receive signals (SIGTERM, SIGINT)
+- terminate gracefully
+- reap zombie child processes
+
+Bad PID 1 handling causes:
+
+- slow rollouts (pods take the full `terminationGracePeriodSeconds`)
+- `exit 143` (SIGTERM not handled in time, kubelet escalates to SIGKILL)
+- zombie processes accumulating
+
+Fix patterns:
+
+- Use **exec form** in Dockerfiles (`CMD ["node", "server.js"]`, never `CMD node server.js` which spawns a shell that doesn't forward signals).
+- Use a tiny init wrapper for languages that don't reap children well (`tini`, `dumb-init`).
+- Implement SIGTERM handlers in the app: stop accepting traffic, drain in-flight requests, then exit.
+- Set a `preStop` lifecycle hook with a small sleep so Service endpoints are updated before the app exits:
+
+```yaml
+lifecycle:
+  preStop:
+    exec:
+      command: ["sh", "-c", "sleep 10"]
+```
+
+---
+
+## GPU Device Plugin Basics
+
+Kubernetes has no native GPU magic. The NVIDIA device plugin advertises GPUs to kubelet as an extended resource.
+
+```bash
+kubectl describe node <gpu-node> | grep -A5 nvidia.com/gpu
+kubectl get nodes -L nvidia.com/gpu.product
+```
+
+A Pod requests GPUs:
+
+```yaml
+resources:
+  limits:
+    nvidia.com/gpu: 1
+```
+
+Notes:
+
+- Standard GPU resources are **not fractional** (one of MIG or time-slicing is needed for sharing).
+- `requests` and `limits` are effectively the same for GPUs.
+- The scheduler places the Pod only on nodes with enough allocatable GPUs.
+- GPU allocation does **not** guarantee high utilization — you can have 80% allocated and 20% used at the same time.
+
+Schedule to a specific GPU type:
+
+```yaml
+nodeSelector:
+  nvidia.com/gpu.product: "NVIDIA-H100-80GB-HBM3"
+```
+
+Taint GPU nodes so non-GPU workloads stay away:
+
+```bash
+kubectl taint nodes gpu-node dedicated=gpu:NoSchedule
+```
+
+GPU workloads then add a matching toleration.
+
+---
+
+## kubelet's Active Role During Rollouts
+
+kubelet is not passive — it actively shapes runtime behavior. During a bad rollout it is simultaneously:
+
+- running readiness probes (and removing failing pods from the EndpointSlice)
+- running liveness probes (and restarting containers that fail)
+- garbage-collecting dead containers and images (can fill ephemeral storage during crash loops)
+- emitting NodeConditions (MemoryPressure, DiskPressure, PIDPressure)
+- enforcing cgroup limits (OOMKill when memory limit exceeded)
+- evicting pods by QoS order under node pressure
+
+When debugging a rollout, `kubectl describe pod` surfaces kubelet's view via Events. Then `journalctl -u kubelet -n 200` on the node is the deeper layer.
+
+---
+
+## ndots And External DNS Amplification
+
+Pods get `/etc/resolv.conf` with `ndots: 5` by default. Any hostname with fewer than 5 dots is tried with **every search domain prepended first**:
+
+```text
+api.example.com
+  -> api.example.com.default.svc.cluster.local   (try 1)
+  -> api.example.com.svc.cluster.local           (try 2)
+  -> api.example.com.cluster.local               (try 3)
+  -> api.example.com                             (try 4 — finally external)
+```
+
+For workloads making many external calls (`*.amazonaws.com`, etc.), this 3-5x amplifies DNS load. Override at Pod level:
+
+```yaml
+spec:
+  dnsConfig:
+    options:
+    - { name: ndots, value: "2" }
+```
+
+Or set the FQDN with a trailing dot in code: `api.example.com.` — that bypasses search-domain prepending entirely.

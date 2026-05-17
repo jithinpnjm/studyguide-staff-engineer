@@ -1,0 +1,303 @@
+DOMAIN: databases-storage
+DOCS WITH TEXT: 2
+
+=== SOURCE: Acknowledgement We want to express a big thank you to everyone who has helped… ===
+Acknowledgement
+
+We want to express a big thank you to everyone who has helped us from the earliest draft to the
+
+published first edition of this e-book. A special thanks to our lovely colleagues at 84codes and to
+
+all of our remote-based tech friends. Finally, a huge thank you to all of our CloudKarafka users
+
+for your feedback and continued support.
+
+We’d love to hear from you!
+
+We encourage you to email us any comments that you might have about the e-book. Feedback
+
+is crucial for the next edition so feel free to tell us what you think should or shouldn't be
+
+included. If you have an application that is using CloudKarafka or a user story that you would
+
+like to share, please send us an email!
+
+Book version: 1.1
+
+Author: Elin Vinka, Lovisa Johansson
+
+Email: 
+​
+elin@84codes.com
+​
+, lovisa@84codes.com
+
+Published: 2019-09-28
+
+Graphics: Elin Vinka, Daniel Marklund
+
+This book is for anyone who has heard about Apache Kafka and is curious to learn more but
+
+keeps getting lost in advanced documentation sites around the Apache Kafka community. We
+
+feel you, we hear you and we want to say:
+
+Look no further! Give this a read and we look forward to meeting you in the community chats in
+
+the future!
+
+“The expert at anything was once a beginner.” - Helen Hayes
+
+Introduction
+7
+
+Part 1: Apache Kafka Beginner
+8
+
+What is Apache Kafka?
+9
+
+Topics and Data Streams
+10
+
+Partition
+10
+
+Replication - the power of copying and reproducing
+12
+
+The function of “leaders” and the election of new leaders
+13
+
+Consumers and consumer groups
+15
+
+Apache Kafka Example
+17
+
+Website activity tracking
+17
+
+Example usage of Apache Kafka
+19
+
+Message Service
+19
+
+Real-time event stream processing
+20
+
+Log aggregation
+20
+
+Data Ingestion
+20
+
+Commit log service
+20
+
+Event sourcing
+21
+
+Get started with Apache Kafka
+21
+
+Hosted free Apache Kafka instance at CloudKarafka
+21
+
+Secure connection via certificates
+22
+
+Secure connection via SASL/SCRAM
+22
+
+Secure connection via VPC
+23
+
+Create a topic
+23
+
+CloudKarafka MGMT
+24
+
+Publish and subscribe
+25
+
+Apache Kafka and Ruby
+26
+
+Part 2 - Performance optimization for Apache Kafka
+29
+
+Performance optimization for Apache Kafka - Producers
+30
+
+Ack-value
+30
+
+How to set the Apache Kafka ack-value
+31
+
+What does In-Sync really mean?
+31
+
+What is the ISR?
+31
+
+What is ISR for?
+31
+
+Batch messages in Apache Kafka
+32
+
+Compression of large records
+32
+
+Apache Kafka client libraries
+32
+
+Performance optimization for Apache Kafka - Brokers
+33
+
+Topics and Partitions
+33
+
+More partitions - higher throughput
+33
+
+Do not set up too many partitions
+33
+
+The balance between cores and consumers
+34
+
+Kafka Broker
+34
+
+Minimum in-sync replicas
+34
+
+Partition load between brokers
+34
+
+Partition distribution warning in the CloudKarafka MGMT
+35
+
+Do not hardcode partitions
+35
+
+Number of partitions
+35
+
+Default created topic
+35
+
+Default retention period
+35
+
+Record order in Apache Kafka
+36
+
+Number of Zookeepers
+36
+
+Apache Kafka server type
+36
+
+Performance optimization for Apache Kafka - Consumers
+37
+
+
+=== SOURCE: Q 1. What is SQL? SQL stands for Structured Query Language. It is a programming ===
+Q 1. What is SQL? 
+SQL stands for Structured Query Language. It is a
+programming language used for managing and
+manipulating relational databases.
+Ans:
+Q 2. What is a database?
+A database is an organized collection of data stored
+and accessed electronically. It provides a way to
+store, organize, and retrieve large amounts of data
+efficiently.
+Ans:
+Q 3. What is a primary key? 
+A primary key is a column or combination of columns
+that uniquely identifies each row in a table. It
+enforces the entity integrity rule in a relational
+database.
+Ans:
+01
+Q 4. What is a foreign key?
+A foreign key is a column or combination of columns
+that establishes a link between data in two tables. It
+ensures referential integrity by enforcing
+relationships between tables.
+Ans:
+02
+Q 5. What is the difference between a primary key
+and a unique key?
+A primary key is used to uniquely identify a row in a
+table and must have a unique value. On the other
+hand, a unique key ensures that a column or
+combination of columns has a unique value but does
+not necessarily identify the row.
+Ans:
+First Normal Form (1NF)
+Second Normal Form (2NF)
+Third Normal Form (3NF)
+Boyce-Codd Normal Form (BCNF)
+Fourth Normal Form (4NF)
+Fifth Normal Form (5NF) or Project-Join Normal
+Form (PJNF)
+The different types of normalization are:
+Q 6. What is normalization? 
+Normalization is the process of organizing data in a
+database to minimize redundancy and dependency.
+It involves breaking down a table into smaller tables
+and establishing relationships between them.
+Ans:
+03
+Q 7. What are the different types of
+normalization?
+Ans:
+Q 8. What is a join in SQL? 
+A join is an operation used to combine rows from two
+or more tables based on related columns. It allows
+you to retrieve data from multiple tables
+simultaneously.
+Ans:
+Q 9. What is the difference between DELETE and
+TRUNCATE in SQL?
+The DELETE statement is used to remove specific
+rows from a table based on a condition. It can be
+rolled back and generates individual delete
+operations for each row.
+TRUNCATE, on the other hand, is used to remove all
+rows from a table. It cannot be rolled back, and it is
+faster than DELETE as it deallocates the data pages
+instead of logging individual row deletions.
+Ans:
+04
+Q 10.What is the difference between UNION
+and UNION ALL?
+UNION and UNION ALL are used to combine the
+result sets of two or more SELECT statements.
+UNION removes duplicate rows from the combined
+result set.
+whereas UNION ALL includes all rows, including
+duplicates.
+Ans:
+Q 11. What is the difference between the HAVING
+clause and the WHERE clause?
+The WHERE clause is used to filter rows based on a
+condition before the data is grouped or aggregated.
+It operates on individual rows.
+The HAVING clause, on the other hand, is used to
+filter grouped rows based on a condition after the
+data is grouped or aggregated using the GROUP BY
+clause.
+Ans:
+05
+Q 12. What is a transaction in SQL?
+A transaction is a sequence of SQL statements that
+are executed as a single logical un

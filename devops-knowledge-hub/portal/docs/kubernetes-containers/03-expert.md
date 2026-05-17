@@ -511,3 +511,641 @@ trivy image myapp:latest
 cosign sign --key cosign.key myregistry/myapp:latest
 cosign verify --key cosign.pub myregistry/myapp:latest
 ```
+
+---
+
+## Kubernetes Networking — Packet Path Deep Dive
+
+Kubernetes networking is where Linux networking, container networking, DNS, load balancing, policy, cloud networking, and service discovery meet. If you can explain the packet path, you can debug the packet path.
+
+### Same-Node Pod-to-Pod Traffic
+
+```text
+Pod A eth0 -> veth pair -> bridge/eBPF datapath -> veth pair -> Pod B eth0
+```
+
+Failure points: app not listening on the bound interface, veth missing, CNI datapath broken, NetworkPolicy drop, local conntrack state.
+
+### Cross-Node Pod-to-Pod Traffic — Overlay vs Native Routing
+
+| Model | Mechanism | Tradeoff |
+|---|---|---|
+| Overlay (VXLAN, Geneve) | Encapsulate Pod packets in UDP between nodes | Easier setup, MTU overhead (~50 bytes for VXLAN), CPU encap cost |
+| Native routing | Network fabric routes Pod CIDRs directly | More efficient, requires BGP or cloud route programming |
+| eBPF native (Cilium) | Programmable kernel datapath, optional overlay | Best performance, deepest observability |
+
+Overlay examples: Flannel VXLAN, Calico VXLAN, Cilium VXLAN.
+
+Native examples: Calico BGP, Cilium native routing, AWS VPC CNI (Pod IPs in VPC subnet), Azure CNI.
+
+### External Client → Pod Packet Path
+
+```text
+Internet -> Cloud Load Balancer -> Node (NodePort or LB target) -> kube-proxy/eBPF DNAT
+        -> CNI delivers to veth -> Pod netns -> container process
+Reply path reverses the same hops; conntrack un-NATs the reply.
+```
+
+When eBPF/Cilium is in the path, kube-proxy may be absent and XDP can handle early-path packet processing. iptables rules are replaced by eBPF programs in the TC ingress/egress hooks.
+
+### Where MTU Issues Hide
+
+Overlay adds encapsulation overhead. If the underlying network has MTU 1500 and the overlay adds 50 bytes, the pod MTU should be 1450. If not:
+
+- small packets work
+- large packets hang silently (no clear error)
+- TLS handshake intermittently fails
+- uploads succeed in dev, fail in prod
+
+```bash
+ping -M do -s 1472 <target>        # don't-fragment with 1472 bytes payload = 1500 MTU
+tracepath <target>
+ip link show eth0                  # check MTU
+```
+
+### Conntrack — The Stateful NAT Table
+
+Linux conntrack tracks flows for NAT and firewall state. kube-proxy iptables mode relies on conntrack for reverse-NAT of the reply path.
+
+```bash
+conntrack -S                       # statistics including drops, insert_failed
+sysctl net.netfilter.nf_conntrack_max
+sysctl net.netfilter.nf_conntrack_buckets
+ss -s                              # socket summary
+```
+
+Symptoms of conntrack exhaustion:
+
+- **new** connections fail while existing ones continue
+- DNS timeouts under load
+- intermittent 503s during traffic spikes
+
+Fix: raise `nf_conntrack_max` and `nf_conntrack_buckets`, add a node-level DaemonSet that alerts when conntrack usage exceeds 70%.
+
+### Cilium And Hubble
+
+Cilium replaces kube-proxy entirely with eBPF. Inspect:
+
+```bash
+cilium status
+cilium service list                # Services and backends
+cilium endpoint list               # Pods and their identities
+cilium connectivity test
+hubble observe --follow            # Live flow visibility
+hubble observe --verdict DROPPED --type policy-verdict
+```
+
+Hubble surfaces drop reasons by NetworkPolicy name, identity, and direction — the kind of detail that takes hours to extract from iptables.
+
+---
+
+## NetworkPolicy — Default Behavior, Pitfalls, And DNS
+
+NetworkPolicy is **allow-list** but only **after** a Pod is selected by a policy. Once a Pod is selected by an Ingress or Egress policy, traffic in that direction must be explicitly allowed.
+
+A common production bug: applying an egress default-deny without allowing DNS. The pod cannot resolve any name and every external call hangs at name resolution. DNS uses **both TCP and UDP port 53**.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          k8s-app: kube-dns
+    ports:
+    - { protocol: UDP, port: 53 }
+    - { protocol: TCP, port: 53 }
+```
+
+NetworkPolicy requires a CNI that **enforces** it. Flannel does not. Calico, Cilium, and Weave Net do.
+
+---
+
+## GPU Platform — Operator, MIG, MPS, Time-Slicing
+
+### NVIDIA GPU Operator
+
+The GPU Operator automates GPU node setup. It manages:
+
+- NVIDIA drivers (DaemonSet)
+- container toolkit
+- device plugin (advertises `nvidia.com/gpu` to kubelet)
+- DCGM exporter (Prometheus metrics)
+- MIG manager
+- node feature discovery (labels nodes with `nvidia.com/gpu.product`, GPU count, driver version)
+- validator jobs (verify each layer is healthy)
+
+```bash
+kubectl get pods -n gpu-operator
+kubectl get clusterpolicy
+kubectl logs -n gpu-operator deploy/gpu-operator
+kubectl logs -n gpu-operator ds/nvidia-dcgm-exporter
+```
+
+A GPU node can be `Ready: True` but **unusable** if the device plugin failed. Treat GPU node readiness as stricter than ordinary node readiness — probe `nvidia.com/gpu` allocatable on the node before scheduling expensive jobs.
+
+### MIG — Multi-Instance GPU
+
+MIG partitions supported GPUs (A100, H100) into hardware-isolated slices. Resources may appear as:
+
+```text
+nvidia.com/mig-1g.10gb
+nvidia.com/mig-2g.20gb
+nvidia.com/mig-3g.40gb
+```
+
+Useful when inference workloads do not need a full GPU and teams need hardware isolation. Tradeoff: more scheduling complexity, not all training workloads tolerate it.
+
+### MPS (Multi-Process Service)
+
+NVIDIA MPS allows multiple processes to share a GPU's compute context with finer-grained interleaving than time-slicing. No hardware partition — software multiplexing. Use for batch inference with multiple smaller models.
+
+### Time-Slicing
+
+The device plugin can advertise the same physical GPU multiple times (`replicas: 4` per GPU). Pods get a time slice of the GPU. Useful for development environments; **not** appropriate for production-latency-sensitive inference.
+
+### Topology — NVLink, NVSwitch, PCIe, RDMA
+
+GPU placement affects training throughput dramatically:
+
+1. same GPU memory (no transfer)
+2. NVLink / NVSwitch (intra-node, high bandwidth)
+3. PCIe within the same host
+4. InfiniBand / RDMA across nodes
+5. plain Ethernet across nodes (slowest)
+
+```bash
+nvidia-smi topo -m
+```
+
+Distributed training (PyTorch DDP, Horovod, NCCL) collapses to the slowest link. Place workers on nodes connected by RDMA when possible. Node affinity + topology spread can express these preferences.
+
+### NCCL And Distributed Training Signals
+
+Distributed training uses NCCL for collective operations (all-reduce, all-gather). Important signals:
+
+- all-reduce latency
+- network throughput per worker
+- straggler workers (one slow worker slows the whole step)
+- RDMA error counters
+- packet drops
+
+```bash
+nvidia-smi
+ibstat
+ibv_devinfo
+ethtool -S <interface> | grep -E 'errors|dropped'
+```
+
+---
+
+## Gang Scheduling — Kueue And Volcano
+
+Default Kubernetes scheduler places pods independently. For multi-worker training, partial starts waste GPU time: if 4 workers are needed and only 2 schedule, those 2 GPUs sit idle waiting for peers.
+
+Gang schedulers (Kueue, Volcano) enforce **all-or-nothing** admission:
+
+- the job waits until all required resources are available
+- then all workers start together
+
+Concepts:
+
+- **Queue** — admission ordering for one team or workload class
+- **Quota** — total resources a queue can consume
+- **Cohort / fair sharing** — borrow capacity between queues when idle
+- **Workload priority** — high-priority jobs jump the queue
+
+```yaml
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ClusterQueue
+metadata: { name: training-pool }
+spec:
+  namespaceSelector: {}
+  resourceGroups:
+  - coveredResources: [cpu, memory, "nvidia.com/gpu"]
+    flavors:
+    - name: gpu-h100
+      resources:
+      - { name: cpu, nominalQuota: 96 }
+      - { name: memory, nominalQuota: 1024Gi }
+      - { name: "nvidia.com/gpu", nominalQuota: 8 }
+```
+
+Without gang scheduling, expensive training jobs can spin partial workers for hours, burning GPU budget with zero progress.
+
+---
+
+## GPU Observability — DCGM Metrics
+
+DCGM (Data Center GPU Manager) exporter publishes per-GPU metrics. Watch for:
+
+- GPU utilization (compute, memory copy)
+- memory used/free
+- temperature
+- power draw and throttling
+- ECC errors
+- **XID errors** (GPU fault codes — many are unrecoverable hardware faults)
+- PCIe / NVLink throughput
+- queue wait time (platform-level)
+- training step throughput (workload-level)
+- model load time (inference-level)
+
+Bad signals: low utilization + high queue depth (scheduling/topology problem), memory near full (KV cache pressure or batch too large), XID errors (replace the GPU/node).
+
+A common cost trap: **80% allocated GPUs but 20% actual utilization** — scheduling looks fine, business value is poor. Right-size requests, use MIG for inference, adopt queueing for training.
+
+---
+
+## Operators — Reconciliation Pattern
+
+An Operator is a Kubernetes controller that encodes domain-specific operational logic via a Custom Resource.
+
+```text
+Watch desired state (CR) -> observe actual state -> reconcile difference -> update status
+```
+
+A reconciler is called whenever the watched resource changes (or on a periodic resync). Properties of a good Operator:
+
+- **idempotent** — running reconcile twice produces the same result
+- **status-rich** — surface conditions, lastReconcileTime, observed generation
+- **safe during retries** — partial progress must be safe to repeat
+- **not in the critical data path** — reconciliation lag should never break user traffic
+- **observable** — emits metrics for reconcile duration, error rate, queue depth
+
+### Kubebuilder / Operator SDK
+
+Two common scaffolding tools both built on `controller-runtime`:
+
+| Tool | Owner | Language |
+|---|---|---|
+| `kubebuilder` | Kubernetes SIG API Machinery | Go |
+| `operator-sdk` | Red Hat / Operator Framework | Go, Ansible, Helm |
+| `kopf` | Independent | Python |
+| Java Operator SDK | Red Hat | Java |
+
+```bash
+# kubebuilder scaffold
+kubebuilder init --domain example.com --repo example.com/widget
+kubebuilder create api --group apps --version v1 --kind Widget
+```
+
+### CRD Versioning
+
+CRDs evolve. Use multiple `versions:` entries with **conversion webhooks** to translate between them. Mark one as `storage: true`. Deprecate old versions before removing them.
+
+```yaml
+spec:
+  versions:
+  - name: v1beta1
+    served: true
+    storage: false
+  - name: v1
+    served: true
+    storage: true
+  conversion:
+    strategy: Webhook
+    webhook:
+      conversionReviewVersions: ["v1"]
+      clientConfig:
+        service:
+          name: convert-svc
+          namespace: my-op
+```
+
+### Operator Risk Classification
+
+Not all operators carry the same blast radius. A practical taxonomy:
+
+| Risk class | Examples | Impact when broken |
+|---|---|---|
+| Low | Only manages its own CRDs, no cluster RBAC | The CR it manages stops reconciling |
+| Medium | ClusterRoleBinding, cluster-wide controllers | Affects multiple namespaces |
+| High | Mutating webhook on Pods, certificate manager with mutating webhook | Can break every workload's admission |
+
+Audit:
+
+```bash
+kubectl get clusterrolebindings -o wide | grep -v system
+kubectl get mutatingwebhookconfigurations
+kubectl get validatingwebhookconfigurations
+```
+
+Operators that mutate Pods at admission are the highest risk — a bug there can stop the entire cluster from accepting new workloads.
+
+---
+
+## Admission Webhooks — failurePolicy And The Outage Trap
+
+Admission webhooks intercept API requests. The `failurePolicy` choice has large operational consequences:
+
+| failurePolicy | Behavior when webhook is unreachable |
+|---|---|
+| `Fail` | Reject the request (safer for security-critical policies) |
+| `Ignore` | Allow the request (preserves availability) |
+
+If a Kyverno or OPA validating webhook with `failurePolicy: Fail` becomes unavailable, the API server **rejects all writes** that match its rules. Deployments, scaling, self-healing — all blocked. The cluster appears frozen.
+
+Safe patterns:
+
+- `failurePolicy: Ignore` for non-critical policies (labeling, hints).
+- `failurePolicy: Fail` only for security-critical policies, with the webhook scoped narrowly (`namespaceSelector`, `objectSelector`).
+- Run the webhook with high replica count, PDB, and on dedicated control-plane-adjacent nodes.
+- Exclude `kube-system` from webhook rules to avoid self-bootstrap deadlock.
+- Stage policies: `Audit` mode first, `Enforce` on new namespaces, `Enforce` broadly only after burn-in.
+
+```yaml
+webhooks:
+- name: validate.kyverno.svc
+  failurePolicy: Ignore       # or Fail — choose deliberately
+  timeoutSeconds: 5
+  namespaceSelector:
+    matchExpressions:
+    - { key: kubernetes.io/metadata.name, operator: NotIn, values: [kube-system] }
+```
+
+---
+
+## Service Mesh — Istio Architecture
+
+A service mesh adds mTLS, retries, timeouts, circuit breaking, traffic policy, and L7 observability without code changes — at the cost of operational complexity and sidecar overhead.
+
+### Sidecar Mode
+
+```text
+App container <-> Envoy sidecar (in same pod) <-> network
+```
+
+- Every pod gains an **Envoy** proxy.
+- A mutating webhook injects the sidecar on pod creation (label `istio-injection=enabled` on the namespace).
+- **istiod** is the control plane: distributes configuration (xDS protocol) and certificates (SPIFFE-based identities) to sidecars.
+- mTLS happens between the sidecars; the app speaks plaintext to localhost.
+
+Overhead per pod:
+
+- ~30–80ms additional startup latency (sidecar must be ready)
+- ~50–150MB sidecar memory
+- one extra container in every probe/eviction calculation
+- mTLS certificate rotation events
+
+### Ambient Mode (Istio 1.18+)
+
+No per-pod sidecars. Instead:
+
+- a **node-level proxy** (`ztunnel`) handles L4 mTLS and identity
+- an optional **waypoint proxy** per service handles L7 policy
+
+Tradeoffs: lower per-pod overhead, simpler upgrades, but less granular per-workload policy than sidecars.
+
+### Traffic Management Primitives
+
+| Resource | Purpose |
+|---|---|
+| `VirtualService` | Route rules (host, path, headers, weights) |
+| `DestinationRule` | Subsets, load balancing, connection pools, circuit breakers |
+| `Gateway` | Mesh ingress/egress configuration |
+| `PeerAuthentication` | mTLS strictness (STRICT, PERMISSIVE, DISABLE) |
+| `AuthorizationPolicy` | L7 access rules |
+
+A `DestinationRule` referring to a non-existent subset is a classic outage: the `VirtualService` routes traffic to "v2" and there is no `v2` — the mesh returns 503 for every request. Validate with `istioctl analyze` before applying.
+
+### When To Adopt A Mesh — And When Not
+
+Adopt when you have a **specific unmet need**:
+
+- mandatory mTLS for compliance
+- L7 traffic splitting for progressive delivery (canary, blue-green)
+- circuit-breaking that the app cannot implement consistently
+- mesh-level observability (golden signals per route)
+
+Defer when:
+
+- problems can be solved with NetworkPolicy + Ingress
+- the team cannot own istiod operations
+- per-pod sidecar overhead breaks tight latency SLOs
+
+Cilium can deliver mTLS, L7 policy, and observability without sidecars in some scenarios — evaluate it alongside Istio ambient before defaulting to sidecars.
+
+---
+
+## etcd — Backup, Restore, And Where It Fits In DR
+
+etcd holds Kubernetes object state. It does **not** hold:
+
+- container images (registry)
+- PV data (the storage backend)
+- application database state
+- node-level state outside Kubernetes
+
+### Backup
+
+```bash
+ETCDCTL_API=3 etcdctl snapshot save /backup/etcd-$(date +%s).db \
+  --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key
+```
+
+Minimum production cadence: every 30 minutes for active clusters, with retention long enough to cover any plausible recovery window.
+
+### Restore
+
+```bash
+etcdctl snapshot restore /backup/etcd.db \
+  --data-dir=/var/lib/etcd-restore
+# Then point etcd at the new data-dir, restart, and reconfigure the cluster.
+```
+
+A restore is **only the first step**. Even after etcd is healthy:
+
+- the new etcd may have stale leases (controllers acquire fresh ones)
+- pods may need to re-reconcile their CRDs
+- in-flight rollouts at the time of backup will be in indeterminate state
+- secrets may need to be rotated if the backup contained compromised values
+
+### Verify Before You Need It
+
+Run periodic restore drills into a sandbox cluster. "We take backups" is not equivalent to "we can recover."
+
+---
+
+## Disaster Recovery — Three Separate Problems
+
+Most "DR plans" conflate three problems that have different solutions:
+
+| Problem | Mechanism | Tooling |
+|---|---|---|
+| etcd recovery | Restore from snapshot | `etcdctl snapshot restore` |
+| Cluster rebuild | Reprovision control plane + nodes | Cluster API, eksctl, GKE, AKS |
+| Application data recovery | Restore app-specific stateful data | Velero, pgBackRest, Litestream, application-native backups |
+
+**Velero** snapshots Kubernetes object state and PV contents. It does **not** capture:
+
+- in-memory application state
+- WAL not yet flushed to disk
+- application invariants that span multiple objects (consistency)
+
+Stateful applications need application-aware backups in addition to Velero. Postgres needs pgBackRest or pg_dump with a stable transaction snapshot. Kafka needs broker-level replication or MirrorMaker. ElasticSearch needs snapshot API.
+
+### RTO And RPO Per Workload Class
+
+A real DR plan defines separate RTO/RPO per class:
+
+| Workload class | RTO target | RPO target |
+|---|---|---|
+| Control plane | 60 min | 30 min (etcd snapshot cadence) |
+| Stateless services | 30 min (re-deploy from Git) | 0 (no app state) |
+| Stateful (databases) | depends on data size | application-specific (often <5 min via WAL shipping) |
+
+"DR-ready" requires:
+
+- written runbook
+- tested restore drill at agreed cadence (quarterly minimum)
+- separate plans for etcd, cluster, and app data
+- a clear answer to "passive recovery" (can you recover?) vs "active failover" (can you switch traffic?)
+
+Multi-cluster does **not** solve DR unless there is active data replication or you accept data loss on failover.
+
+---
+
+## Multi-Cluster Patterns
+
+| Pattern | Use |
+|---|---|
+| Federation (KubeFed) | Manage many clusters as one (rarely used in 2026 — deprecated for most cases) |
+| Cluster API (CAPI) | Declaratively provision clusters from a management cluster |
+| GitOps fanout | Argo CD ApplicationSet, Flux multi-cluster — one Git repo, N clusters |
+| Service mesh federation | Istio multicluster, Linkerd multicluster — east-west across clusters |
+| Karmada / OCM (Open Cluster Management) | Workload distribution across clusters |
+
+A staff-engineer rule: one cluster per environment minimum (dev/staging/prod). Add per-region clusters for latency or compliance. Use Cluster API + GitOps so cluster creation itself is reproducible.
+
+---
+
+## Container Runtime Internals — Namespaces, cgroups, overlayfs
+
+A container = image filesystem + writable layer + Linux namespaces + cgroups + a process.
+
+### Linux Namespaces
+
+| Namespace | Isolates |
+|---|---|
+| PID | processes (containers see only their own PIDs) |
+| NET | interfaces, routes, ports |
+| MNT | mount points |
+| UTS | hostname, domain |
+| IPC | shared memory, semaphores |
+| USER | UID/GID mapping (for rootless containers) |
+| CGROUP | cgroup hierarchy visibility |
+
+### cgroups (v2 is the standard now)
+
+cgroups enforce resource limits at the kernel level. Kubernetes requests/limits map directly:
+
+| Kubernetes | cgroup v2 |
+|---|---|
+| `cpu.requests` | `cpu.weight` (proportional share) |
+| `cpu.limits` | `cpu.max` (hard cap via CFS bandwidth) |
+| `memory.limits` | `memory.max` (OOM kill at the boundary) |
+| `memory.requests` | informational + reclaim hints |
+
+```bash
+# On a node, find the cgroup of a running container
+crictl inspect <id> | jq '.info.runtimeSpec.linux.cgroupsPath'
+
+# Inspect memory pressure for a cgroup
+cat /sys/fs/cgroup/<path>/memory.pressure
+cat /sys/fs/cgroup/<path>/memory.current
+cat /sys/fs/cgroup/<path>/memory.max
+```
+
+### overlayfs
+
+Container images are stacked read-only layers + one writable container layer.
+
+```text
++-------------------+ <- writable container layer (deleted on container removal)
++-------------------+ <- app code layer
++-------------------+ <- dep install layer
++-------------------+ <- OS deps layer
++-------------------+ <- base image layer
+```
+
+Implications:
+
+- Image layers are reused across containers from the same base — disk efficient.
+- Logs written **inside** the container consume the writable layer; under crash loops this fills `/var/lib/containerd` and triggers `DiskPressure`.
+- Deleting a file in the writable layer does not shrink the image's history; the underlying layer still contains it.
+- Cache order in Dockerfiles matters because each instruction creates a layer.
+
+### OCI Spec And runc
+
+The Open Container Initiative (OCI) defines:
+
+- **image-spec** — what an image is on disk (manifest, layers, config)
+- **runtime-spec** — what a container is at runtime (rootfs, mounts, namespaces, cgroups)
+
+`runc` is the reference OCI runtime — it takes an OCI bundle and starts a container. containerd does pulling/snapshotting and calls runc to actually create namespaces and exec the process.
+
+Alternative runtimes:
+
+- **gVisor** — user-space kernel for stronger isolation
+- **Kata Containers** — lightweight VM per container for hardware isolation
+- **Firecracker** — micro-VMs (AWS Lambda, Fargate)
+
+---
+
+## Why Memory Pressure Hurts Latency Before OOM
+
+When a cgroup approaches its memory limit, the kernel runs **direct reclaim synchronously in the application thread's call path**. The next allocation that would have taken nanoseconds now takes milliseconds.
+
+Mechanisms layered on top of OOM:
+
+- **kswapd** — async page reclaim, competes with the app for CPU
+- **Direct reclaim** — synchronous, in the app's allocation path
+- **Dirty page writeback throttling** — when `dirty_ratio` is hit, writes block inside the app
+- **Swap activity** — even small swap causes microsecond-to-millisecond stalls on hot-page refault
+- **THP (Transparent Hugepages) compaction** — pause to create 2MB pages
+
+Symptoms: P99 latency spikes without any OOM event. Investigate with:
+
+```bash
+sar -B 1
+cat /proc/vmstat | grep -E 'pgmajfault|pgsteal|allocstall'
+cat /sys/fs/cgroup/<path>/memory.stat
+```
+
+---
+
+## Cluster API — Declarative Cluster Lifecycle
+
+Cluster API (CAPI) lets you declare clusters as Kubernetes objects in a "management cluster":
+
+```yaml
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: prod-eu-west-1
+spec:
+  infrastructureRef:
+    kind: AWSCluster
+    name: prod-eu-west-1
+  controlPlaneRef:
+    kind: KubeadmControlPlane
+    name: prod-eu-west-1-cp
+```
+
+Use CAPI for:
+
+- DR (recreate a cluster from Git after disaster)
+- Multi-cluster fleets (one repo, N clusters)
+- Reproducible cluster builds
+
+CAPI providers exist for AWS, GCP, Azure, vSphere, OpenStack, Equinix Metal, and others.

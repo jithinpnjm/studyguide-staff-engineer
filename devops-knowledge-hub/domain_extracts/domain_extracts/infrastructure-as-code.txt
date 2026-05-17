@@ -1,0 +1,2244 @@
+DOMAIN: infrastructure-as-code
+DOCS WITH TEXT: 26
+
+=== SOURCE: "Terraform Interview Guide for DevOps & Solutions Architects role Top Terraform ===
+🎯 "Terraform Interview Guide for DevOps & Solutions Architects role 
+Top Terraform Interview Questions with real-world project experience!
+
+Whether you're preparing for DevOps roles, platform engineering, or cloud infra interviews 
+— this guide dives into what really matters in production.
+
+1. Q: How do you manage infrastructure across multiple environments using Terraform? 
+A: 
+• Use workspaces (terraform workspace) to manage environment isolation (dev, stage, 
+prod). 
+• Separate state files per environment. 
+• Use environment-specific variables or .tfvars files. 
+• Organize code into modules reused across environments. 
+Scenario: We managed dev, stage, and prod using workspaces. Modules were reused with 
+environment-specific variables. The terraform workspace command ensured the correct 
+backend and state were used per environment, avoiding resource conflicts.
+
+2. Q: How do you structure a Terraform project for large-scale infrastructure? 
+A: 
+• Use a modular architecture: separate modules for VPC, compute, RDS, etc. 
+• Keep reusable logic in modules/ and environment-specific code in envs/. 
+• Leverage remote state with backends like S3 + DynamoDB for locking. 
+• Follow naming conventions and directory standards. 
+Scenario: For a large-scale migration, we used a mono-repo with shared modules. Teams 
+deployed via terraform apply using S3 backend and DynamoDB for state locking.
+
+3. Q: How do you manage Terraform state securely and reliably? 
+A: 
+• Store state remotely using a backend (e.g., S3, Azure Blob). 
+• Enable state locking with DynamoDB. 
+• Encrypt state at rest using KMS. 
+• Restrict access via IAM; avoid committing state to Git.
+
+Scenario: State stored in S3, encrypted with KMS, locked using DynamoDB. Access 
+controlled via IAM policies to prevent concurrent runs.
+
+4. Q: What is Terraform’s depends_on and when would you use it? 
+A: 
+• Forces an explicit dependency between resources. 
+• Use when implicit dependencies are not detected (e.g., null_resource, provisioners). 
+• Prevents race conditions during terraform apply. 
+Scenario: aws_instance depended on a null_resource for setup script. We used depends_on = 
+[null_resource.setup] to control execution order.
+
+5. Q: How do you implement Blue/Green deployments with Terraform? 
+A: 
+• Use separate modules or configs for blue and green stacks. 
+• Switch traffic via ALB Target Group or Route 53. 
+• Use terraform workspace or parallel stacks for management. 
+• Decommission old stack after validation. 
+Scenario: Deployed v1 and v2 ECS using separate modules. Route 53 updated to green, and 
+terraform destroyed old version post validation.
+
+6. Q: How do you manage secrets in Terraform without exposing them in code? 
+A: 
+• Avoid hardcoding secrets in .tf or .tfvars. 
+• Use environment variables (TF_VAR_secret_name). 
+• Use SOPS, Vault, or AWS SSM with data sources. 
+• Inject via CI/CD secrets management during runtime. 
+Scenario: 
+Used AWS Secrets Manager + data "aws_secretsmanager_secret_version
+
+=== SOURCE: ANSIBLE Ansible is an open source software that automates software… ===
+ANSIBLE
+
+Ansible is an open source software that automates software provisioning, configuration 
+management, and application deployment.
+
+Ansible is commonly used for tasks like software installation, configuration, and system 
+updates across multiple servers or devices in a network.
+
+Orchestration, Security and compliance.
+
+Uses YAML Scripting language which works on KEY-VALUE PAIR
+
+Ansible GUI is called as Ansible Tower. It was just Drag and Drop.
+
+It helps reduce manual work, improve consistency, and save time in managing complex 
+environments.
+
+The Keys Features of Ansible: 
+Agentless :There is no software or agent to be installed on the client that communicates back 
+to the server.
+
+Simple and extensible: Ansible is written in Python and uses YAML for playbook language, 
+both of which are considered relatively easy to learn.
+
+PLAYBOOK: 
+Ansible playbooks are a way to send commands to remote computers in a scripted way. 
+Instead of using Ansible commands individually to remotely configure computers from the 
+command line, you can configure entire complex environments by passing a script to one or 
+more systems.
+
+WHY ANSIBLE: 
+While managing the multiple servers its hard to keep their configuration identical. If you have 
+multiple servers which needs to configure the same setup in all. while doing the one to one 
+server their might be a chances to miss some configuration steps in some servers. Thats why 
+automation tools come into play! The automation tools like Ansible, Chef, Puppet and 
+SaltStack all are based on a same principle.
+
+DESCRIBE THE DESIRED STATE OF THE SYSTEM 
+MASTER-SLAVE CONCEPT :
+
+STEP-1: LAUNCH 5 INSTANCE (1-MASTER, 4-SLAVE)
+
+STEP-2: INSTALL ANSIBLE, PYTHON AND PIP ON MASTER SERVER
+
+amazon-linux-extras install ansible2 -y 
+yum install python-pip -y 
+STEP-3: ADD ANSIBLE USER IN ANSIBLE SERVER (useradd ansible) 
+STEP-4: SET A PASSWORD TO USER IN ANSIBLE SERVER (passwd ansible)
+
+STEP-5: GIVE ROOT PERMISSIONS TO ANSIBLE USER
+
+visudo ---> 100 line (100gg)
+
+add these second line (ansible ALL=(ALL) NOPASSWD: ALL) 
+now save & quit from the flle 
+STEP-6: NOW WE HAVE TO SAY YES TO PASSWORD AUTHNETICATION
+
+vi /etc/ssh/sshd_config---- > 63 line (63gg)
+
+change the password authentication from no to yes 
+STEP-7: RESTART SSHD (systemctl restart sshd)
+
+NOTE: REPETE ALL THESE STEPS ON ALL SLAVE SERVERS FROM STEP -3 
+TO STEP-7 
+STEP-8: LOGIN AS ANSIBLE USER (su - ansible) 
+STEP-9: GENERATE A KEY IN ANSIBLE USER ON MASTER SERVER (ssh-keygen)
+
+It will generate 2 keys (public & private)
+
+STEP-10: COPY THE PUBLIC KEY TO ALL SLAVE SERVERS (ssh-copy-id ansible@slave_ip) 
+STEP-11: LOGIN TO THE SLAVE (ssh ansible@slave_ip)
+
+NOW ITS TIME TO CHANGE ANSIBLE CONFIGURATIONS: 
+STEP-12: EXIT FROM ANSIBLE USER ON MASTER SERVER (exit), so we will be in root user 
+STEP-13 : ENBALE ANSIBLE INVENTORY AND SUDO USER (vi /etc/ansible/ansible.cfg)
+
+save & quit from the file
+
+STEP-14: ADD INVENTORIES (vi /etc/ansible/hosts)
+
+HERE dev & test is the group names 
+save &
+
+=== SOURCE: An Ansible playbook is a YAML script used to automate system configurations,… ===
+An Ansible playbook is a YAML script used to automate
+system configurations, deployments, and management
+tasks.
+it is also used to execute multiple tasks.
+Ansible playbook
+p la yb o o k:
+
+Verify and correct the syntax of the Ansible playbook
+ansible-playbook --syntax-check app.yml- The ansible-playbook --syntax-
+check app.yml command validates YAML syntax without executing the
+playbook.
+output:
+To execute the Ansible playbook: 
+ansible-playbook -i host app.yml- The command runs the app.yml
+playbook using the specified host inventory for target machines.
+output:
+
+To uninstall software using an Ansible playbook:
+ansible all -i host -m yum -a “name=httpd state=absent
+autoremove=true” -b - It removes httpd package from all
+hosts using yum with autoremove, running with become
+privileges.
+output:
+
+steps:
+To install git software in playbook:
+1.Create an Ansible playbook named hello.yml
+2.To check the syntax of ansible playbook
+output:
+p r o je c t 1
+
+3.To execute the playbook:
+output:
+
+How to install ansible without pip:
+1.sudo amazon-linux-extras install ansible2 - This command
+installs Ansible 2 on Amazon Linux using the amazon-linux-
+extras repository with sudo.
+output:
+
+2.ansible --version - We can check the Ansible version and
+the file that already contains the configuration.
+configuration file:
+3.sudo nano /etc/ansible/ansible.cfg - This command opens
+Ansible's configuration file in the Nano editor with superuser
+privileges for editing.
+"Change the setting in the configuration file to host_key_checking = False so
+that we don’t have to specify the inventory file each time."
+
+4.sudo nano /etc/ansible/hosts - This command opens the
+Ansible inventory file (/etc/ansible/hosts) in the Nano editor with
+superuser privileges, 
+5.ansible all -i host -m ping - used to check connectivity to all hosts listed
+in the inventory file.
+output:
+
+6.ansible all -i host -m shell -a “mkdir sample” - This Ansible
+command runs the mkdir sample shell command on all hosts in the
+host inventory, creating a directory named "sample".
+output:
+7.ansible all -m package -a name=httpd state=installed “-b -install
+software in slave machine using package module
+output:
+
+=== SOURCE: Ansible Introduction to Ansible Ansible is an open-source IT automation tool… ===
+Ansible
+
+Introduction to Ansible
+
+Ansible is an open-source IT automation tool used to automate software provisioning, configuration
+
+management,
+
+application
+
+deployment,
+
+and
+
+task
+
+automation.
+
+It
+
+simplifies
+
+tasks
+
+like
+
+provisioning
+
+servers,
+
+configuring
+
+systems,
+
+and
+
+managing
+
+configurations
+
+across
+
+infrastructure.
+
+History of Ansible
+
+Ansible was created by Michael DeHaan in 2012. It was developed as a simple, agentless
+
+configuration
+
+management
+
+tool
+
+with
+
+an
+
+emphasis
+
+on
+
+simplicity
+
+and
+
+ease
+
+of
+
+use.
+
+Ansible
+
+was
+
+later
+
+acquired
+
+by
+
+Red
+
+Hat
+
+in
+
+2015.
+
+Since
+
+then,
+
+it
+
+has
+
+gained
+
+significant
+
+popularity
+
+in
+
+DevOps
+
+environments.
+
+Advantages of Configuration Management Tools
+
+Configuration Management (CM) tools like Ansible provide the following advantages:
+
+● Consistency : Ensure configurations are the same across environments. ● Automation : Automates repetitive tasks like software installation, updates, and system
+
+configurations.
+ ● Scalability : CM tools scale across hundreds or thousands of machines with minimal human
+
+intervention.
+ ● Auditing : CM tools can track changes, making auditing easier. ● Error reduction : Minimize manual errors in system configurations and application setups.
+
+Why Ansible?
+
+● Agentless : Ansible does not require agents to be installed on target machines. It uses SSH or
+
+WinRM
+
+for
+
+communication.
+ ● Declarative Syntax : Users declare what they want to happen, not how it should happen. ● Simple and Easy : Ansible uses YAML, a human-readable language, making it simple for users
+
+to
+
+write
+
+automation
+
+scripts.
+ ● Idempotence is a technical term that means a function or operation can be repeated without
+
+changing
+
+the
+
+result
+.
+ ● Idempotency : Ansible ensures that tasks are executed only when necessary, avoiding
+
+redundant
+
+operations.
+ ● Extensible : Ansible provides an easy mechanism for integrating with other tools and creating
+
+custom
+
+modules.
+
+Ansible Advantages
+
+● Ease of Use : Simple, clear syntax in YAML. ● No Need for Agents : Direct communication via SSH. ● Cross-platform : Works on Linux, Windows, and macOS.
+
+● Extensible : Ansible can be extended with custom modules. ● Declarative : You define the desired state, not the steps to reach that state. ● Powerful Features : Support for roles, playbooks, and dynamic inventories.
+
+Install & Configure Ansible
+
+1. Install Ansible : ○ On Linux: sudo apt-get install ansible (Ubuntu/Debian) ○ On RedHat/CentOS: sudo yum install ansible ○ On macOS: brew install ansible 2. Configure Ansible : ○ Edit the ansible.cfg file to configure settings like default inventory file, SSH
+
+settings,
+
+etc.
+
+Use Cases of Ansible
+
+● Infrastructure Provisioning : Automate server provisioning across cloud and on-premise
+
+environments.
+ ● Configuration Management : Ensure consistent configuration across machines. ● Application Deployment : Automate the deployment of software applications across many
+
+servers.
+ ● Continuous Integration/Continuous Deployment (CI/
+
+=== SOURCE: Ansible Playbook An Ansible Playbook is a file written in YAML format that… ===
+Ansible Playbook
+
+An Ansible Playbook is a file written in YAML format that contains instructions for automating 
+tasks on remote servers. Think of it as a set of "recipes" that tell Ansible what to do, step by step. 
+These instructions can include installing software, configuring files, managing users, restarting 
+services, and more. 
+Key Points in Simple Words: 
+1. YAML File: It's written in a human-readable format, easy to write and understand. 
+2. Tasks: A playbook has tasks, which are specific actions like "install Apache" or "copy a file." 
+3. Plays: Each play in the playbook targets a group of servers and specifies what tasks to perform 
+on them. 
+4. Modules: Tasks use Ansible modules (like tools) to perform specific operations, e.g., yum for 
+installing packages or copy for copying files. 
+Example: 
+Here’s a simple playbook to install Apache on a web server:
+
+How It Works: 
+• hosts: Defines the group of servers (e.g., webservers) where the tasks will run. 
+• become: true: Allows running tasks as a superuser. 
+• Tasks: Each task does one thing, like installing Apache or starting its service. 
+In summary, an Ansible Playbook is a simple, organized way to automate IT tasks and make your 
+work easier and faster.
+
+Here’s a line-by-line explanation of the playbook snippet: 
+Play Definition
+
+- name: The name of the play, which describes what this play does. In this case, it installs Apache 
+on a web server. It's for readability and helps you understand the purpose of the play at a glance.
+
+hosts: Specifies the group of servers (defined in the Ansible inventory file) where this play will 
+run. Here, webservers is the target group.
+
+become: Indicates that the tasks in this play should be executed with elevated privileges (e.g., as 
+the root user). This is essential for tasks like installing software or managing services. 
+Tasks Section
+
+tasks: Defines a list of actions to perform on the specified hosts. Each task has a name and 
+specific instructions. 
+Task 1: Install Apache
+
+- name: A descriptive label for the task. This one is labeled "Install Apache" to indicate its 
+purpose.
+
+• yum: Refers to the Ansible module used to manage packages on Red Hat-based systems (like 
+CentOS or RHEL). 
+• name: httpd: Specifies the package to install (httpd, which is Apache for Red Hat-based
+
+Task 2: Start Apache Service
+
+- name: A descriptive label for the task. This one is labeled "Start Apache service" to explain that it 
+starts the Apache service.
+
+• service: Refers to the Ansible module for managing services on a system. 
+• name: httpd: Specifies the service name (Apache is called httpd on Red Hat-based systems). 
+• state: started: Ensures the service is running. If it’s not running, Ansible will start it. If it’s 
+already running, no action will be taken. 
+Summary of the Playbook: 
+1. Targets the webservers group. 
+2. Uses root privileges (become: true). 
+3. Task 1: Installs Apache (httpd package) if not already present. 
+4. Task 2: Ensures the Apache servi
+
+=== SOURCE: Ansible and Ansible Architecture The Ansible orchestration engine interacts… ===
+Ansible and Ansible Architecture 
+The Ansible orchestration engine interacts with a user who is writing the Ansible 
+playbook to execute the Ansible orchestration and interact along with the services of 
+private or public cloud and configuration management database. The below diagram 
+explains it. .
+
+Ansible Architecture 
+Playbooks here actually define your workflow because whatever tasks that you write 
+in a playbook, it gets executed in the same order that you have written them. They are 
+written in YAML format, which describes the tasks and executes through the Ansible. 
+Also, you can launch the tasks synchronously and asynchronously with playbooks. 
+The above architecture has a bunch of Host machines to which ansible server 
+connects and pushes the playbooks through SSH. It is not always needed to use an 
+SSH for connecting with your host machines; you can also use a connection plug-in. 
+For example, Ansible provides you with a docker container connection plugin and 
+using that connection plug-in, you can easily connect to all your Docker containers 
+and start configuring right away.
+
+It has an Ansible automation engine using which users can directly run 
+a playbook that gets deployed on the hosts. There are multiple components in the 
+Ansible automation engine. The first is a host inventory. It’s a list of all the IP 
+addresses of all the hosts. Let’s go one by one, in the Ansible automation engine. 
+Ansible works against multiple systems in your infrastructure at the same time. It 
+does this by selecting portions of systems listed in Ansible’s inventory file, which 
+defaults to being saved in the location /etc/ansible/hosts. You can specify a different 
+inventory file using the -i <path> option on the command line. 
+• Playbooks and Inventory
+
+As a best practice, you don’t want your Ansible architecture that consists of playbooks and Inventory 
+to be too specific. But on the other hand, you need to have a certain level of abstraction and keep out 
+precise information. Therefore, to develop flexible code, you must separate site-specific information 
+from the code, done with variables in Ansible.
+
+Remember that when you develop dynamic code along with your static information, you can use this 
+on any site with minor modifications to the variables themselves. However, you can have variables in 
+different places, and where you place variables, such as a play header or Inventory, will take different 
+precedence. So, to provide site-specific code, variables can be used in your Ansible deployment 
+architecture.
+
+Before you proceed, you may find the following posts helpful for pre-information: 
+1. Network Configuration Automation 
+2. Ansible Variables 
+3. Network Traffic Engineering
+
+• A key point: Video on Ansible automation and Ansible architecture. 
+In this video, we will discuss Ansible automation and Ansible architecture. In particular, Ansible 
+Engine is run from the CLI. This is compared to a different Ansible deployment architecture with 
+An
+
+=== SOURCE: Ansible for DevOps Engineers Zero to Advanced with Real-World Examples Author : ===
+Ansible for DevOps Engineers Zero to
+
+Advanced
+
+with
+
+Real-World
+
+Examples
+
+Author : Umar Shahzad
+
+Introduction to Ansible
+
+Ansible is an open-source automation tool used for configuration management, application
+
+deployment,
+
+and
+
+task
+
+automation.
+
+It
+
+is
+
+agentless,
+
+meaning
+
+it
+
+does
+
+not
+
+require
+
+software
+
+to
+
+be
+
+installed
+
+on
+
+remote
+
+systems.
+
+Ansible
+
+operates
+
+using
+
+SSH
+
+for
+
+Linux
+
+systems
+
+and
+
+WinRM
+
+for
+
+Windows
+
+systems.
+
+Why Use Ansible?
+
+● Agentless Architecture : No need to install agents on target machines. ● Idempotency : Ensures that running the same playbook multiple times does not cause
+
+unintended
+
+changes.
+ ● Declarative Language : Uses YAML for configuration, making it easy to read and write. ● Scalability : Manages thousands of nodes efficiently.
+
+Setting Up Ansible
+
+Installation (Linux) sudo apt update && sudo apt install ansible -y
+
+OR (For RHEL-based systems)
+
+sudo yum install ansible -y
+
+Installation (MacOS) brew install ansible
+
+Verifying Installation ansible --version
+
+Configuring Ansible
+
+Edit the inventory file (default location: /etc/ansible/hosts):
+
+[webservers] 192.168.1.10 192.168.1.11
+
+[dbservers] 192.168.1.20
+
+Writing Your First Playbook
+
+A playbook is a YAML file containing automation instructions.
+
+Example: Installing Apache - name: Install Apache Web Server
+
+hosts: webservers
+
+become: yes
+
+tasks:
+
+- name: Install Apache
+
+apt:
+
+name: apache2
+
+state: present
+
+- name: Start and Enable Apache
+
+service:
+
+name: apache2
+
+state: started
+
+enabled: yes
+
+Run the playbook using:
+
+ansible-playbook apache.yml
+
+Advanced Ansible Features
+
+Ansible Roles
+
+Roles help structure playbooks by separating tasks, variables, and handlers.
+
+ansible-galaxy init my_role
+
+Directory structure:
+
+my_role/ ├── tasks/main.yml ├── handlers/main.yml ├── templates/ ├── files/ ├── vars/main.yml ├── defaults/main.yml └── meta/main.yml
+
+Ansible Vault (Encrypting Sensitive Data) ansible-vault encrypt secrets.yml ansible-vault decrypt secrets.yml
+
+Ansible Loops (Running Tasks Multiple Times) - name: Install multiple packages
+
+hosts: all
+
+tasks:
+
+- name: Install required packages
+
+apt:
+
+name: "{{ item }}"
+
+state: present
+
+loop:
+
+- vim
+
+- curl
+
+- git
+
+Ansible Conditionals - name: Install software based on OS
+
+hosts: all
+
+tasks:
+
+- name: Install Apache on Debian-based systems
+
+apt:
+
+name: apache2
+
+state: present
+
+when: ansible_os_family == "Debian"
+
+Best Practices
+
+1. Use Roles for Scalability : Keep your playbooks modular. 2. Avoid Hardcoding Values : Use variables and templates. 3. Secure Sensitive Data : Always use Ansible Vault. 4. Use Dynamic Inventory : Fetch inventory dynamically for cloud environments. 5. Test in Staging Before Production : Always validate changes in a non-production
+
+environment.
+ 6. Use Handlers for Efficient State Management : Restart services only when required. 7. Enable Logging for Troubleshooting : Configure logs in ansible.cfg.
+
+Use Cases
+
+● Cloud Automation : Automate AWS, Azure, or GCP configurations. ● CI/CD Pi
+
+=== SOURCE: Ansible forTeenagers SUITABLE FOR ADULTS A n t o n y K e r v a z o - C a n u t… ===
+Ansible forTeenagers
+SUITABLE FOR ADULTS
+A n t o n y K e r v a z o - C a n u t
+Ansible is an open-source automation tool for configuration and
+management of IT infrastructures. It allows for the easy
+management of numerous servers using YAML language to describe
+automated tasks. Ansible operates agentlessly, meaning there is no
+need to install additional software on the nodes it manages.
+Ansible is popular for several reasons:
+Simplicity and ease of use: The playbooks (configuration files) are
+written in YAML, a simple and human-readable language.
+Powerful and flexible: Ansible can handle complex tasks and
+adapt to various environments.
+Agentless: No need to install software on the managed nodes,
+simplifying management and security.
+Idempotent: Playbooks can be run multiple times without causing
+undesirable or unintended effects.
+Large community and support: Ansible benefits from a vast
+community and an abundance of resources and modules.
+Introduction
+A n t o n y K e r v a z o - C a n u t
+Ansible Installation
+A n t o n y K e r v a z o - C a n u t
+The inventory file is a configuration document used by Ansible to list
+and organize the hosts and server groups on which tasks and
+playbooks will be executed.
+Ansible communicates with remote nodes using SSH for Unix/Linux
+systems and WinRM for Windows systems, enabling secure and
+efficient management of configurations and automations remotely.
+Inventory
+A n t o n y K e r v a z o - C a n u t
+This command sends a ping to all the hosts defined in inventory.ini to
+verify that Ansible can connect to them correctly.
+Ansible Ping
+A n t o n y K e r v a z o - C a n u t
+Playbooks
+A n t o n y K e r v a z o - C a n u t
+An Ansible playbook is a YAML file describing the tasks to be
+executed on the servers.
+This playbook targets the servers group in your inventory file and
+executes a task to install Apache on the machines in this group.
+Tasks
+A n t o n y K e r v a z o - C a n u t
+Tasks are the basic units of action in an Ansible playbook. They
+define what you want to achieve on the targeted hosts.
+This task updates the packages on an Ubuntu server using the apt
+module. Ansible has a wide range of modules for various tasks. For
+example, to manage files, use the file module.
+Variables
+A n t o n y K e r v a z o - C a n u t
+
+=== SOURCE: Ansible — Feb 2025 ===
+1
+
+Top 12 Ansible Playbooks Best Practices 
+Ansible is a powerful automation tool that uses YAML-based Playbooks to define 
+the desired state of systems and applications. Writing effective Playbooks is 
+essential for maintainability, reusability, and ensuring predictable behavior across 
+various environments.
+
+2
+
+1. Clear Naming Conventions 
+• Use meaningful, descriptive names for playbooks, tasks, variables, and files. 
+• Follow consistent naming patterns (e.g., lower case with underscores). 
+Example: 
+--- 
+- name: Install and configure Apache
+
+hosts: webservers
+
+tasks:
+
+- name: Install Apache
+
+apt:
+
+name: apache2
+
+state: present 
+Best Practices: 
+• Always name tasks so they clearly state what they do. 
+• Variable names should be consistent and clear.
+
+2. Modular Design (Use Roles & Includes) 
+• Organize playbooks into reusable roles for better scalability and structure. 
+• Roles help to break large playbooks into smaller, manageable pieces. 
+Directory Structure: 
+├── site.yml 
+├── roles/ 
+│ ├── apache/ 
+│ │ ├── tasks/
+
+3
+
+│ │ │ └── main.yml 
+│ │ ├── handlers/ 
+│ │ │ └── main.yml 
+│ │ ├── templates/ 
+│ │ └── files/ 
+Example: 
+--- 
+- hosts: webservers
+
+roles:
+
+- role: apache 
+Best Practices: 
+• Break down tasks into logical roles (e.g., apache, mysql, security). 
+• Use includes and imports to split large playbooks.
+
+3. Avoid Hardcoding (Use Variables and Defaults) 
+• Define variables to avoid hardcoding values and increase flexibility. 
+• Group variables in vars files or use group_vars for specific environments. 
+Example: 
+--- 
+- name: Install a specific version of Apache
+
+hosts: webservers
+
+vars:
+
+apache_version: "2.4.29"
+
+tasks:
+
+4
+
+- name: Install Apache
+
+apt:
+
+name: apache2={{ apache_version }}
+
+state: present 
+Best Practices: 
+• Use variable files to separate environment-specific variables (e.g., 
+group_vars/, host_vars/). 
+• Provide default values using defaults/main.yml within roles.
+
+4. Reuse Existing Roles 
+• Use publicly available roles from Ansible Galaxy to speed up development. 
+• Before creating new roles, check if community roles meet your 
+requirements. 
+Example of Installing a Role: 
+ansible-galaxy install geerlingguy.apache 
+Best Practices: 
+• Always review and test Galaxy roles before integrating them. 
+• Customize roles as needed, but avoid modifying the role’s core logic unless 
+necessary.
+
+5. Use Vault for Sensitive Data 
+• Ansible Vault should be used for securely storing sensitive information such 
+as passwords, API keys, and other confidential data. 
+Example of Vault Usage: 
+ansible-vault create secrets.yml
+
+5
+
+Example Playbook: 
+yaml 
+Copy code 
+--- 
+- name: Deploy application with sensitive data
+
+hosts: webservers
+
+vars_files:
+
+- secrets.yml
+
+tasks:
+
+- name: Use sensitive data
+
+debug:
+
+msg: "Password is {{ vault_db_password }}" 
+Best Practices: 
+• Use ansible-vault to encrypt sensitive variables (e.g., database passwords, 
+credentials). 
+• Keep encrypted files separate and avoid including them in version control 
+withou
+
+=== SOURCE: Ansible — Mar 2025 ===
+www.allitebooks.com
+www.allitebooks.com
+
+Ansible Playbook Essentials
+Design automation blueprints using Ansible's playbooks 
+to orchestrate and manage your multitier infrastructure
+Gourav Shah
+BIRMINGHAM - MUMBAI
+www.allitebooks.com
+www.allitebooks.com
+
+Ansible Playbook Essentials
+Copyright © 2015 Packt Publishing
+All rights reserved. No part of this book may be reproduced, stored in a retrieval 
+system, or transmitted in any form or by any means, without the prior written 
+permission of the publisher, except in the case of brief quotations embedded in 
+critical articles or reviews.
+Every effort has been made in the preparation of this book to ensure the accuracy 
+of the information presented. However, the information contained in this book is 
+sold without warranty, either express or implied. Neither the author, nor Packt 
+Publishing, and its dealers and distributors will be held liable for any damages 
+caused or alleged to be caused directly or indirectly by this book.
+Packt Publishing has endeavored to provide trademark information about all of the 
+companies and products mentioned in this book by the appropriate use of capitals. 
+However, Packt Publishing cannot guarantee the accuracy of this information.
+First published: August 2015
+Production reference: 1290715
+Published by Packt Publishing Ltd.
+Livery Place
+35 Livery Street
+Birmingham B3 2PB, UK.
+ISBN 978-1-78439-829-3
+www.packtpub.com
+www.allitebooks.com
+www.allitebooks.com
+
+Credits
+Author
+Gourav Shah
+Reviewers
+Ajey Gore
+Olivier Korver
+Ben Mildren
+Aditya Patawari
+Acquisition Editor
+Vinay Argekar
+Content Development Editor
+Amey Varangaonkar
+Technical Editor
+Abhishek R. Kotian
+Copy Editors
+Pranjali Chury
+Neha Vyas
+Project Coordinator
+Suzanne Coutinho
+Proofreader
+Safis Editing
+Indexer
+Monica Ajmera Mehta
+Graphics
+Jason Monteiro
+Production Coordinator
+Nilesh R. Mohite
+Cover Work
+Nilesh R. Mohite
+www.allitebooks.com
+www.allitebooks.com
+
+About the Author
+Gourav Shah (www.gouravshah.com) has extensive experience in building and 
+managing highly available, automated, fault-tolerant infrastructure and scaling it. 
+He started his career as a passionate Linux and open source enthusiast, transformed 
+himself into an operations engineer, and evolved to be a cloud and DevOps expert 
+and trainer.
+In his previous avatar, Gourav headed IT operations for Efficient Frontier
+
+(now Adobe), India. He founded Initcron Systems (
+www.initcron.com), a niche 
+consulting firm that specializes in DevOps enablement and cloud infrastructure 
+management. Under the Initcron banner, he helps companies design DevOps 
+strategies and helps implement them. Initcron also provides automation services for 
+start-ups, as well as large enterprises.
+Gourav is a coveted corporate trainer and has trained professionals from top 
+IT companies around the world, such as IBM, CISCO, Qualcomm, Accenture, 
+Dreamworks, Walmart Labs, Intuit, and Wells Fargo, to name a few. He runs a 
+specialized training school by the name School of Devops (
+
+
+=== SOURCE: Basic Terraform Commands Command Description terraform init Initializes a new… ===
+굓굔굕굖 Basic Terraform Commands 
+Command Description 
+terraform init Initializes a new or existing Terraform conﬁguration. 
+terraform plan Creates an execution plan to preview changes. 
+terraform apply Applies the desired infrastructure changes. 
+terraform destroy Destroys all resources managed by Terraform. 
+terraform show Displays details about Terraform’s state or execution plan. 
+terraform output Shows values of deﬁned output variables.
+
+굓굔굕굖 Intermediate Terraform Commands 
+Command Description 
+terraform state list Lists all resources managed in Terraform state. 
+terraform state show <resource> Shows details of a speciﬁc resource. 
+terraform state mv <old> <new> Moves a resource within the state ﬁle. 
+terraform state rm <resource> Removes a resource from Terraform state. 
+terraform import <resource> <id> Imports an existing resource into Terraform. 
+terraform taint <resource> Marks a resource for replacement on the next apply. 
+terraform untaint <resource> Removes the taint from a resource.
+
+굓굔굕굖 Advanced Terraform Commands 
+Command Description 
+terraform fmt Formats Terraform ﬁles to follow best practices. 
+terraform validate Validates the syntax and conﬁguration. 
+terraform graph Generates a graph of the Terraform dependency structure. 
+terraform workspace new <name> Creates a new Terraform workspace. 
+terraform workspace list Lists available workspaces. 
+Command Description 
+terraform workspace select <name> Switches to a diƯerent workspace. 
+terraform refresh Updates Terraform state with real infrastructure status. 
+terraform force-unlock <lock-id> Forces Terraform to unlock the state. 
+terraform apply -target=<resource> Applies changes to a speciﬁc resource. 
+terraform plan -destroy Shows a destruction plan without applying it. 
+terraform apply -var="name=value" Overrides variable values during execution. 
+terraform apply -parallelism=N Limits concurrent operations. 
+terraform console Opens an interactive Terraform console. 
+terraform debug Enables debug mode for troubleshooting. 
+terraform test Runs Terraform test cases (for Terraform 1.6+). 
+terraform login Authenticates to Terraform Cloud. 
+terraform logout Removes stored credentials for Terraform Cloud.
+
+굓굔굕굖 Less Common Terraform Commands 
+Command Description 
+terraform providers Lists required providers. 
+terraform force-unlock <lock-id> Unlocks Terraform state manually. 
+terraform providers lock Locks provider versions in .terraform.lock.. 
+terraform providers mirror <dir> Mirrors provider binaries to a directory. 
+terraform workspace delete <name> Deletes a Terraform workspace. 
+terraform providers schema Outputs the JSON schema of providers. 
+terraform show -json Outputs Terraform state in JSON format. 
+terraform output -json Shows Terraform output in JSON format. 
+terraform state pull Retrieves the current state as a JSON ﬁle. 
+terraform state push <stateﬁle> Overwrites the current Terraform state.
+
+굓굔굕굖 Terraform Enterprise & Cloud Commands 
+Command Description 
+terraform cloud
+
+=== SOURCE: Error Handling in Ansible Playbooks: Error Handling in Ansible Playbooks: A… ===
+Error Handling in Ansible Playbooks:
+
+Error Handling in Ansible Playbooks: A Beginner-Friendly Explanation 
+Ansible is a tool used to automate tasks like setting up servers, installing software, or managing 
+configurations. A playbook is like a recipe that lists all the steps for Ansible to follow. Sometimes, 
+things can go wrong when running these tasks—like a server being unreachable or a file not being 
+found. Error handling in Ansible ensures the playbook doesn't stop completely when something fails 
+and allows you to manage failures gracefully. 
+Here’s a simple explanation of error-handling concepts in Ansible:
+
+Why Do Errors Happen in Playbooks? 
+Errors can occur because: 
+• A server is offline. 
+• A file or package needed for a task doesn’t exist. 
+• Permissions are missing. 
+• A command fails (e.g., trying to start a service that's not installed).
+
+How Does Error Handling Work in Ansible? 
+Ansible has built-in ways to deal with these errors. You can: 
+1. Ignore Errors: Tell Ansible to skip a task even if it fails. 
+2. Retry Tasks: Try running a task again if it fails the first time. 
+3. Run Custom Actions After a Failure: Take specific actions, like logging the error or notifying 
+someone. 
+Key Features of Ansible Error Handling 
+1. ignore_errors: yes 
+Use this to ignore a failure in a task and let the playbook continue.
+
+failed_when: 
+Define when a task should be considered a failure. Useful when a task might technically succeed but 
+doesn’t meet your conditions.
+
+block, rescue, and always 
+Like a safety net, these let you define tasks to do if something fails: 
+• block: The main set of tasks. 
+• rescue: What to do if any block task fails. 
+• always: Actions that should always run, no matter what
+
+register and when 
+Save the result of a task and run other tasks only if a specific condition is met.
+
+Retries with until 
+Keep trying a task until it succeeds or a maximum number of retries is reached.
+
+Why Is Error Handling Important? 
+Without error handling: 
+• The playbook might stop at the first failure, leaving tasks incomplete. 
+• Debugging can become harder if failures aren’t logged properly. 
+• Automation becomes less reliable. 
+With proper error handling: 
+• Your automation becomes robust and flexible. 
+• You can identify and fix issues faster.
+
+=== SOURCE: FROM SCRATCH TO ADVANCE VISHAL MACHAN MAIL ID : vishalmachan15@gmail.com… ===
+FROM SCRATCH TO ADVANCE
+
+VISHAL MACHAN
+
+MAIL ID : vishalmachan15@gmail.com
+
+LINKEDIN: www.linkedin.com/in/machan-vishal
+
+2025
+
+Table of Contents: Ansible Deep Dive Guide 
+##
+
+Introduction to Ansible 
+1. Basic Concepts
+
+- Control Node
+
+- Managed Nodes
+
+- Inventory
+
+- Playbooks
+
+- Plays
+
+- Roles
+
+- Tasks
+
+- Handlers
+
+- Modules
+
+- Plugins
+
+- Collections
+
+##
+
+2. Build Your Inventory
+
+- Basic Inventory
+
+- Adding Variables to Inventory
+
+- Group Variables within Inventory
+
+- Variable Syntax
+
+- Grouping Inventory by Platform
+
+- Verifying the Inventory
+
+- Protecting Sensitive Variables with `ansible-vault`
+
+##
+
+3. Ansible Architecture: Master Node, Slave Node, and Tower Deep Dive
+
+- Control Node and Managed Nodes Setup
+
+- How Ansible Tower/AWX Works
+
+- Tower Components and Workflow
+
+##
+
+4. Ansible Playbooks with Explanation
+
+a. Sample Full-fledged Playbook
+
+b. Master and Slave Playbook Scenario
+
+c. Playbook Integration with Ansible Tower
+
+##
+
+5. Network Automation: Advanced Topics
+
+- Network Resource Modules
+
+- Module States
+
+- Using Network Modules
+
+- Example: Config Verification
+
+- Example: VLAN Management
+
+- Ansible Network Examples
+
+- Prerequisites
+
+- Inventory Groups and Variables
+
+- Example 1: Collection Facts & Backups
+
+- Example 2: Cross-platform Modules
+
+- Implementation Notes
+
+- Troubleshooting
+
+- Parsing Semi-Structured Text
+
+- CLI Parser Basics
+
+- Parsing CLI Output
+
+- Advanced Parsing Use Cases
+
+- Data Validation with Ansible
+
+- Using the `validate` Plugin
+
+- Structuring & Validating Data
+
+- Network Debug and Troubleshooting Guide
+
+- General Troubleshooting
+
+- Shell Issues
+
+- Socket/Path Errors
+
+- Timeout Errors
+
+- Proxy & Miscellaneous Issues
+
+Ansible: From Scratch to Deep Dive
+
+1.
+
+Introduction to Ansible 
+Ansible is an open-source IT automation tool developed by Red Hat that enables: 
+• Configuration Management 
+• Application Deployment 
+• Orchestration 
+• Provisioning 
+• Continuous Delivery 
+It uses simple YAML files (called playbooks) and does not require an agent to be installed on target 
+machines, making it lightweight and easy to manage.
+
+Basic Concepts
+
+Control Node 
+• The machine where Ansible is installed and from where commands are executed. 
+• This is the central orchestrator that pushes instructions to other systems (managed nodes) via 
+SSH.
+
+Managed Nodes 
+• The remote machines (servers, VMs, etc.) that Ansible manages. 
+• No need to install an agent; communication happens over SSH or Win-RM (for Windows).
+
+Inventory 
+• A file (usually hosts) that defines which machines are managed. 
+• Can be static (INI/YAML) or dynamic (using scripts or plugins).
+
+• Example: 
+• [webservers] 
+• web1.example.com 
+• web2.example.com
+
+Playbooks 
+• YAML files that define what needs to be done. 
+• Each consists of one or more plays, each targeting a group of hosts with defined tasks. 
+• Example: 
+• - hosts: webservers 
+•
+
+tasks: 
+•
+
+- name: Install nginx 
+•
+
+apt: 
+•
+
+name: nginx 
+•
+
+state: present
+
+Plays 
+• A play maps a group of hosts to tasks. 
+
+
+=== SOURCE: Project Author: Marianne Gleason Page 1 ANSIBLE PROJECT ON AWS You are a Devops ===
+Project Author: Marianne Gleason Page 1
+
+ANSIBLE PROJECT ON AWS
+
+You are a Devops Engineer and the organization you are working on needs to set up two configuration 
+management server groups. One for Apache another for Nginx. Being a Devops Engineer it is your task 
+to deal with this configuration management issue.
+
+Let us see the tasks that you need to perform using Ansible.
+
+1. Create two Server Groups. One for Apache and another for Nginx. 
+2. Push two html files with their server information.
+
+Make sure that you don’t forget to start the services once the installation is done. Also send post 
+installation messages for both the server groups.
+
+Using Ansible Roles accomplish the above the tasks.
+
+Also, once the Apache server configuration is done you need to install Java on that server group using 
+ansible role in a playbook.
+
+WHAT IS ANSIBLE? 
+Ansible is an automation and orchestration tool popular for its simplicity of installation, ease of use in 
+what concerns the connectivity to clients, its lack of agent for ansible clients and the multitude of skills. 
+Ansible supports the deployment and infrastructure management phases of the DevOps lifecycle, 
+automating such tasks as configuration management, infrastructure provisioning, and application 
+deployment. 
+Ansible functions by connecting via SSH to the clients, so it doesn't need a special agent on the client-
+side, and by pushing modules to the clients. The modules are then executed locally, on the client-side, 
+and the output is pushed back to the Ansible server. 
+Since it uses SSH, it can very easily connect to clients using SSH-Keys, simplifying though the whole 
+process. Client details, like hostnames or IP addresses and SSH ports, are stored in files called inventory 
+files. Once you have created an inventory file and populated it, ansible can use it.
+
+Project Author: Marianne Gleason Page 2
+
+How Ansible Will Work In This Project
+
+Project Author: Marianne Gleason Page 3
+
+Step 1. Configure 3 VMs on AWS. One ansible (master) and two worker nodes (apache (node1) and 
+nginx (node2))
+
+Step 2. Install ansible by including the following commands in a script file, ansible.sh in the master 
+(ansible) and run script file via bash ansible.sh 
+Check node1 and node2 to verify that python3 --version is installed. 
+sudo apt update 
+sudo apt install software-properties-common 
+sudo apt-add-repository --yes --update ppa:ansible/ansible 
+sudo apt install ansible 
+Step 3. ssh connection into node1 and node2 from the master. See commands below 
+cd 
+cd .ssh 
+ls 
+ssh-keygen 
+cat id_rsa.pub
+
+On node:
+
+cd .ssh 
+sudo nano authorized_key
+
+Note: paste key save & exit
+
+Step 4. Check ssh connection – both were successful 
+ssh ubuntu@3.133.86.114 – this is public ip address for node1 
+ssh ubuntu@18.217.54.29 – this is public ip address for node2
+
+Project Author: Marianne Gleason Page 4
+
+Step 5. Configure host file for two server groups. 
+Change to ansible directory and the host file 
+cd /etc/ansible 
+ls 
+Sudo nano
+
+=== SOURCE: Subhabrata Panda | 1 MASTERING INFRASTRUCTURE AS CODE SUBHABRATA PANDA… ===
+Subhabrata Panda
+
+| 1
+
+MASTERING INFRASTRUCTURE AS CODE
+
+SUBHABRATA PANDA
+
+Subhabrata Panda
+
+| 2
+
+A B O U T M E
+
+I am Subhabrata Panda, a passionate DevOps and Cloud Enthusiast, with a strong foundation in Terraform, 
+AWS, and cutting -edge cloud technologies.I have consistently demonstrated expertise in deploying scalable, 
+secure, and efficient infrastructure solutions. 
+With hands-on experience implementing Infrastructure as Code (IaC) using Terraform, I have successfully 
+worked on projects that include building secure CI/CD pipelines, managing multi -tier applications, and 
+optimizing cloud deployments.
+
+This e -book reflects my commitment to making complex infrastructure concepts accessible and actionable. 
+Whether you are a beginner or an experienced professional, my goal is to provide you with the tools and insights 
+needed to excel in modern cloud-based DevOps practices. 
+Feel free to connect with me at panda.subhabrata2003@gmail.com to discuss ideas, share feedback, or 
+collaborate on exciting projects!
+
+Subhabrata Panda
+
+| 3 
+I N D E X
+
+1. P R E R E Q U I S I T E S
+
+7
+
+2. I N T R O DUC T I O N 7
+
+3. I A C – I N F R A S T R U C T U R E A S C O D E 9
+
+4. I N S TA L L T E R R A F O R M O N W I N D O W S 10
+
+5. I N S TA L L T E R R A F O R M O N M A C / U B U N T U 1 2
+
+6 . C H O O S E T H E P R O V I D E R 1 3
+
+7 . S E T U P AW S A C C O U N T 1 4
+
+8 . AW S D A S H B O A R D 1 6
+
+9 . AW S U S E R S E T U P 1 7
+
+10 . D O W N L O A D AW S O N W I N D O W S 2 1
+
+1 1 . AW S C L I C O N F I G U R AT I O N F O R V S C O D E 2 3
+
+1 2 . AW S E C 2 W I T H T E R R A F O R M
+
+1 1 . 1 A M I
+
+1 1 . 2 t e r r a f o r m p l a n
+
+1 1 . 3 t e r r a f o r m a p p l y
+
+1 1 . 4 t e r r a f o r m d e s t r o y
+
+1 1 . 5 t e r r a f o r m d e s t r o y - a u t o— a p p r o v e
+
+1 1 . 6 t e r r a f o r m v a l i d a t e 
+2 6
+
+1 3 . R E S O U R C E C H A N G E 3 3
+
+1 4 . VA R I A B L E S I N T E R R A F O R M
+
+1 3 . 1 S y n t a x 
+3 4
+
+1 5 . O U T P U T I N T E R R A F O R M 3 6
+
+1 6 . I M P L E M E N T S 3 B U C K E T W I T H T H E H E L P O F T E R R A F O R M
+
+1 5 . 1 I n t r o d u c t i o n o f S 3 B u c k e t 
+3 7
+
+Subhabrata Panda
+
+| 4
+
+1 7 .
+
+R A N D O M P R O V I D E R
+
+1 6 . 1 S y n t a x
+
+40
+
+1 8 . T E R R A F O R M R E M O T E S TAT E M A N A G E M E N T
+
+1 7 . 1 K e y p o i n t s
+
+1 7 . 2 S y n t a x 
+4 3
+
+1 9 . P R O J E C T 1 - D E P L OY S TAT I C W E B S I T E O N AW S U S I N G S 3
+
+B U C K E T
+
+1 8 . 1 R e f e r e n c e
+
+1 8 . 2 Wo r k i n g 
+4 5
+
+20 . U N D E R S TA N D V P C F O R T E R R A F O R M I M P L E M E N TAT I O N
+
+1 9 . 1 V P C C I D R B l o c k
+
+1 9 . 2 I n t e r n e t G a t e w a y
+
+1 9 . 3 R o u t e T a b l e s
+
+1 9 . 4 S e c u r i t y T a r g e t G r o u p s
+
+1 9 . 5 N A C L
+
+1 9 . 6 S u b n e t s
+
+1 9 . 7 N A T G a t e w a y
+
+1 9 . 8 A W S P e e r i n g
+
+1 9 . 9 R o u t e 5 3 
+4 8
+
+2 1 . I M P L E M E N T I N G V P C U S I N G T E R R A F O R M
+
+2 0 . 1 I n t r o d u c t i o n 
+5 4
+
+2 2 . D ATA R E S O U R C E
+
+2 1 . 1 R e a l
+
+=== SOURCE: Summary of Terraform Associate Exam Preparation bullet points PART 1: 1.… ===
+Summary of Terraform Associate Exam Preparation 
+bullet points
+
+PART 1: 
+1. Understanding Providers & Initialization 
+• Providers define how Terraform interacts with cloud platforms (e.g., AWS, Azure). 
+• After defining a provider, terraform init is required to initialize the working 
+directory and download necessary plugins. 
+• Provider plugins are stored in the .terraform directory under 
+registry.terraform.io/hashicorp/aws. 
+2. Is the Provider Block Mandatory? 
+• No, the provider block is not mandatory if it is empty (i.e., no specific configurations 
+like region or credentials). 
+• Terraform can infer the required provider through the required_providers block. 
+• However, a provider itself is mandatory for creating resources. 
+3. Using Provider Aliases 
+• Aliases allow multiple configurations of the same provider for different regions or 
+accounts. 
+• Example:
+
+provider "aws" {
+
+region = "ap-southeast-1" 
+}
+
+provider "aws" {
+
+alias = "mumbai"
+
+region = "ap-south-1" 
+}
+
+resource "aws_instance" "example" {
+
+provider = aws.mumbai 
+} 
+4. Best Practices for Credentials 
+• Storing credentials inside the provider block is not recommended. 
+• Use environment variables or external authentication mechanisms instead.
+
+5. Terraform Settings (terraform Block) 
+• Contains:
+
+o required_version: Specifies Terraform version (e.g., >= 1.2.0). 
+o required_providers: Defines provider dependencies and versions. 
+o Backend Configuration: To be discussed in later sessions. 
+6. Key Terraform Commands 
+• terraform init → Initializes working directory and downloads providers. 
+• terraform init -upgrade → Upgrades provider versions based on constraints. 
+• terraform plan → Creates an execution plan but does not modify state. 
+• terraform apply → Applies changes and modifies the state file. 
+• terraform destroy → Removes Terraform-managed infrastructure. 
+• terraform fmt → Formats configuration files.
+
+o terraform fmt -check → Checks formatting without modifying files. 
+o terraform fmt -recursive → Formats files in subdirectories. 
+7. Version Constraints & Provider Tiers 
+• Version constraints use operators like >=, <=, ~>. 
+• Providers are categorized into:
+
+o Official (maintained by HashiCorp) 
+o Partner (verified by third-party vendors) 
+o Community (custom providers) 
+8. State File & Terraform Behavior 
+• The default Terraform state file is terraform.tfstate. 
+• Terraform plan does not modify the state file. 
+• Destroying infrastructure can be done either via:
+
+o terraform destroy 
+o Removing a resource from .tf files and running terraform apply.
+
+PART 2: 
+1. Terraform Validate (terraform validate) 
+• Validates Terraform configuration files in the directory. 
+• Requires an initialized directory (terraform init must be run first). 
+• terraform plan also includes an implicit validation check, so terraform 
+validate is not always necessary. 
+2. Terraform Refresh (terraform refresh) 
+• Reads current settings of managed resources and updates the state file to match 
+them
+
+=== SOURCE: TERRAFORM COMPLETE NOTES 1. Introduction to Terraform What is Terraform?… ===
+TERRAFORM COMPLETE NOTES
+
+1. Introduction to Terraform
+
+What is Terraform?
+
+Terraform, developed by HashiCorp, is an open-source Infrastructure as Code (IaC) tool that allows 
+users to define, provision, and manage infrastructure resources through configuration files. These 
+resources can be physical or virtual components like servers, databases, networking components, 
+storage, or even Kubernetes clusters. The configurations are written in a declarative language known 
+as HashiCorp Configuration Language (HCL), which is both easy to learn and highly expressive.
+
+The beauty of Terraform lies in its ability to abstract infrastructure management into a simplified, 
+declarative model. Instead of manually provisioning resources through cloud provider dashboards, or 
+writing scripts to automate them, you can simply describe what your infrastructure should look like, 
+and Terraform handles the rest.
+
+Terraform is widely used because it can manage infrastructure across various cloud providers such as
+
+AWS, Azure, Google Cloud, and even on-premises environments using providers like VMware and 
+OpenStack. With Terraform, you can manage all your infrastructure in one place, regardless of the 
+provider.
+
+Infrastructure as Code (IaC)
+
+To better understand Terraform, it’s important to grasp the concept of Infrastructure as Code (IaC). 
+IaC allows you to automate the provisioning and management of infrastructure in a declarative or 
+imperative manner using code. Instead of configuring each resource manually (via cloud consoles or 
+command-line interfaces), you describe the desired state of your infrastructure, and the IaC tool (like 
+Terraform) will provision it for you.
+
+Here are some key benefits of IaC:
+
+• Consistency: Ensures the same infrastructure setup across multiple environments 
+(development, staging, production).
+
+• Version Control: Infrastructure configurations can be stored in version control systems like 
+Git, making it easy to track changes over time, roll back if necessary, and collaborate with 
+other team members.
+
+• Automation: Infrastructure can be deployed or modified in seconds or minutes, reducing the 
+risk of human error.
+
+How Terraform Works
+
+Terraform operates using providers to interact with infrastructure APIs (like AWS or Azure APIs). 
+Here's a simplified view of how Terraform works:
+
+1. Configuration Files: You define the desired state of your infrastructure in .tf files using HCL.
+
+2. Terraform Plan: Terraform compares your desired configuration with the current 
+infrastructure state to generate a plan of action.
+
+3. Terraform Apply: Terraform applies the changes defined in the plan by interacting with cloud 
+provider APIs to provision, update, or destroy resources.
+
+4. State File: Terraform tracks the resources it manages through a state file (terraform.tfstate). 
+This state file acts as a record of what Terraform has done, allowing it to manage future 
+changes incrementally.
+
+2. Why Use Terraform?
+
+a. Multi-Cloud Support
+
+One of
+
+=== SOURCE: Terraform Interview Mastery: Advanced Q&A, Real- World Scenarios & Pro Tips for ===
+Terraform Interview Mastery: Advanced Q&A, Real-
+World Scenarios & Pro Tips for 3+ Years Experienced 
+& Certified DevOps Engineers
+
+Nuthan Gatla
+
+1
+
+What is Terraform and How it works? 
+Terraform is an open-source Infrastructure as Code (IaC) tool developed by HashiCorp. It 
+allows you to define, provision, and manage infrastructure across various cloud providers 
+and services using a declarative configuration language known as HashiCorp Configuration 
+Language (HCL). 
+How Does Terraform Work? (Workflow) 
+"Terraform follows a simple three-step workflow:" 
+Write – We define infrastructure in HCL, specifying cloud resources like VMs, networks, 
+and databases. 
+Plan – Terraform generates an execution plan (terraform plan) to show the changes before 
+applying them. 
+Apply – Terraform provisions and manages resources (terraform apply). It maintains a state 
+file to track infrastructure changes.
+
+A DevOps Engineer manually created infrastructure on AWS, and now there is a 
+requirement to use Terraform to manage it. How would you import these resources in 
+Terraform code?
+
+2
+
+"If an AWS infrastructure was manually created and we now need Terraform to manage it 
+without recreating resources, we use the terraform import command. This allows us to 
+bring existing AWS resources under Terraform’s management. "
+
+2. Step-by-Step Process
+
+To import existing AWS resources into Terraform, we follow these steps: 
+Step 1: Initialize Terraform 
+"First, we create a Terraform configuration file (main.tf) and initialize Terraform." 
+provider "aws" {
+
+region = "us-east-1" 
+} 
+Command: 
+terraform init 
+Step 2: Identify the Existing AWS Resource 
+"Next, we find the resource details using AWS CLI or AWS Console. For example, if we 
+are importing an EC2 instance, we get its Instance ID:"
+
+3
+
+aws ec2 describe-instances –query 
+"Reservations[*].Instances[*].InstanceId" 
+Step 3: Define a Matching Terraform Resource 
+"We write a Terraform configuration matching the resource but without unnecessary 
+attributes." 
+resource "aws_instance" "existing_instance" {
+
+ami
+
+= "ami-0c55b159cbfafe1f0"
+
+instance_type = "t2.micro" 
+} 
+Step 4: Import the Resource into Terraform State 
+"Now, we use the terraform import command to sync the AWS resource with 
+Terraform’s state." 
+terraform import aws_instance.existing_instance i-0abcdef1234567890
+
+This does not modify the resource but allows Terraform to track it. 
+Step 5: Verify the Import and Update Configuration 
+"After importing, we run terraform show to see the current state and update main.tf if 
+needed." 
+terraform show > temp.tf 
+Step 6: Plan and Apply 
+"Finally, we verify everything using terraform plan and apply changes safely." 
+terraform plan 
+terraform apply
+
+You have multiple environments - dev, stage, prod for your application and you want to 
+use the same code for all of these environment. How can you do that?
+
+Approach 1: Using Terraform Workspaces (Recommended for Simple Cases) 
+4
+
+Terraform workspaces allow you to use the same 
+
+=== SOURCE: Terraform Walkthrough What is IaC? Infrastructure as code (IaC) means to manage ===
+Terraform Walkthrough
+What is IaC?
+Infrastructure as code (IaC) means to manage your IT infrastructure using configuration files.
+Why IaC?
+Historically, managing IT infrastructure was a manual process. People would physically put servers in place and configure them. Only after the 
+machines were configured to the correct settings required by the OS and dependencies would those people deploy the application.
+Businesses are making a transition where traditionally-managed infrastructure can no longer meet the demands of today’s businesses. IT 
+organizations are quickly adopting the public cloud, which is predominantly API-driven.
+To meet customer demands and save costs, application teams are architecting their applications to support a much higher level of elasticity, 
+supporting technology like containers and public cloud resources. These resources may only live for a matter of hours; therefore the traditional 
+method of raising a ticket to request resources is no longer a viable option.
+Benefits of IaC
+Speed
+IaC benefits a company’s IT architecture and workflow as it uses automation to substantially increase the provisioning speed of the infrastructure’
+s development, testing, and production.
+Consistency
+Since it is code, it generates the same result every time. It provisioned the same environment every time, enabling improved infrastructure 
+consistency at all times.
+Cost
+One of the main benefits of IaC is, without a doubt, lowering the costs of infrastructure management. With everything automated and organized, 
+engineers save up on time and cost which can be wisely invested in performing other manual tasks and higher-value jobs.
+Minimum Risk
+IaC allows server configuration that can be documented, logged, and tracked later for reference. Configuration files will be reviewed by a person 
+or policy as a code (sentinel) for security leakages.
+Everything Codified
+The main benefit of IaC is explicit coding to configure files in use. You can share codes with the team, test them to ensure accuracy, maintain 
+uniformity and update your infrastructure into the same flow of IaC.
+Version Controlled, Integrated
+Since the infrastructure configurations are codified, we can check-in into version control like GitHub and start versioning it.
+IaC allows you to track and give insight on what, who, when, and why anything changed in the process of deployment. This has more 
+transparency which we lack in traditional infrastructure management.
+Now, we know what is Infrastructure as Code means, now let’s deep dive into Terraform...
+Terraform
+Terraform is a tool for building, changing, and versioning infrastructure safely and efficiently. Terraform can manage existing and popular service 
+providers as well as custom in-house solutions.
+Provider
+A provider is responsible for understanding API interactions and exposing resources.
+Most of the available providers correspond to one cloud or on-premises infrastructure platform and offers resource types that correspond to each
+
+=== SOURCE: Terraform — Mar 2025 ===
+1. What does the terraform init command do? 
+Ans -> 
+The terraform init command initializes a Terraform working directory. It performs the 
+following tasks: 
+ Downloads Provider Plugins: It installs the necessary provider plugins (e.g., AWS, 
+Azure, GCP) that are defined in the configuration files. 
+ Initializes Backend: If a backend is configured (e.g., for storing Terraform state), it 
+initializes the connection to that backend. 
+ Installs Modules: If modules are used in the Terraform configuration, it downloads 
+and installs the required modules. 
+ Prepares the Environment: Sets up the working directory for use with subsequent 
+Terraform commands, such as terraform plan or terraform apply. 
+In short, terraform init sets up the necessary components for Terraform to interact with 
+the cloud environment defined in your configuration. 
+2. What does the terraform plan command do? 
+Ans ->
+
+Purpose: It generates an execution plan, showing what changes Terraform will make to 
+your infrastructure. 
+Functionality: 
+ Compares the desired state defined in your configuration files with the current 
+state of the infrastructure (from the state file). 
+ Outputs a detailed list of actions that will be performed (e.g., resources to be 
+created, updated, or destroyed). 
+ Helps to verify and preview changes before applying them. 
+In summary: terraform plan shows a preview of the changes. 
+3. What does the terraform apply command do? 
+Ans -> 
+Purpose: It applies the changes required to reach the desired state of the 
+infrastructure. 
+Functionality: 
+ Executes the actions proposed in the plan (or automatically generates and 
+applies the plan if no plan is provided). 
+ Makes actual changes to the infrastructure based on the configuration, such as 
+creating, modifying, or destroying resources. 
+ Once the changes are applied, it updates the state file to reflect the current 
+infrastructure state.
+
+In summary: terraform apply actually makes the changes to your infrastructure. 
+4. Explain about Terraform provider block. 
+Ans ->
+
+In Terraform, the provider block specifies the platform (like AWS, Azure, GCP) that 
+Terraform will interact with. It handles: 
+ Platform Configuration: Defines where and how Terraform will manage 
+resources (e.g., AWS, Azure, etc.). 
+ Authentication: Contains credentials to connect to the platform. 
+ Region/Project Settings: Specifies regional or project-level details for resource 
+management. 
+ Multiple Providers: Allows managing resources across different platforms in 
+one configuration. 
+ Example: 
+provider "aws" {
+
+region
+
+= "us-west-2"
+
+access_key = "YOUR_ACCESS_KEY"
+
+secret_key = "YOUR_SECRET_KEY" 
+} 
+provider "azurerm" {
+
+features {} 
+} 
+provider "google" {
+
+credentials = file("file-path.json")
+
+project
+
+= "my-project-id"
+
+region
+
+= "us-central1" 
+}
+
+5. Explain about Terraform resource block. 
+Ans -> 
+In Terraform, a resource block is used to define infrastructure components like servers, 
+networks, or databases. It tells 
+
+=== SOURCE: Terraform: From Beginner To Master: With Examples In AWS Kevin Holditch This… ===
+Terraform: From Beginner To Master: With
+Examples In AWS
+Kevin Holditch
+This book is for sale at http://leanpub.com/terraform-from-beginner-to-master
+This version was published on 2020-09-30
+This is a Leanpub book. Leanpub empowers authors and publishers with the Lean Publishing
+process. Lean Publishing is the act of publishing an in-progress ebook using lightweight tools and
+many iterations to get reader feedback, pivot until you have the right book and build traction once
+you do.
+© 2019 - 2020 Kevin Holditch
+Contents
+Preface . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+Thanks . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+Preface . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 1
+Chapter 1 - Introduction to Terraform . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+What is Terraform? . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+Issues with configuring infrastructure manually . . . . . . . . . . . . . . . . . . . . . . . . . . 2
+Terraform to the rescue . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 3
+Why not just use CloudFormation? . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+What about Chef and Puppet, don’t they solve this problem? . . . . . . . . . . . . . . . . . . 6
+Chapter 2 - Installation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+Installation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+Setting up your free A WS Account . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+Setup an A WS user for use with Terraform . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+Setup an A WS Credentials file . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+Install JetBrains IntelliJ Community Edition . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+Chapter 3 - Your First Terraform Project . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+Code samples . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+Setting up your first project . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 10
+Creating your first infrastructure with Terraform . . . . . . . . . . . . . . . . . . . . . . . . . 11
+Chapter 4 - Resources . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+Resources in detail . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 13
+Interpolation syntax . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15
+Chapter 5 - Providers . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+=== SOURCE: Top 45 Terraform Interview Questions & Answers for DevOps Jobs in 2025 1.… ===
+Top 45 Terraform Interview Questions & 
+Answers for DevOps Jobs in 2025 
+1. Terraform Basics 
+1. What is Terraform, and how does it work? 
+o Terraform is an Infrastructure as Code (IaC) tool that automates cloud 
+resource provisioning using declarative configuration files. 
+2. What are the key components of Terraform? 
+o Providers (AWS, Azure, GCP), Modules, State Files, Resources, 
+Variables, Outputs. 
+3. What is the difference between Terraform and other IaC tools like Ansible? 
+o Terraform is declarative and focuses on infrastructure provisioning, while 
+Ansible is imperative and mainly used for configuration management. 
+4. What is the Terraform workflow? 
+o terraform init → terraform plan → terraform apply → terraform destroy. 
+5. How does Terraform maintain the state of infrastructure? 
+o Terraform stores infrastructure state in a tfstate file, which helps track 
+resources. 
+6. What is a Terraform provider? 
+o A plugin that interacts with cloud services like AWS, Azure, or GCP . 
+7. How do you initialize a Terraform project? 
+o terraform init initializes Terraform and downloads provider plugins. 
+8. What is the use of terraform plan? 
+o It shows the changes Terraform will make before applying them. 
+9. How do you apply changes in Terraform? 
+o terraform apply executes the plan and provisions resources. 
+10. How do you destroy all Terraform-managed resources? 
+• terraform destroy deletes all resources defined in the configuration.
+
+2. Terraform State Management 
+11. What is Terraform state, and why is it important? 
+• Terraform state tracks deployed infrastructure and maps it to real-world 
+resources. 
+12. Where can Terraform store state files? 
+• Locally (terraform.tfstate) or remotely (S3, Azure Blob, Terraform Cloud). 
+13. How do you enable remote state storage in Terraform? 
+• By configuring a backend, e.g., for AWS S3: 
+hcl 
+CopyEdit 
+terraform {
+
+backend "s3" {
+
+bucket = "terraform-state-bucket"
+
+key
+
+= "terraform.tfstate"
+
+region = "us-east-1"
+
+} 
+} 
+14. What happens if multiple users modify the same Terraform state file? 
+• State locking (using DynamoDB for S3 backend) prevents conflicts. 
+15. How do you refresh the Terraform state file? 
+• terraform refresh updates the state file with real-world resources. 
+16. How do you manually remove a resource from the state file? 
+• terraform state rm <resource_name>. 
+17. How do you list all resources in the Terraform state? 
+• terraform state list. 
+18. How do you move a resource from one state to another? 
+• Using terraform state mv <source> <destination>. 
+19. What is drift detection in Terraform? 
+• It detects manual changes to infrastructure that differ from Terraform’s state. 
+20. What is the use of terraform taint? 
+• Marks a resource for forced recreation in the next terraform apply.
+
+3. Terraform Variables & Modules 
+21. What are Terraform variables? 
+• Variables allow parameterizing Terraform configurations. 
+22. How do you define and use variables in Terraform? 
+• Define: 
+hcl 
+Cop
+
+=== SOURCE: What Is Ansible? Ansible is an open-source tool for resource provisioning… ===
+What Is Ansible?
+
+Ansible is an open-source tool for resource provisioning automation that aids 
+DevOps teams in continuous delivery. 
+nsible is an open-source, cross-platform tool for resource provisioning automation 
+that DevOps professionals popularly use for continuous delivery of software code by 
+taking advantage of an “infrastructure as code” approach. This article explains 
+Ansible’s functioning, architecture, and features in detail. It also discusses what 
+Ansible is used for in a modern, digital environment.
+
+Ansible is an open-source, cross-platform tool for resource provisioning automation 
+that DevOps professionals popularly use for continuous delivery of software code by 
+taking advantage of an “infrastructure as code” approach. This article explains 
+Ansible’s functioning, architecture, and features in detail. It also discusses what 
+Ansible is used for in a modern, digital environment.
+
+What Is Ansible? 
+Ansible is defined as an open-source, cross-platform tool for resource 
+provisioning automation that DevOps professionals popularly use for 
+continuous delivery of software code by taking advantage of an “infrastructure 
+as code” approach. Over the years, the Ansible automation platform has evolved to 
+deliver sophisticated automation solutions for operators, administrators, and IT 
+decision-makers across various technical disciplines. It’s a leading enterprise 
+automation solution with flourishing open-source software and the unofficial 
+standard in IT automated systems. It operates on several Unix-like platforms and can 
+manage systems like Unix and Microsoft architectures. It comes with descriptive 
+language for describing system settings. Michael DeHaan created Ansible, which Red 
+Hat acquired in 2015.
+
+Page1
+
+Ansible is an agentless system that executes actions over remote SSH or Windows 
+Remote Management connections (allowing remote PowerShell execution). Ansible is 
+an open-source IT automation engine that may help you save time at work while 
+simultaneously improving the scalability, consistency, and dependability of your IT 
+infrastructure.
+
+It is designed for IT professionals who require it for app deployment, system 
+integration, in-service coordination, and anything else that an IT admin or network 
+manager routinely accomplishes. Sys admins and developers would be unable to keep 
+up if they had to manage everything manually in today’s IT environments, which are 
+usually too complex and often have to expand too quickly. 
+Page2
+
+Page3 
+Automation makes complex activities easier to manage, allowing engineers to focus 
+on tasks that offer value to the organization. This implies that time is saved and 
+production is boosted. And as said earlier, Ansible is fast becoming extremely 
+relevant among automation tools. While it is at the vanguard of automation, systems 
+management, and DevOps, it is also a valuable everyday tool for developers. Ansible 
+enables the rapid configuration of an entire network of devices without the
+
+=== SOURCE: ansible using for devops Ansible is a powerful open-source automation tool… ===
+ansible using for devops
+
+Ansible is a powerful open-source automation tool widely used in DevOps for 
+simplifying IT infrastructure automation. It enables developers and system 
+administrators to automate tasks such as configuration management, application 
+deployment, provisioning, and orchestration. Here's how Ansible integrates into 
+DevOps workflows:
+
+Key Features of Ansible in DevOps 
+1. Agentless Architecture: 
+o Ansible does not require an agent to be installed on managed nodes. It uses 
+SSH for communication, making it lightweight and easy to set up. 
+2. YAML-Based Playbooks: 
+o Configurations are defined in YAML files called Playbooks. These are 
+human-readable and easy to write, understand, and share. 
+3. Idempotency: 
+o Ensures that repeated executions of playbooks yield the same results, which 
+is crucial for consistent deployments.
+
+4. Extensibility: 
+Ansible supports modules for different functionalities, from managing cloud 
+resources (AWS, Azure, GCP) to configuring servers (Apache, Nginx, databases). 
+5. Community Support: 
+The Ansible Galaxy repository provides a wealth of pre-built roles and playbooks 
+to speed up implementation. 
+Use Cases of Ansible in DevOps 
+1. Configuration Management: 
+o Standardizing and maintaining system configurations across development, 
+testing, and production environments. 
+2. Continuous Deployment: 
+o Automating the deployment of applications and services as part of a CI/CD 
+pipeline. 
+3. Provisioning Infrastructure: 
+o Automating the setup of servers, VMs, and containers across cloud and on-
+premise environments. 
+4. Orchestration: 
+o Managing complex multi-step workflows involving multiple systems and 
+dependencies. 
+5. Compliance Automation: 
+o Ensuring systems adhere to security and compliance policies by automating 
+regular checks. 
+How Ansible Fits Into the DevOps Lifecycle 
+1. Plan: 
+o Define infrastructure requirements and configurations using playbooks. 
+2. Develop: 
+o Use Ansible to set up and configure development environments. 
+3. Build: 
+o Automate application builds using Ansible with CI/CD tools like Jenkins or GitLab 
+CI. 
+4. Release: 
+o Deploy builds consistently across staging and production environments. 
+5. Operate: 
+o Automate operational tasks like patching, scaling, and backup management. 
+6. Monitor: 
+o Ensure systems are monitored and updated, integrating Ansible with monitoring 
+tools.
+
+Popular DevOps Tools Integrated with Ansible 
+• Jenkins: Automate CI/CD workflows with Ansible for deployment and 
+configuration. 
+• Docker: Provision and manage containers. 
+• Kubernetes: Deploy and manage Kubernetes clusters. 
+• Terraform: Combine with Ansible for infrastructure provisioning and 
+configuration management. 
+• Git: Store playbooks and roles in version control for collaborative development. 
+Advantages of Using Ansible in DevOps 
+• Simple and easy to learn for beginners. 
+• Agentless architecture reduces maintenance overhead. 
+• Highly flexible and scalable for diverse env
+
+=== SOURCE: iamrishmish Rishabh Mishra Rishabh Mishra DevOps i_m_rishmish Rishmish94 T e r… ===
+iamrishmish Rishabh Mishra Rishabh Mishra DevOps i_m_rishmish Rishmish94
+T e r r a f o r m
+
+C o m m a n d s
+iamrishmish Rishabh Mishra Rishabh Mishra DevOps i_m_rishmish Rishmish94
+Terraform is one of the most popular Infrastructure as
+Code (IaC) tools that helps automate cloud
+infrastructure deployment. But to use it effectively, you
+need to know its essential commands.
+1. Setting Up Terraform
+2. Planning & Applying Changes
+3. Destroying Infrastructure
+4. Managing Terraform State
+5. Working with Modules & Outputs
+Terraform
+iamrishmish Rishabh Mishra Rishabh Mishra DevOps i_m_rishmish Rishmish94
+Before diving into commands, let's look at a basic
+Terraform configuration:
+This code tells Terraform to create an AWS EC2 instance
+using a specific AMI and instance type.
+
+t e r r a f o r m i n i t
+t e r r a f o r m i n i t
+iamrishmish Rishabh Mishra Rishabh Mishra DevOps i_m_rishmish Rishmish94
+This command sets up a new or existing Terraform project. It
+does the following:
+Downloads necessary provider plugins (like AWS, Azure,
+Google Cloud, etc.).
+Configures the backend where Terraform stores its state
+file.
+Prepares Terraform to manage infrastructure.
+ - Initialize a Terraform Project
+terraform init
+After running terraform init, Terraform will download the AWS
+provider plugin needed to communicate with AWS.
+touch main.tf # Create a new Terraform file
+terraform init # Initialize Terraform in the directory
+
+t e r r a f o r m i n i t
+t e r r a f o r m i n i t
+iamrishmish Rishabh Mishra Rishabh Mishra DevOps i_m_rishmish Rishmish94
+Terraform code should be clean and readable.
+ This command automatically formats the
+code properly.
+ - Format Terraform Code
+terraform fmt
+Running terraform fmt will correct any indentation or spacing
+issues in the configuration file.
+terraform fmt # Reformats all Terraform files in the directory
+
+t e r r a f o r m i n i t
+t e r r a f o r m i n i t
+iamrishmish Rishabh Mishra Rishabh Mishra DevOps i_m_rishmish Rishmish94
+Before applying changes, it's good practice to
+validate your Terraform code. 
+This command checks for syntax errors or
+missing configurations.
+
+- Check for Errors
+terraform validate 
+If there are syntax errors in the configuration, Terraform will
+highlight them before applying changes.
+terraform validate # Checks for syntax errors
+
+t e r r a f o r m i n i t
+t e r r a f o r m i n i t
+iamrishmish Rishabh Mishra Rishabh Mishra DevOps i_m_rishmish Rishmish94
+Before making changes to your infrastructure,
+you should preview what Terraform is about to
+do. 
+This command shows what will be added,
+changed, or destroyed without applying
+anything.
+
+- Preview Changes
+terraform plan
+Terraform will output a plan detailing that it will create one EC2
+instance.
+terraform plan # Shows what Terraform will do
+
+t e r r a f o r m i n i t
+t e r r a f o r m i n i t
+iamrishmish Rishabh Mishra Rishabh Mishra DevOps i_m_rishmish Rishmish94
+Once you're happy with the plan, use this
+command to actually create the infrastructure.
+ - Apply Ch
+
+=== SOURCE: youtube.com/techbeatly techbeatly.com/ansible-best-practices Ansible Best… ===
+youtube.com/techbeatly
+techbeatly.com/ansible-best-practices
+Ansible Best Practices
+youtube.com/techbeatly
+Use only the features you needed in your playbook
+Use simple methods to achieve your goal
+Write playbooks as “Human Readable”
+Use available modules rather than raw commands
+Ansible is simple, make it simple
+techbeatly.com/ansible-best-practices
+youtube.com/techbeatly
+Playbooks, Configurations, Variables, Roles and Collections
+Opportunity for Collaboration
+Less worry about the old version of playbooks and configurations
+Make Auditing possible
+Create project-specific repositories 
+techbeatly.com/ansible-best-practices
+Keep Projects in Version Control System
+youtube.com/techbeatly
+Use comments inside playbooks; useful for everyone
+Keep a style guide
+Use whitespaces and extra lines as needed
+Practice names for tasks
+Use proper tags for tasks
+Main playbooks calling roles or sub-playbooks
+Use explicit declarations (eg: state or overwrite actions)
+Use handlers in playbooks and roles
+Avoid shell and command modules as much as possible
+techbeatly.com/ansible-best-practices
+Make Playbooks Reader Friendly
+youtube.com/techbeatly
+techbeatly.com/ansible-best-practices
+Keep a style guide
+youtube.com/techbeatly
+techbeatly.com/ansible-best-practices
+Native YAML for Playbooks
+youtube.com/techbeatly
+techbeatly.com/ansible-best-practices
+Avoid hardcoding 
+youtube.com/techbeatly
+VSCode
+Atom
+Sublime
+Vim with Plugins
+techbeatly.com/ansible-best-practices
+Use editor with syntax highlighting
