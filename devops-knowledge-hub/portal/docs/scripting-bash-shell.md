@@ -562,3 +562,1215 @@ Bash for gluing Unix tools, simple file ops, and one-liners that stay < 50 lines
 
 
 <AIChatWidget domain="scripting-bash-shell" title="Ask AI about Bash & Shell Scripting" />
+
+---
+
+## [SRE] Foundations: Bash Premium Teaching Guide For SRE And Platform Engineers
+
+## Foundations: Bash Premium Teaching Guide For SRE And Platform Engineers
+
+Bash is the control language of Linux operations. It glues commands together, automates repetitive work, and helps you debug production quickly.
+
+If Linux is the operating foundation, Bash is the hand tool you carry every day.
+
+---
+
+## How To Use This Module
+
+Study in layers:
+
+1. **Beginner Layer** — terminal fluency, variables, quoting, exit codes.
+2. **Intermediate Layer** — pipes, text processing, functions, JSON/API workflows.
+3. **Advanced Layer** — strict mode, traps, retries, idempotency, parallelism.
+4. **Production SRE Layer** — triage one-liners, runbook scripts, safety patterns.
+5. **Interview Layer** — explain when Bash is right and when to switch to Python.
+
+---
+
+## Memory Palace: Bash Is A Toolbox
+
+| Bash Concept | Toolbox Analogy | Meaning |
+|---|---|---|
+| Shell | Workbench | Where commands are assembled |
+| Command | Tool | Does one job |
+| Pipe | Hose connector | Sends output into next tool |
+| Variable | Label | Stores reusable value |
+| Function | Tool bundle | Reusable operation |
+| Exit Code | Status light | Success or failure |
+| Trap | Cleanup hook | Runs on exit/interruption |
+| Script | Procedure card | Repeatable automation |
+
+---
+
+## Beginner Layer: What Bash Actually Is
+
+Bash is both:
+
+1. an interactive shell
+2. a scripting language
+
+It mostly orchestrates other programs.
+
+```text
+stdin  -> input
+stdout -> normal output
+stderr -> errors
+exit code -> success/failure
+```
+
+Unix philosophy:
+
+> Small tools that do one thing well, combined with pipes.
+
+---
+
+## Beginner Layer: Terminal Fluency
+
+Navigation:
+
+```bash
+pwd
+ls -lah
+cd /path
+mkdir demo
+touch file.txt
+cp a b
+mv a b
+rm file.txt
+```
+
+Reading files:
+
+```bash
+less file
+head -20 file
+tail -50 file
+tail -f /var/log/app.log
+```
+
+Help:
+
+```bash
+man grep
+command --help
+which kubectl
+type cd
+history
+```
+
+---
+
+## Beginner Layer: Variables And Quoting
+
+```bash
+name="cluster-a"
+echo "$name"
+```
+
+Always quote variables unless you intentionally want word splitting or glob expansion.
+
+Risky:
+
+```bash
+echo $name
+```
+
+Safer:
+
+```bash
+echo "$name"
+```
+
+Command substitution:
+
+```bash
+pods=$(kubectl get pods --no-headers | wc -l)
+now=$(date +%F-%H%M)
+```
+
+---
+
+## Beginner Layer: Exit Codes
+
+Most commands return `0` for success and non-zero for failure.
+
+```bash
+curl -sf https://example.com/health
+if [[ $? -eq 0 ]]; then
+  echo healthy
+fi
+```
+
+Better:
+
+```bash
+if curl -sf https://example.com/health; then
+  echo healthy
+else
+  echo unhealthy
+fi
+```
+
+---
+
+## Intermediate Layer: Safe Script Foundation
+
+For serious scripts:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+```
+
+Meaning:
+
+- `-e`: stop on unhandled error
+- `-u`: fail on unset variable
+- `pipefail`: pipeline fails if any command fails
+- safer word splitting
+
+Strict mode is not magic. You still need clear error handling.
+
+---
+
+## Intermediate Layer: Conditionals, Loops, Functions
+
+Conditionals:
+
+```bash
+if [[ -f /etc/hosts ]]; then
+  echo exists
+fi
+```
+
+Loops:
+
+```bash
+while read -r line; do
+  echo "$line"
+done < file.txt
+```
+
+Functions:
+
+```bash
+log(){ printf '[%s] %s\n' "$(date -Is)" "$*" >&2; }
+die(){ log "ERROR: $*"; exit 1; }
+require(){ command -v "$1" >/dev/null || die "missing $1"; }
+```
+
+Functions make runbook automation readable.
+
+---
+
+## Intermediate Layer: Pipes And Text Processing
+
+Useful tools:
+
+```bash
+grep -E 'ERROR|WARN' app.log
+awk '{print $1}' access.log
+sed -n '1,20p' file
+sort file | uniq -c | sort -rn
+cut -d: -f1 /etc/passwd
+```
+
+Mental model:
+
+```text
+command output -> filter -> transform -> summarize
+```
+
+---
+
+## Intermediate Layer: JSON And APIs
+
+Modern operations use JSON everywhere.
+
+```bash
+kubectl get pods -o json | jq '.items[].metadata.name'
+curl -s https://api.example.com/status | jq '.status'
+```
+
+Use `jq` instead of fragile grep/sed parsing for JSON.
+
+---
+
+## Advanced Layer: Traps And Cleanup
+
+```bash
+tmp=$(mktemp)
+cleanup(){ rm -f "$tmp"; }
+trap cleanup EXIT
+```
+
+Use traps for:
+
+- temp file cleanup
+- lock release
+- rollback hooks
+- signal handling
+
+---
+
+## Advanced Layer: Retry With Backoff
+
+```bash
+for i in 1 2 3; do
+  if curl -sf https://api.example.com/health; then
+    break
+  fi
+  sleep $((i * 2))
+done
+```
+
+Retries should be bounded. Infinite retries hide failure.
+
+---
+
+## Advanced Layer: Idempotency
+
+Idempotent scripts can run more than once safely.
+
+```bash
+mkdir -p /opt/app
+cp -n config /opt/app/
+```
+
+Production automation should prefer idempotency over “run once and hope.”
+
+---
+
+## Advanced Layer: Safe Deletes
+
+Dangerous:
+
+```bash
+rm -rf $target/cache
+```
+
+Safer:
+
+```bash
+[[ -n "${target:-}" ]] || exit 1
+rm -rf "${target:?}/cache"
+```
+
+Most shell disasters are quoting and variable-expansion disasters.
+
+---
+
+## Advanced Layer: Parallelism
+
+```bash
+for host in app1 app2 app3; do
+  ssh "$host" uptime &
+done
+wait
+```
+
+Parallelism is powerful, but add limits for large fleets. Unbounded parallel SSH can create an incident.
+
+---
+
+## Production SRE Layer: Useful One-Liners
+
+Top disk usage:
+
+```bash
+du -sh /var/* | sort -rh | head
+```
+
+Count HTTP status codes:
+
+```bash
+awk '{print $9}' access.log | sort | uniq -c | sort -rn
+```
+
+Socket states:
+
+```bash
+ss -tan | awk 'NR>1 {print $1}' | sort | uniq -c
+```
+
+Watch pods:
+
+```bash
+watch -n 5 'kubectl get pods -A'
+```
+
+---
+
+## Production SRE Layer: Real Incidents
+
+### Log Disk Full
+
+Check:
+
+```bash
+find /var/log -type f -size +500M
+lsof +L1
+```
+
+### Service Down On Many Hosts
+
+```bash
+for h in app1 app2 app3; do
+  ssh "$h" systemctl is-active myapp || echo "$h failed"
+done
+```
+
+### API Returning 500
+
+```bash
+curl -vk https://api.example.com/health
+tail -f /var/log/app.log
+```
+
+### Cleanup Script Deleted Too Much
+
+Cause:
+
+- unquoted variable
+- empty path
+- no guardrail
+
+Fix:
+
+- quote variables
+- require non-empty target
+- dry-run mode
+- explicit allowlist
+
+---
+
+## Bash vs Python Judgment
+
+Use Bash when:
+
+- chaining commands
+- quick automation
+- OS/file/log tasks
+- deployment glue
+- simple runbook steps
+
+Use Python when:
+
+- complex logic
+- structured data
+- APIs with auth
+- long-lived tooling
+- tests and packaging matter
+
+Senior engineers know when Bash has become a liability.
+
+---
+
+## Interview Layer: Strong Answers
+
+### Why `set -euo pipefail`?
+
+> It reduces silent failures by failing on unhandled errors, unset variables, and failed pipeline components.
+
+### Why quote variables?
+
+> To avoid accidental word splitting, glob expansion, and dangerous path handling.
+
+### When replace Bash with Python?
+
+> When logic, data structures, error handling, and maintainability outgrow shell orchestration.
+
+### How safely run commands on many hosts?
+
+> Limit concurrency, log results per host, handle timeouts, avoid broad destructive commands, and prefer orchestration tools for repeated fleet work.
+
+---
+
+## Labs
+
+### Beginner
+
+1. Write backup script.
+2. Parse small log file.
+3. Use variables and conditionals.
+
+### Intermediate
+
+1. Health-check multiple URLs.
+2. Summarize nginx logs.
+3. Process JSON with jq.
+
+### Advanced
+
+1. Retry wrapper with backoff.
+2. Safe cleanup script with dry-run.
+3. Parallel host checker with concurrency limit.
+4. Deploy script with rollback hook.
+
+---
+
+## Memory Review
+
+- Why is quoting variables important?
+- Why does pipefail matter?
+- When is jq safer than grep?
+- Why use trap cleanup EXIT?
+- When should Bash become Python?
+
+---
+
+## Senior Summary
+
+> I use Bash for fast, composable operational tasks close to the OS. I make scripts safer with strict mode, quoting, traps, idempotency, bounded retries, and guardrails around destructive operations. When logic becomes complex or long-lived, I switch to Python.
+
+---
+
+## [SRE] Bash Lab 1: Health Check Script
+
+## Bash Lab 1: Health Check Script
+
+### Operational Context
+
+Every SRE team eventually writes a script that answers "is this thing up?" before a more
+sophisticated monitoring stack exists — or as a fast sanity check during an incident when you
+don't trust the dashboard. A health check script is one of the first tools you reach for when
+a deployment just went out, a new environment is being bootstrapped, or a dependency is flaky
+and you want to know *right now* whether it's reachable.
+
+This lab teaches the fundamentals: argument handling, TCP-level reachability with a real
+timeout, meaningful exit codes, and log lines that are useful in a pager alert or cron job
+output. These patterns appear in every production automation script.
+
+### Prerequisites
+
+- Bash 4+
+- `nc` (netcat) or `bash /dev/tcp` — both approaches are covered below
+- Basic understanding of exit codes (0 = success, non-zero = failure)
+
+### Time Estimate
+
+30–45 minutes to complete the core script. Extensions add another 30 minutes.
+
+---
+
+### Step-by-Step Build Guide
+
+#### Step 1 — Get the scaffold running
+
+Open `starter/health_check.sh`. It already validates that `HOST` and `PORT` are passed and
+prints usage if they aren't. Run it to confirm the skeleton works:
+
+```bash
+bash starter/health_check.sh
+# → usage: health_check.sh HOST PORT
+
+bash starter/health_check.sh localhost 80
+# → TODO: implement TCP health check for localhost:80
+```
+
+Confirm the exit code from the missing-args case:
+
+```bash
+bash starter/health_check.sh; echo "exit: $?"
+# → exit: 1
+```
+
+#### Step 2 — Replace the TODO with a real TCP check
+
+The simplest TCP probe in pure bash uses the special `/dev/tcp` pseudo-device. No external
+tools required:
+
+```bash
+# Pattern: open a TCP connection with a 3-second timeout
+# The redirect opens the socket; if it fails, the command fails
+timeout 3 bash -c "echo > /dev/tcp/${host}/${port}" 2>/dev/null
+```
+
+Replace the TODO line with this check. Capture the exit code and act on it:
+
+```bash
+if timeout 3 bash -c "echo > /dev/tcp/${host}/${port}" 2>/dev/null; then
+    echo "UP"
+else
+    echo "DOWN"
+    exit 1
+fi
+```
+
+Test against something you know is up and something you know is down:
+
+```bash
+bash health_check.sh google.com 443      # should print UP
+bash health_check.sh localhost 19999     # should print DOWN, exit 1
+echo "exit was: $?"
+```
+
+#### Step 3 — Add a timestamp to every log line
+
+Bare `echo` output is fine interactively but useless in cron or systemd logs where timestamps
+aren't added automatically. Define a log function at the top of your script and use it
+everywhere:
+
+```bash
+log() {
+    echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $*"
+}
+```
+
+Replace every `echo` call with `log`. Now each line is independently timestamped, which means
+you can redirect output to a file and still know exactly when the check ran.
+
+#### Step 4 — Make the output operator-friendly
+
+Right now the output only says "UP" or "DOWN". Add the host, port, and latency so someone
+reading the log knows what was checked without having to reconstruct the command:
+
+```bash
+start=$(date +%s%3N)   # milliseconds since epoch
+# ... your timeout/tcp check here ...
+end=$(date +%s%3N)
+latency=$(( end - start ))
+
+log "host=${host} port=${port} status=UP latency=${latency}ms"
+```
+
+Structured key=value output is easy to grep and easy to parse with awk later.
+
+#### Step 5 — Validate that port is a number
+
+`/dev/tcp` will silently misbehave if port is not a number. Add a guard:
+
+```bash
+if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+    echo "error: port must be a number, got: ${port}" >&2
+    exit 2
+fi
+```
+
+Note the `>&2` — errors go to stderr, not stdout. This matters when callers capture stdout.
+
+#### Step 6 — Support multiple host:port pairs (optional but common)
+
+A real health check script usually checks a list. Use a `for` loop over arguments in
+`HOST:PORT` format:
+
+```bash
+for target in "$@"; do
+    host="${target%%:*}"
+    port="${target##*:}"
+    # ... check each target ...
+done
+```
+
+The `%%:*` strips everything from the first colon onwards (giving the host).
+The `##*:` strips everything up to and including the last colon (giving the port).
+
+---
+
+### Sample Output
+
+```
+[2026-04-09T14:22:01Z] host=api.internal port=8080 status=UP latency=12ms
+[2026-04-09T14:22:01Z] host=db.internal port=5432 status=UP latency=4ms
+[2026-04-09T14:22:04Z] host=cache.internal port=6379 status=DOWN latency=3001ms
+```
+
+Exit code is 0 only if all targets passed. If any target is DOWN, exit code is 1.
+
+---
+
+### Common Mistakes and How to Debug Them
+
+**The script exits immediately on the first DOWN host**
+
+`set -e` (from `set -euo pipefail`) causes any non-zero exit to abort the script. Your TCP
+check returning 1 will kill the script before it prints "DOWN". Fix: either wrap the check in
+an `if`, or temporarily suppress the failure: `timeout ... || true`. Using `if` is cleaner
+because it makes intent explicit.
+
+**Timeout is not installed**
+
+`timeout` is part of GNU coreutils. On macOS it may be `gtimeout` (via `brew install
+coreutils`). Test with: `which timeout`. As a fallback, the `bash /dev/tcp` approach has
+no built-in timeout — you need the `timeout` wrapper, or use `nc -z -w3`.
+
+**Port is in the range but wrong type causes a silent hang**
+
+If port is accidentally set to a hostname string, bash will try to resolve `/dev/tcp/host/otherhost` and hang. The numeric validation in Step 5 prevents this.
+
+**False positives on firewalled ports**
+
+A firewall that drops (rather than rejects) packets will cause your script to hang until
+timeout. If you see every check taking exactly 3 seconds, a DROP rule is likely. Increase
+the timeout or use `nc -z -w3` which handles this more gracefully.
+
+**Output is mixed between stdout and stderr**
+
+Debugging with `echo` inside the script writes to stdout. Your callers may be capturing
+stdout to check for "UP". Add `>&2` to any debug-only lines that aren't part of the real
+output.
+
+---
+
+### Extension Challenges
+
+1. **Exit code inventory**: Make the exit code encode how many targets failed. Exit 0 if all
+   pass, exit 1 if 1–50% fail, exit 2 if more than 50% fail. Useful for callers that need
+   a severity signal.
+
+2. **Retry on DOWN**: Add a `--retries N` flag. If a host is DOWN, retry up to N times with a
+   1-second sleep before reporting DOWN. Think carefully about what this means for the overall
+   script latency.
+
+3. **Read targets from a file**: Accept a `-f targets.txt` argument where each line is
+   `HOST:PORT`. Use `while IFS= read -r line; do ... done < "$file"` to iterate. Skip blank
+   lines and lines starting with `#`.
+
+4. **Machine-readable output**: Add a `--json` flag that prints one JSON object per target
+   instead of the key=value format. Test with `jq .` to verify your JSON is valid.
+
+5. **Probe a Kubernetes Service**: Extend the script to resolve a Kubernetes Service ClusterIP
+   using `kubectl get svc -n NAMESPACE SERVICE -o jsonpath='{.spec.clusterIP}'` and then check
+   that IP on the service port. This is how you verify network policy hasn't accidentally
+   blocked internal traffic.
+
+---
+
+## [SRE] Bash Lab 2: Access Log Summary
+
+## Bash Lab 2: Access Log Summary
+
+### Operational Context
+
+During an incident the first question is almost always "what is the error rate?" and the
+second is "which endpoint and which client?". Dashboards are great when they're already
+configured — but when you're triaging a new service, a degraded environment, or a log file
+someone dropped into a support ticket, you need to be able to extract this signal yourself
+in under two minutes.
+
+`awk`, `sort`, and `uniq -c` together form a log analysis toolkit that every SRE should be
+able to use fluently. This lab builds a reusable script that produces the three most
+operationally useful summaries from an NGINX access log: request volume by endpoint, error
+rate by status code, and top offending clients.
+
+The patterns here transfer directly to Apache logs, HAProxy logs, Envoy access logs (with
+minor format adjustments), and any other space-delimited access log.
+
+### Prerequisites
+
+- `awk`, `sort`, `uniq` — standard on every Linux system
+- Familiarity with NGINX combined log format (covered in Step 1)
+- Sample data: `../shared/logs/sample-nginx-access.log`
+
+### Time Estimate
+
+25–40 minutes for the core script. Extensions add 20–30 minutes.
+
+---
+
+### Step-by-Step Build Guide
+
+#### Step 1 — Understand the log format before writing a single line of awk
+
+Never assume field positions. Print the first two lines of the log and count fields manually:
+
+```bash
+head -2 ../shared/logs/sample-nginx-access.log
+```
+
+NGINX combined log format:
+
+```
+$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent"
+```
+
+Field positions when split on spaces (awk `$N` notation):
+
+| Field | awk | Example value |
+|-------|-----|---------------|
+| Client IP | `$1` | `10.0.0.11` |
+| Timestamp | `$4 $5` | `[08/Apr/2026:10:00:01 +0000]` |
+| HTTP method | `$6` | `"GET` |
+| Request path | `$7` | `/api/v1/orders` |
+| Protocol | `$8` | `HTTP/1.1"` |
+| Status code | `$9` | `200` |
+| Bytes sent | `$10` | `512` |
+
+Verify your field mapping before trusting any counts:
+
+```bash
+awk '{print $9}' ../shared/logs/sample-nginx-access.log | head -5
+```
+
+If you see numbers like 200, 404, 500, your field position is correct.
+
+#### Step 2 — Count requests per status code
+
+This is the fastest health check. Start here:
+
+```bash
+awk '{print $9}' ../shared/logs/sample-nginx-access.log \
+  | sort \
+  | uniq -c \
+  | sort -rn
+```
+
+Wrap this in your script as a function:
+
+```bash
+status_summary() {
+    local log_file="$1"
+    echo "=== Requests by Status Code ==="
+    awk '{print $9}' "$log_file" \
+        | sort | uniq -c | sort -rn \
+        | awk '{printf "  %-6s %s\n", $2, $1}'
+}
+```
+
+The final `awk` reformats the output so status code comes first (more readable):
+`200    41` instead of `41 200`.
+
+#### Step 3 — Count requests per endpoint (top 10)
+
+```bash
+endpoint_summary() {
+    local log_file="$1"
+    echo "=== Top Endpoints by Request Count ==="
+    awk '{print $7}' "$log_file" \
+        | sort | uniq -c | sort -rn \
+        | head -10 \
+        | awk '{printf "  %-40s %s\n", $2, $1}'
+}
+```
+
+Test this. If you see query strings cluttering the output (`/api/v1/search?q=foo`), you can
+strip them with: `awk '{split($7, a, "?"); print a[1]}'`
+
+#### Step 4 — Find IPs generating 5xx errors
+
+This is the "who is hammering the broken endpoint" query:
+
+```bash
+error_clients() {
+    local log_file="$1"
+    echo "=== Top IPs with 5xx Responses ==="
+    awk '$9 ~ /^5/ {print $1}' "$log_file" \
+        | sort | uniq -c | sort -rn \
+        | head -10 \
+        | awk '{printf "  %-20s %s errors\n", $2, $1}'
+}
+```
+
+The `$9 ~ /^5/` pattern means "status code starts with 5". This matches 500, 502, 503, 504.
+
+#### Step 5 — Wire everything together with a separator
+
+```bash
+main() {
+    local log_file="${1:-}"
+    if [[ -z "$log_file" ]]; then
+        echo "usage: $0 LOG_FILE" >&2
+        exit 1
+    fi
+    if [[ ! -f "$log_file" ]]; then
+        echo "error: file not found: $log_file" >&2
+        exit 1
+    fi
+
+    local total
+    total=$(wc -l < "$log_file")
+    echo "Log: $log_file  (${total} lines)"
+    echo ""
+    status_summary "$log_file"
+    echo ""
+    endpoint_summary "$log_file"
+    echo ""
+    error_clients "$log_file"
+}
+
+main "$@"
+```
+
+#### Step 6 — Add a file-not-found check
+
+You added `[[ ! -f "$log_file" ]]` above. Test it:
+
+```bash
+bash log_summary.sh /nonexistent.log
+# → error: file not found: /nonexistent.log
+echo $?  # → 1
+```
+
+This matters in automation: if the script silently produces empty output when the log
+doesn't exist, the caller can't tell whether there were zero errors or whether the file
+was missing.
+
+---
+
+### Sample Output
+
+```
+Log: ../shared/logs/sample-nginx-access.log  (62 lines)
+
+=== Requests by Status Code ===
+  200    28
+  404    12
+  500     9
+  502     7
+  503     6
+
+=== Top Endpoints by Request Count ===
+  /api/v1/orders                           18
+  /api/v1/users                            14
+  /healthz                                  9
+  /api/v1/products                          8
+  /api/v1/search                            7
+  /api/v1/auth/login                        6
+
+=== Top IPs with 5xx Responses ===
+  10.0.0.13            8 errors
+  10.0.0.17            4 errors
+  10.0.0.12            3 errors
+```
+
+---
+
+### Common Mistakes and How to Debug Them
+
+**Status codes are printing as 0 or blank**
+
+Field positions shift if the log format is different. Some NGINX configs log a dash for
+`$remote_user` differently, or include `$request_time`. Always print the raw field and
+inspect it before counting:
+
+```bash
+awk '{print NR, $9}' sample-nginx-access.log | head -5
+```
+
+**`uniq -c` produces wrong counts**
+
+`uniq -c` only collapses *consecutive* identical lines. If you forget to `sort` before
+`uniq -c`, you get per-run counts instead of totals. The pipeline must be:
+`... | sort | uniq -c | sort -rn`.
+
+**Empty output for 5xx queries**
+
+Check whether any 5xx lines actually exist:
+
+```bash
+grep ' 5[0-9][0-9] ' ../shared/logs/sample-nginx-access.log | wc -l
+```
+
+If this returns 0 but you expected errors, your test data may not have any 5xx entries.
+
+**`awk` treating quoted strings as multiple fields**
+
+The `"GET /path HTTP/1.1"` portion in the log is one semantic field but is split by awk
+because of the spaces inside the quotes. Field `$6` is `"GET`, `$7` is `/path`, `$8` is
+`HTTP/1.1"`. This is expected and is why the endpoint is in `$7`, not `$6`. If your logs
+have URLs with spaces (unusual but possible), you'll need a more careful parser.
+
+**Script exits on empty file**
+
+If the log file is empty, `wc -l` returns 0 and awk produces no output — this is fine. But
+if you have `set -e` and a pipeline returns non-zero due to an empty result, you may get
+unexpected exits. Test: `bash log_summary.sh /dev/null`
+
+---
+
+### Extension Challenges
+
+1. **Error rate percentage**: For each status class (2xx, 3xx, 4xx, 5xx), print the count
+   and percentage of total requests. Use `awk` to compute both in one pass.
+
+2. **Time-window filter**: Accept optional `--from` and `--to` arguments in `HH:MM` format
+   and only analyze log lines within that window. NGINX timestamps are in the format
+   `08/Apr/2026:10:00:01`.
+
+3. **Response-size analysis**: Print the top 5 endpoints by total bytes transferred. This
+   reveals bandwidth consumers that may not have the highest request count.
+
+4. **Slow request detection**: NGINX can log `$request_time`. If your sample log included
+   this field, find all requests that took more than 1 second and print the endpoint and time.
+
+5. **Alert threshold**: Add a `--max-error-rate` flag. If the 5xx percentage exceeds the
+   threshold, print a warning line to stderr and exit with code 2. This makes the script
+   usable in a CI or alerting pipeline.
+
+---
+
+## [SRE] Bash Lab 3: Retry Wrapper With Guardrails
+
+## Bash Lab 3: Retry Wrapper With Guardrails
+
+### Operational Context
+
+Retry logic is everywhere in production systems: deployment scripts waiting for a pod to
+become ready, health check loops polling until a service comes up, database migration scripts
+waiting for the schema to be applied. Done badly, retry loops turn a transient blip into a
+prolonged incident — or worse, they amplify an overloaded system by hammering it with
+repeated requests exactly when it's struggling to recover.
+
+This lab builds a general-purpose retry wrapper that you can drop in front of *any* command.
+The key constraints that make retry safe:
+
+1. **Exponential backoff** — each attempt waits longer than the last
+2. **Capped sleep** — backoff doesn't grow unbounded (no 10-minute waits)
+3. **Attempt logging** — every retry is visible in the output
+4. **Exit code preservation** — the final failure exit code is passed through to the caller
+
+Understanding *when not to retry* is as important as knowing how to retry — this lab covers
+both.
+
+### Prerequisites
+
+- `sleep`, `date` — standard on every Linux system
+- Understanding of `$?` (last exit code) and `$@` (all arguments)
+- A simple command to test with: `curl`, `wget`, or even `false`
+
+### Time Estimate
+
+30–45 minutes for the core wrapper. Extensions add 30 minutes.
+
+---
+
+### Step-by-Step Build Guide
+
+#### Step 1 — Understand what you're wrapping
+
+The wrapper must run *any* command the user passes after the script name. The user's command
+is everything in `$@`. Test that your script can receive and re-execute an arbitrary command:
+
+```bash
+# Print what will be run, then actually run it
+echo "Running: $*"
+"$@"
+echo "Exit code: $?"
+```
+
+Note: use `"$@"` (double-quoted, with `@`), not `$*`. `"$@"` preserves argument boundaries.
+If the command is `grep "hello world" file.txt`, `"$@"` passes three arguments correctly.
+`$*` collapses them into one string.
+
+#### Step 2 — Add configurable attempt count and basic retry loop
+
+```bash
+max_attempts="${RETRY_MAX:-3}"
+attempt=1
+
+while [[ $attempt -le $max_attempts ]]; do
+    echo "[attempt $attempt/$max_attempts] running: $*"
+    if "$@"; then
+        echo "[attempt $attempt/$max_attempts] succeeded"
+        exit 0
+    fi
+    last_exit=$?
+    echo "[attempt $attempt/$max_attempts] failed with exit code $last_exit"
+    attempt=$(( attempt + 1 ))
+done
+```
+
+Test with a command that always fails:
+
+```bash
+bash retry.sh false
+# should show 3 attempts, all failing
+```
+
+Test with a command that succeeds:
+
+```bash
+bash retry.sh echo hello
+# should show 1 attempt, success
+```
+
+#### Step 3 — Add exponential backoff with a cap
+
+Linear sleep (always wait 1 second) wastes time on slow failures and doesn't relieve pressure
+on an overwhelmed service. Exponential backoff doubles the wait each time:
+
+```bash
+max_sleep="${RETRY_MAX_SLEEP:-30}"
+base_sleep=1
+
+# Inside the retry loop, after a failure and before incrementing attempt:
+if [[ $attempt -lt $max_attempts ]]; then
+    sleep_time=$(( base_sleep * (2 ** (attempt - 1)) ))
+    # Cap the sleep so it doesn't grow unbounded
+    if [[ $sleep_time -gt $max_sleep ]]; then
+        sleep_time=$max_sleep
+    fi
+    echo "[attempt $attempt/$max_attempts] sleeping ${sleep_time}s before retry"
+    sleep "$sleep_time"
+fi
+```
+
+With `base_sleep=1` and `max_sleep=30`:
+- After attempt 1: sleep 1s
+- After attempt 2: sleep 2s
+- After attempt 3: sleep 4s
+- After attempt 4: sleep 8s
+- After attempt 5: sleep 16s
+- After attempt 6: sleep 30s (capped)
+
+#### Step 4 — Preserve the failing exit code
+
+When all retries are exhausted, the caller needs the real exit code from the failed command,
+not 1 from your script logic. Track it explicitly:
+
+```bash
+last_exit=1   # default if we somehow fall through
+
+while [[ $attempt -le $max_attempts ]]; do
+    if "$@"; then
+        exit 0
+    fi
+    last_exit=$?
+    # ... backoff and retry ...
+    attempt=$(( attempt + 1 ))
+done
+
+echo "[retry] all $max_attempts attempts failed"
+exit "$last_exit"
+```
+
+Test:
+
+```bash
+bash retry.sh bash -c 'exit 42'
+echo "caller sees: $?"
+# → caller sees: 42
+```
+
+#### Step 5 — Add a timestamp to each log line
+
+In automation, bare echo output is hard to correlate with other events. Add a timestamp:
+
+```bash
+log() {
+    echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] $*"
+}
+```
+
+Replace all `echo` calls inside the retry logic with `log`.
+
+#### Step 6 — Add guardrail commentary (important for interviews)
+
+Add a comment block in your script explaining when retry is safe vs dangerous. This
+demonstrates operational maturity:
+
+```bash
+# SAFE to retry:
+#   - Idempotent reads (HTTP GET, kubectl get)
+#   - Health-check probes
+#   - Waiting for a resource to become available
+#
+# DANGEROUS to retry without thought:
+#   - HTTP POST / payment operations (risk of double-charge)
+#   - Destructive operations (kubectl delete, terraform destroy)
+#   - Already-overloaded services — retries amplify load
+#   - Non-idempotent database writes
+```
+
+---
+
+### Sample Output
+
+```
+[2026-04-09T14:30:00Z] [attempt 1/4] running: curl -sf http://localhost:8080/healthz
+[2026-04-09T14:30:00Z] [attempt 1/4] failed with exit code 7
+[2026-04-09T14:30:00Z] [attempt 1/4] sleeping 1s before retry
+[2026-04-09T14:30:01Z] [attempt 2/4] running: curl -sf http://localhost:8080/healthz
+[2026-04-09T14:30:01Z] [attempt 2/4] failed with exit code 7
+[2026-04-09T14:30:01Z] [attempt 2/4] sleeping 2s before retry
+[2026-04-09T14:30:03Z] [attempt 3/4] running: curl -sf http://localhost:8080/healthz
+[2026-04-09T14:30:03Z] [attempt 3/4] succeeded
+```
+
+Exit code is 0 if any attempt succeeded. Exit code is the last command's exit code if all
+attempts failed.
+
+---
+
+### Common Mistakes and How to Debug Them
+
+**`set -e` kills the script on the first failure**
+
+With `set -euo pipefail`, a command returning non-zero exits the script immediately. Your
+retry loop depends on *catching* non-zero exit codes. Use `if "$@"; then ... fi` instead of
+running the command bare. The `if` construct is exempt from `set -e`.
+
+Alternatively, temporarily disable `set -e` around the loop:
+```bash
+set +e
+"$@"
+last_exit=$?
+set -e
+```
+
+Using `if` is cleaner and is the recommended approach.
+
+**Arithmetic on `attempt` fails with `set -u`**
+
+`$(( attempt + 1 ))` is fine. But if you write `let attempt++` and attempt is unset, you get
+an error. Always initialize variables before the loop.
+
+**The exit code is always 1 instead of the real code**
+
+If you check `$?` but then run another command before saving it, you've lost the real exit
+code. Save it immediately: `last_exit=$?`. Any command between the failed command and
+`last_exit=$?` will overwrite `$?`.
+
+**Retry loops hiding real problems in CI**
+
+If a CI job is retrying 10 times and mostly succeeding on attempt 3, the real issue is
+being hidden. Add monitoring for retry *rate*, not just final success/failure. In this lab,
+print a warning if more than 1 retry was needed: `if [[ $attempt -gt 1 ]]; then log "WARNING: succeeded after $attempt attempts"`.
+
+**Using `sleep` in a tight loop on a production system**
+
+If your command is fast and you have many retries, the sleep caps help. But if max_sleep is
+0 or you remove the sleep for testing and forget to put it back, you can create a tight
+retry loop that hammers a database or API. Always test with `--dry-run` or `echo` first.
+
+---
+
+### When NOT to Use This Wrapper
+
+This is the most important section. Retry logic is not always helpful.
+
+**Amplifying overload**: A service returning 503 is telling you it's overwhelmed. Retrying
+immediately with 10 clients each retrying 3 times turns 10 requests into 30 requests at the
+worst possible moment. Real systems use jitter (randomized sleep) to spread retries out.
+
+**Non-idempotent operations**: If your command creates a payment, sends an email, or modifies
+a record that can't be deduplicated, retrying can cause double operations. Always ask: "if
+this runs twice, is that safe?"
+
+**Masking cascading failures**: Retry loops in multiple layers of a stack (client → service →
+database) can combine to produce retry storms. If each layer retries 3 times, a single failure
+triggers 27 attempts at the database layer.
+
+---
+
+### Extension Challenges
+
+1. **Add jitter**: Instead of deterministic exponential backoff, add a random component:
+   `sleep_time=$(( sleep_time + RANDOM % 3 ))`. This spreads load from multiple simultaneous
+   retriers and is standard practice in distributed systems.
+
+2. **Retry on specific exit codes only**: Add a `--retry-on 7,22,28` flag. Only retry if the
+   command's exit code matches one of the listed codes. This prevents retrying on errors that
+   are guaranteed to fail again (e.g., "file not found").
+
+3. **Deadline mode**: Instead of `--max-attempts`, add `--deadline 60` which retries until
+   the wall-clock deadline expires. Use `date +%s` to track elapsed time. This is more
+   natural for "wait until service is up" use cases.
+
+4. **Dry-run flag**: Add `--dry-run` which prints the command and backoff plan without
+   actually running anything. Useful for validating complex invocations in automation scripts.
+
+5. **Integrate with the health check script**: Use `retry.sh` to wrap `health_check.sh` and
+   wait until a service comes up after deployment. This is a real pattern used in Kubernetes
+   readiness polling and deployment scripts.

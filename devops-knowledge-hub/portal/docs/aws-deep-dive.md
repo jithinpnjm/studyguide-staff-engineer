@@ -1,9 +1,654 @@
 ---
-title: "Foundations: AWS Zero-To-Hero SRE Conceptual Guide"
+title: "AWS Deep Dive"
 sidebar_position: 14
 ---
 
-# Foundations: AWS Zero-To-Hero SRE Conceptual Guide
+# AWS Deep Dive
+
+Comprehensive AWS reference covering all major services, architecture patterns, and production operations — from the SRE interview prep pack.
+
+---
+
+## Getting Started With AWS
+
+## Getting Started With AWS
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The slide deck starts by introducing AWS as a cloud provider, but for interview learning that definition is too shallow. AWS is an API-driven infrastructure platform. Instead of filing tickets for servers, networks, firewalls, storage, load balancers, and databases, you declare or call APIs to create them. That changes the operational model: infrastructure becomes fast, repeatable, observable, and dangerous. A wrong IAM policy, route table, or autoscaling rule can affect production in seconds.
+
+The first principle is scope. Some AWS services are global, some are regional, and some are zonal. IAM feels global. S3 bucket names are global, but buckets live in a selected Region. VPCs are regional. Subnets are zonal. EC2 instances and EBS volumes are zonal. Route 53 and CloudFront sit closer to the global edge. When a production system fails, scope tells you where to look. A single-AZ issue should not bring down a multi-AZ app. A regional control plane issue should not destroy already-running data plane traffic if the architecture is resilient. A global identity or DNS mistake can have a much wider blast radius.
+
+Interview framing:
+
+```text
+AWS is not just rented servers. It is programmable infrastructure with explicit
+identity, network, failure, and geographic boundaries. I design by deciding which
+boundary should absorb each failure.
+```
+
+---
+
+## IAM
+
+## IAM
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+IAM is the control plane for trust. The PDF covers users, groups, policies, MFA, CLI, SDK, roles, and best practices. The deeper lesson is that AWS authorization happens on every API request. A Linux engineer might think in users, groups, sudo, file modes, and SSH keys. In AWS, the equivalent question is: which principal is calling which API action against which resource, under which conditions?
+
+An IAM policy is not just permission text. It is part of an authorization graph. A role has a permissions policy that says what the role can do, and a trust policy that says who can assume it. An S3 bucket can have a resource policy. A KMS key has its own key policy. An organization can have SCPs. A VPC endpoint can have an endpoint policy. A session can have session policies. Any explicit deny in that path wins.
+
+For teaching, use this example. An ECS task uploads files to S3. The app gets `AccessDenied`. A junior engineer adds `s3:*` to the task role. A senior engineer asks: is the app using the task role or execution role? Is the bucket policy allowing the principal? Is Block Public Access relevant? Is the object encrypted with KMS? Does the task role have `kms:GenerateDataKey`? Is there an SCP denying writes outside a Region? Is access required through a specific VPC endpoint?
+
+Operational failure modes:
+
+- long-lived access keys leaked from laptops or CI
+- runtime role missing permissions after deployment
+- role trust policy prevents `AssumeRole`
+- KMS key policy blocks otherwise valid S3 or Secrets Manager access
+- SCP denies an action that identity policy allows
+- EKS service account trust condition does not match the pod identity
+
+Debugging method:
+
+```text
+1. Find exact error and AWS API action.
+2. Identify runtime principal with sts:GetCallerIdentity.
+3. Check CloudTrail for the failed call.
+4. Evaluate identity policy, resource policy, key policy, endpoint policy, SCP, and conditions.
+5. Add the narrowest permission or fix the trust boundary.
+```
+
+AWS docs to anchor this topic:
+
+- IAM policy evaluation logic: https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html
+
+---
+
+## EC2 Basics
+
+## EC2 Basics
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+EC2 is the familiar VM model in AWS. The reason it still matters is control. When you need OS-level tuning, custom agents, legacy software, special networking, GPUs, or predictable long-running compute, EC2 is still a core primitive.
+
+An EC2 instance is not just "a server." It is a bundle of choices: AMI, instance type, subnet, security group, IAM instance profile, EBS root volume, user data, placement, monitoring, and purchasing model. Every choice has operational consequences. The AMI decides boot contents and patch level. The instance type decides CPU, memory, network, EBS bandwidth, and sometimes local storage. The subnet decides AZ and routing. The security group decides allowed network paths. The IAM role decides AWS API power from inside the instance.
+
+User data is often misunderstood. It is bootstrapping, not a complete deployment platform. If production depends on a 400-line user data script that downloads packages from the internet, clones a repo, builds code, and starts services without failure reporting, autoscaling becomes fragile. A better model is baked AMIs or container images plus small startup config.
+
+Failure modes:
+
+- instance launches but application never starts
+- app starts but target group health check fails
+- instance has no IAM role or wrong role
+- user data fails because private subnet lacks NAT or VPC endpoints
+- instance type is wrong for bottleneck
+- burstable instance runs out of CPU credits
+
+Debugging method:
+
+```text
+Check instance status checks, system logs, cloud-init/user-data logs, systemd service
+status, listening ports, security group paths, IAM role, and target health reason codes.
+```
+
+AWS docs:
+
+- EC2 instance types: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-types.html
+
+---
+
+## EC2 Purchasing Options
+
+## EC2 Purchasing Options
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF covers On-Demand, Reserved Instances, Savings Plans, Spot, Dedicated Hosts, Dedicated Instances, and Capacity Reservations. The real learning is that compute pricing is an availability and risk decision, not just finance.
+
+On-Demand is flexible and expensive. Reserved Instances and Savings Plans reduce cost for predictable usage but introduce commitment. Spot is cheap but interruptible, so it is excellent for stateless, batch, CI, rendering, data processing, and fault-tolerant worker pools. It is dangerous for singleton stateful services unless the app is designed for interruption. Dedicated Hosts solve licensing and compliance constraints. Capacity Reservations solve the problem of "will AWS have capacity for me during a regional event or launch?"
+
+Senior framing:
+
+```text
+I split capacity into baseline and elastic layers. Critical baseline uses On-Demand
+or committed capacity. Interruptible overflow uses Spot when the workload can retry.
+For disaster scenarios or fixed launch windows, I consider Capacity Reservations.
+```
+
+---
+
+## EC2 Networking: Public IP, Private IP, ENI, Elastic IP
+
+## EC2 Networking: Public IP, Private IP, ENI, Elastic IP
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The slide deck spends time on public/private IPs and ENIs because AWS networking is attached to elastic network interfaces. An ENI is the network identity of a workload. Security groups attach to ENIs. Private IPs live on ENIs. Many managed services create ENIs in your VPC, including Lambda in VPC, RDS, ECS tasks in `awsvpc` mode, and EKS pods with VPC CNI behavior.
+
+Public IPs are reachable from the internet only when routing and security allow it. Private IPs are used inside the VPC and connected networks. Elastic IPs are static public IPv4 addresses, but they are often a smell if used to preserve a fragile pet server. Prefer load balancers, DNS, and autoscaling for resilient services.
+
+Failure mode: replacing an instance changes its public IP, breaking clients that hardcoded it. Senior design avoids this by using DNS and load balancers.
+
+---
+
+## EC2 Placement Groups And Hibernate
+
+## EC2 Placement Groups And Hibernate
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+Placement groups exist because physical placement affects latency and failure domains. Cluster placement groups pack instances close together for low-latency, high-throughput workloads such as HPC. Spread placement groups separate instances across distinct hardware for failure isolation. Partition placement groups divide instances into logical partitions so large distributed systems like Kafka, Cassandra, or HDFS can avoid correlated hardware failure.
+
+Hibernate preserves instance memory to EBS and resumes later. It is useful for long warmup workloads but not a generic HA mechanism. If the workload must survive infrastructure failure, design stateless replacement or application-level checkpointing.
+
+---
+
+## EBS, EFS, Instance Store, AMI
+
+## EBS, EFS, Instance Store, AMI
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF separates EC2 instance storage because storage failure behavior is central to AWS operations.
+
+EBS is network-attached block storage for EC2. It behaves like a disk from the OS perspective: filesystems, partitions, databases, and boot volumes can use it. It is AZ-scoped, so an EBS volume in one AZ cannot attach to an instance in another AZ. Snapshots are the backup primitive and can be copied across Regions.
+
+Instance store is local ephemeral storage physically attached to the host. It is fast but disposable. Use it for caches, scratch data, temporary build artifacts, or replicated systems. Never use it as the only copy of important data.
+
+EFS is managed NFS shared storage. It solves the "multiple compute nodes need the same filesystem" problem. It is useful for shared content, legacy apps, container volumes, and WordPress-style uploads, but it brings NFS semantics, performance modes, throughput choices, and cost considerations.
+
+AMI is the machine image. In production, AMIs should be built, scanned, versioned, and rolled out through launch templates and ASGs. Manual snowflake AMIs are hard to audit and reproduce.
+
+Failure modes:
+
+- EBS volume full causes database or app failure
+- root volume deleted on termination unexpectedly
+- EBS AZ scope breaks recovery plan
+- EFS throughput insufficient for workload
+- stale AMI contains vulnerable packages
+
+Debugging method:
+
+```text
+Check filesystem usage, mount state, EBS volume metrics, burst balance where relevant,
+snapshot age, attachment AZ, encryption/KMS permissions, and application IO latency.
+```
+
+---
+
+## High Availability And Scalability
+
+## High Availability And Scalability
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+Scalability means handling more load. Availability means continuing to serve through failure. A system can scale and still be fragile, or be available at normal load but fail under spikes. AWS designs usually combine load balancing, autoscaling, multiple AZs, health checks, managed databases, queues, and observability.
+
+Vertical scaling makes a node bigger. Horizontal scaling adds more nodes. Stateless services are easier to scale horizontally because any instance can serve any request. Stateful services require externalizing state: sessions to ElastiCache/DynamoDB, files to S3/EFS, relational data to RDS/Aurora, logs to CloudWatch/S3/OpenSearch.
+
+The core request path:
+
+```text
+Route 53 -> CloudFront/WAF -> ALB -> target group -> app tasks/instances
+         -> cache/database/queue/object storage
+```
+
+Failure modes:
+
+- ALB healthy but all targets unhealthy
+- app scales out but database connection limit is exhausted
+- health check endpoint does not represent readiness
+- one AZ has targets but no NAT or broken dependency
+- autoscaling reacts too slowly because warmup is long
+
+Senior answer:
+
+```text
+I design stateless compute across at least two AZs behind an ALB, use ASG/ECS/EKS
+scaling with meaningful metrics, keep state in managed durable services, and verify
+the architecture by testing AZ loss and dependency failure.
+```
+
+AWS docs:
+
+- ELB target health checks: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html
+- EC2 Auto Scaling groups: https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-groups.html
+
+---
+
+## RDS, Aurora, And ElastiCache
+
+## RDS, Aurora, And ElastiCache
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+RDS exists to remove undifferentiated database infrastructure work, not database thinking. AWS can manage backups, patch windows, replication plumbing, monitoring hooks, and failover mechanics. You still own schema, queries, indexes, pooling, migrations, and application behavior during failover.
+
+Aurora exists because AWS wanted a cloud-native relational database with distributed storage and faster replication/failover patterns than traditional single-node database storage. Aurora can scale reads with replicas and supports serverless modes, but it still requires relational design discipline.
+
+ElastiCache exists because repeatedly hitting a database for hot reads, sessions, counters, or rate-limit checks creates avoidable latency and load. Redis/Memcached can absorb that, but a cache introduces consistency and failure questions. What happens if the cache is empty? What happens if the cache is wrong? What happens if Redis is down?
+
+Failure modes:
+
+- RDS failover succeeds but app connection pool stays broken
+- read replica lag causes stale reads
+- database CPU is high due to missing index, not instance size
+- connection storm from Lambda or autoscaling app tier
+- cache outage becomes full outage because app cannot fall back
+
+Debugging method:
+
+```text
+Check RDS events, CPU, memory, storage, IOPS, latency, connections, locks, slow queries,
+replica lag, failover timeline, and application retry/pool behavior.
+```
+
+AWS docs:
+
+- RDS Multi-AZ: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.html
+
+---
+
+## Route 53
+
+## Route 53
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+Route 53 exists because DNS is the first dependency in most user journeys. It maps human names to infrastructure endpoints and can apply routing logic. The PDF covers records, hosted zones, TTL, CNAME vs Alias, routing policies, health checks, resolvers, and hybrid DNS.
+
+The operational lesson is that DNS is cached and indirect. A low TTL can help changes propagate faster, but recursive resolvers and client behavior still matter. DNS failover is useful, but it is not instantaneous and should not be confused with load balancer health checking.
+
+Routing policies should be explained by intent:
+
+- Simple: one normal answer.
+- Weighted: controlled traffic split or canary.
+- Latency: send users to lower-latency Region.
+- Failover: active-passive DR.
+- Geolocation/geoproximity: location-aware routing.
+- Multivalue: return multiple healthy records.
+- IP-based: route based on source CIDR.
+
+Failure modes:
+
+- wrong hosted zone updated
+- CNAME used at zone apex where Alias is needed
+- TTL delays recovery
+- health check checks the wrong thing
+- private hosted zone associated with wrong VPC
+- hybrid DNS resolver rules missing
+
+AWS docs:
+
+- Route 53 routing policies: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy.html
+
+---
+
+## Classic Web Architectures
+
+## Classic Web Architectures
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF teaches stateless and stateful web apps because they reveal how AWS services fit together. Start with one EC2 instance and every problem is hidden: compute, state, files, database, logs, TLS, and deployment are all on one box. Scaling forces separation.
+
+For a stateless app, move traffic behind an ALB, run multiple instances across AZs, use ASG for replacement, and store state elsewhere. For a stateful app, identify every kind of state. User sessions move to Redis/DynamoDB. Uploaded files move to S3/EFS. Relational data moves to RDS/Aurora. Logs move off-host. Once state is externalized, compute can be replaced safely.
+
+Teaching example:
+
+```text
+Single EC2 WordPress:
+  simple, fragile, hard to scale
+
+Better:
+  ALB -> EC2/ECS app tier across AZs
+      -> RDS/Aurora Multi-AZ for DB
+      -> EFS or S3 for uploads
+      -> CloudFront for static content
+      -> CloudWatch for logs/metrics
+```
+
+---
+
+## S3, S3 Advanced, And S3 Security
+
+## S3, S3 Advanced, And S3 Security
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+S3 appears across three PDF sections because it is foundational. Learn it in layers.
+
+At the basic layer, S3 is object storage. Bucket, key, object, metadata, version, storage class, lifecycle, and policy are the vocabulary. Use it for logs, artifacts, backups, data lakes, static content, and durable user uploads.
+
+At the advanced layer, S3 becomes an event and data management platform. Lifecycle transitions control cost. Storage class analysis helps choose transitions. Event notifications trigger Lambda, SQS, SNS, or EventBridge. Batch Operations apply work to many objects. Storage Lens gives visibility. Requester Pays shifts transfer/request cost to the requester.
+
+At the security layer, understand encryption and access. SSE-S3 uses S3-managed keys. SSE-KMS uses KMS keys and therefore adds KMS permissions, audit, and potential throttling/cost considerations. SSE-C means the customer provides keys with requests. Client-side encryption means AWS stores ciphertext it cannot decrypt without client-side keys.
+
+Failure modes:
+
+- public exposure through bad bucket/access point policy
+- app fails because KMS permissions missing
+- old versions cause unexpected storage cost
+- lifecycle transitions break retrieval expectations
+- event notification loops create recursive processing
+- static website endpoint confused with REST endpoint
+
+AWS docs:
+
+- S3 Versioning: https://docs.aws.amazon.com/AmazonS3/latest/userguide/Versioning.html
+- S3 Lifecycle: https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-transition-general-considerations.html
+
+---
+
+## CloudFront And Global Accelerator
+
+## CloudFront And Global Accelerator
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+CloudFront exists to put cached content and HTTP edge logic closer to users. It reduces latency, lowers origin load, and integrates with TLS, WAF, signed URLs/cookies, origin access control, and cache policies. The origin can be S3, ALB, API Gateway, or a custom HTTP service.
+
+The key teaching concept is cache correctness. CloudFront improves speed only when caching behavior matches content behavior. Static assets should use long TTLs and versioned filenames. Dynamic APIs usually need careful cache keys, headers, cookies, and query string behavior. Invalidation exists, but frequent invalidation is often a sign that asset versioning is weak.
+
+Global Accelerator exists for a different problem: stable anycast IPs and optimized routing over the AWS global network to healthy regional endpoints. It does not replace CloudFront caching. Use CloudFront for HTTP caching and edge content. Use Global Accelerator for static IPs, fast regional routing, and non-cacheable TCP/UDP style needs.
+
+Failure modes:
+
+- stale cache after deploy
+- cache key missing header/cookie/query dimension
+- origin overloaded after cache miss storm
+- WAF blocks legitimate traffic
+- S3 origin exposed directly instead of through controlled access
+
+AWS docs:
+
+- CloudFront invalidation: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/Invalidation.html
+
+---
+
+## Storage Extras
+
+## Storage Extras
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF covers Snowball, FSx, Storage Gateway, Transfer Family, and DataSync. These services exist mostly for migration, hybrid, and specialized filesystem needs.
+
+Snowball solves physical data transfer when network movement is too slow or expensive. FSx solves managed filesystem needs beyond EFS: Windows File Server for SMB/Windows workloads, Lustre for high-performance compute, NetApp ONTAP and OpenZFS for enterprise filesystem compatibility. Storage Gateway connects on-premises environments to AWS storage through file, volume, or tape patterns. Transfer Family gives managed SFTP/FTPS/FTP endpoints backed by S3 or EFS. DataSync moves data between on-premises and AWS storage or between AWS storage services.
+
+Senior explanation: these are not first-choice services for every app. They are integration tools when real enterprises have existing data, protocols, appliances, and migration constraints.
+
+---
+
+## Integration And Messaging: SQS, SNS, Kinesis, MQ
+
+## Integration And Messaging: SQS, SNS, Kinesis, MQ
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+SQS is a queue for work buffering. SNS is pub/sub fanout. Kinesis Data Streams is ordered streaming for real-time processing. Firehose is managed delivery into destinations. Amazon MQ is managed ActiveMQ/RabbitMQ for compatibility.
+
+The operational reason to use messaging is failure isolation. Without a queue, a slow downstream service blocks the user path. With a queue, the app accepts work and workers process at sustainable speed. This changes the reliability model from synchronous success to durable acceptance plus asynchronous completion.
+
+Failure modes:
+
+- visibility timeout too short causes duplicate processing
+- no DLQ means poison messages loop forever
+- queue depth grows because downstream database is slow
+- FIFO message group creates unexpected bottleneck
+- Kinesis shard count limits throughput
+- consumer retries overwhelm downstream
+
+AWS docs:
+
+- SQS visibility timeout: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-visibility-timeout.html
+
+---
+
+## Containers On AWS
+
+## Containers On AWS
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF covers Docker, ECR, ECS, Fargate, ECS IAM roles, load balancer integration, ECS scaling, EKS, node types, volumes, App Runner, and migration tools. The senior view is that containers separate packaging from scheduling. AWS then gives you multiple schedulers.
+
+ECS is AWS-native and simpler. It is a good fit when you want container orchestration without Kubernetes complexity. EKS is Kubernetes. It is powerful when you need Kubernetes APIs, controllers, ecosystem tools, CRDs, GitOps workflows, or multi-cloud-ish operating models. Fargate removes node management but changes cost, debugging, daemon, and networking assumptions.
+
+For ECS, task role vs execution role is critical. The execution role lets ECS pull images and write logs. The task role is what application code uses to call AWS APIs. Mixing them up causes real production failures.
+
+For EKS, connect Kubernetes concepts to AWS:
+
+```text
+Pod networking -> VPC CNI, ENIs, subnet IP capacity
+Service LoadBalancer -> AWS load balancer controller / ELB
+PersistentVolume -> EBS or EFS CSI driver
+ServiceAccount identity -> IAM role mapping
+Node scaling -> managed node groups, Cluster Autoscaler, or Karpenter
+```
+
+AWS docs:
+
+- ECS task role: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
+- ECS task execution role: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_execution_IAM_role.html
+
+---
+
+## Serverless
+
+## Serverless
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+Serverless in the PDF includes Lambda, API Gateway, DynamoDB, Step Functions, Cognito, edge functions, and common architectures. Serverless exists to reduce server management for event-driven systems. It does not remove architecture. It moves architecture into limits, permissions, event contracts, retries, concurrency, and observability.
+
+Lambda scales by concurrency. That is powerful but dangerous. A burst of events can create many concurrent executions, which can overwhelm databases or exhaust account concurrency. Reserved concurrency can protect a function or cap blast radius. Provisioned concurrency reduces cold start impact for latency-sensitive functions.
+
+API Gateway adds managed API front door features: auth, throttling, routing, stages, usage plans, request validation, and integrations. Step Functions orchestrates workflows when a process needs retries, branches, waits, and long-running state. Cognito handles user identity for web/mobile apps, but authorization still needs careful design.
+
+Failure modes:
+
+- Lambda times out due to downstream dependency
+- VPC Lambda lacks NAT/endpoints and cannot reach required service
+- concurrency spike overwhelms RDS
+- async retry duplicates side effects
+- API Gateway throttling appears as app failure
+- Step Functions workflow stuck due to unhandled state
+
+---
+
+## Database Choices
+
+## Database Choices
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF database summary is important because interviewers ask "which database would you choose?" The senior answer starts with access patterns and operational requirements.
+
+Use RDS/Aurora for relational consistency, SQL, joins, transactions, and existing relational apps. Use DynamoDB for high-scale key-value/document access when queries are known upfront. Use ElastiCache for low-latency temporary data and hot reads. Use S3 for objects and data lake storage. Use DocumentDB for MongoDB-compatible document workloads with AWS constraints. Use Neptune for graph relationships. Use Timestream for time-series data. Use Keyspaces for Cassandra-compatible workloads.
+
+Senior framing:
+
+```text
+I choose databases by access pattern, consistency, latency, scale, operational model,
+backup/restore, multi-Region needs, and team skill. I do not choose based only on
+service popularity.
+```
+
+---
+
+## Data And Analytics
+
+## Data And Analytics
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+Athena queries S3 directly and is excellent for ad hoc analysis over logs/data lakes. Redshift is a data warehouse for structured analytics. OpenSearch supports search and log analytics. EMR runs big data frameworks such as Spark. Glue provides ETL and cataloging. Lake Formation centralizes data lake governance. MSK provides managed Kafka. Kinesis provides AWS-native streaming.
+
+Operational teaching point: analytics systems can quietly become production dependencies. If fraud detection, dashboards, search, or alert enrichment depends on these pipelines, then ingestion lag, schema drift, partition mistakes, and retention failures become reliability incidents.
+
+---
+
+## Machine Learning
+
+## Machine Learning
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The ML services in the PDF are mostly recognition-level for SAA: Rekognition, Transcribe, Polly, Translate, Lex, Comprehend, SageMaker, Kendra, Personalize, Textract. For SRE interviews, the key is not model theory. The key is platform thinking: IAM, data privacy, cost, latency, retry behavior, batch vs online inference, monitoring, and failure fallback.
+
+Example: an app using Textract for document processing should not synchronously block the user request for a long processing pipeline. A better design accepts upload to S3, emits an event, processes asynchronously, stores status, and notifies the user.
+
+---
+
+## Monitoring, Audit, And Performance
+
+## Monitoring, Audit, And Performance
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF covers CloudWatch, CloudTrail, EventBridge, Config, Insights tools, alarms, logs, and container/Lambda visibility. The senior model is to separate telemetry questions:
+
+```text
+CloudWatch metrics/logs: what is happening operationally?
+CloudTrail: who called which AWS API?
+Config: how did resource configuration change?
+VPC Flow Logs: what network flows happened?
+EventBridge: how do we react to events?
+```
+
+Failure mode: a production route table changes and the app loses connectivity. CloudWatch shows errors, but CloudTrail tells who changed the route table. Config shows before/after configuration. VPC Flow Logs show rejected or missing traffic patterns. You need all layers.
+
+---
+
+## Advanced Identity
+
+## Advanced Identity
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+Advanced identity in the PDF includes Organizations, SCPs, IAM conditions, resource policies, permission boundaries, Identity Center, Directory Service, and Control Tower. These exist because single-account IAM does not scale for enterprises.
+
+Use Organizations and OUs to group accounts. Use SCPs as maximum-permission guardrails. Use IAM Identity Center for workforce federation. Use permission boundaries to constrain what delegated admins or automation can create. Use resource policies for cross-account access. Use `aws:PrincipalOrgID` to restrict resource access to principals from your AWS Organization.
+
+Failure mode: cross-account role assumption works in dev but not prod because prod OU has stricter SCPs or trust policies require external ID/session tags.
+
+---
+
+## Security And Encryption
+
+## Security And Encryption
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF security section covers KMS, SSM Parameter Store, Secrets Manager, ACM, CloudHSM, WAF, Shield, Firewall Manager, GuardDuty, Inspector, and Macie.
+
+KMS is central because many AWS services delegate encryption key use to it. If KMS is misconfigured, S3, EBS, RDS, Lambda environment variables, Secrets Manager, and many other systems can fail. Parameter Store and Secrets Manager solve configuration/secrets storage, with Secrets Manager adding stronger rotation-oriented workflows. ACM solves certificate lifecycle for supported AWS services. WAF and Shield protect edge/application layers. GuardDuty, Inspector, and Macie detect suspicious activity, vulnerabilities, and sensitive S3 data.
+
+Senior security explanation:
+
+```text
+I design security as layered prevention, detection, and recovery: least-privilege IAM,
+private networking, encryption with controlled KMS keys, managed secrets, edge
+protection, vulnerability detection, audit trails, and tested incident response.
+```
+
+---
+
+## VPC Deep Topic
+
+## VPC Deep Topic
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF VPC section is long because networking is where many AWS interviews become real. You must understand CIDR, subnets, route tables, IGW, NAT, NACLs, security groups, peering, endpoints, flow logs, VPN, Direct Connect, Transit Gateway, IPv6, network cost, and Network Firewall.
+
+The deepest mental model:
+
+```text
+Security group = stateful firewall attached to ENI/resource
+NACL = stateless subnet boundary rules
+Route table = next-hop decision
+IGW = internet path for public subnets
+NAT Gateway = outbound IPv4 translation for private subnets
+VPC endpoint = private path to AWS service
+Transit Gateway = cloud router for many networks
+```
+
+Junior engineers memorize definitions. Senior engineers trace packets.
+
+---
+
+## Disaster Recovery And Migrations
+
+## Disaster Recovery And Migrations
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF covers RPO/RTO, backup/restore, pilot light, warm standby, active-active, Elastic Disaster Recovery, DMS, SCT, AWS Backup, MGN, Application Discovery, VMware Cloud, and large data transfer.
+
+DR starts with business requirements. RPO is acceptable data loss. RTO is acceptable downtime. Backup/restore is cheaper but slower. Pilot light keeps core pieces ready. Warm standby runs a scaled-down environment. Multi-site active-active is fastest and most expensive.
+
+The operational truth: a backup that has never been restored is only a hope. A DR design that has never been exercised is a diagram, not a capability.
+
+---
+
+## More Solutions Architecture And Other Services
+
+## More Solutions Architecture And Other Services
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF's later architecture sections connect services into patterns: Lambda/SNS/SQS fanout, S3 events, EventBridge API call reactions, API Gateway service integrations, caching, IP blocking, HPC, HA EC2, CloudFormation, SES, Pinpoint, Systems Manager, Cost Explorer, Outposts, Batch, AppFlow, Amplify, and schedulers.
+
+For interviews, explain patterns:
+
+- Fanout: SNS to multiple SQS queues isolates consumers.
+- S3 event processing: object upload triggers async workflow.
+- API Gateway service integration: API calls AWS service without custom compute.
+- IP blocking: WAF for HTTP, NACL/Network Firewall for network boundaries, SG for resource access.
+- HPC: placement groups, high-network instances, FSx for Lustre, Batch.
+- Systems Manager: operational access without opening SSH.
+- CloudFormation: repeatable infrastructure with change sets and drift awareness.
+- Cost Explorer/Anomaly Detection: cost as an operational signal.
+
+---
+
+## Well-Architected, Trusted Advisor, And Exam Review
+
+## Well-Architected, Trusted Advisor, And Exam Review
+
+> Source spine: `AWS Certified Solutions Architect Slides v47.pdf`. Teaching style: Senior SRE / Platform Engineering handbook.
+
+The PDF ends with Well-Architected and review advice. For senior interviews, Well-Architected is not a checklist to recite. It is a way to reason about tradeoffs.
+
+Use the six pillars as review questions:
+
+- Operational Excellence: can we deploy, observe, and respond safely?
+- Security: who can do what, how is data protected, how do we detect abuse?
+- Reliability: what fails, how do we recover, what is tested?
+- Performance Efficiency: are resources matched to workload needs?
+- Cost Optimization: are we paying for idle, inefficient, or accidental usage?
+- Sustainability: are we using resources efficiently over time?
+
+Senior closing answer:
+
+```text
+For any AWS design, I explain the request path, trust boundaries, failure domains,
+data durability, observability signals, scaling controls, cost drivers, and recovery
+plan. That is stronger than naming services from a diagram.
+```
+
+---
+
+---
+
+## [SRE] Foundations: AWS Zero-To-Hero SRE Conceptual Guide
+
+## Foundations: AWS Zero-To-Hero SRE Conceptual Guide
 
 This guide turns the AWS Solutions Architect slide topics into SRE learning material. It is deliberately not written as certification notes, a service encyclopedia, or a shallow list of AWS features. The goal is to rebuild AWS intuition from the perspective of a Linux/Kubernetes-aware engineer who understands systems but has forgotten the AWS-specific shapes.
 
@@ -54,7 +699,7 @@ Core AWS documentation cross-checks:
 
 ---
 
-# 1. AWS Mental Model
+## 1. AWS Mental Model
 
 AWS is a global cloud platform, but that phrase is too abstract to be useful during an incident. A better mental model is this: AWS is a programmable set of failure domains, trust boundaries, network paths, and managed control planes. You are not only launching servers; you are deciding where failure is allowed to stop, who is allowed to act, and how packets and API calls move through the system.
 
@@ -86,9 +731,9 @@ Senior explanation: AWS gives you isolated scopes and managed primitives. Good a
 
 ---
 
-# 2. Global Infrastructure: Regions, AZs, Edge
+## 2. Global Infrastructure: Regions, AZs, Edge
 
-## Region
+### Region
 
 A Region exists because applications need geographic placement. Latency, compliance, service availability, and disaster recovery are all geographic problems. A Region such as `us-east-1`, `eu-west-1`, or `ap-south-1` is AWS's unit for placing workloads in a broad physical part of the world. AWS documentation states that each Region is designed to be isolated from other Regions. Most services create resources inside one Region, and resources are not automatically replicated across Regions unless the service or your design explicitly does that.
 
@@ -104,7 +749,7 @@ Choose a Region based on:
 
 Example: if most customers are in Germany and data residency matters, `eu-central-1` may be a better default than `us-east-1`, even if some examples online use `us-east-1`.
 
-## Availability Zone
+### Availability Zone
 
 An Availability Zone exists because hardware, power, cooling, and network failures are inevitable. Instead of pretending a data center never fails, AWS exposes AZs so you can spread a workload across independent failure domains. An AZ is made of one or more data centers with independent power, networking, and connectivity. AZs in the same Region are connected by low-latency private networking.
 
@@ -128,7 +773,7 @@ This looks multi-AZ, but the database is still a single-AZ dependency.
 
 Common failure: one AZ has impaired networking. The ALB still exists, Route 53 still resolves, and some application instances still look healthy, but requests fail whenever they land on targets that depend on the impaired AZ. Junior engineers often chase application logs first. Senior engineers split metrics by AZ, inspect target health by AZ, check database failover state, and verify whether any supposedly shared dependency is actually zonal.
 
-## Edge Locations
+### Edge Locations
 
 Edge locations exist because user experience is often limited by distance. A packet from Sydney to Virginia and back cannot beat physics. Edge services like CloudFront, Route 53, AWS WAF, and Global Accelerator move caching, TLS termination, DNS responses, routing decisions, and some security controls closer to users.
 
@@ -144,7 +789,7 @@ Use edge services when you need:
 
 ---
 
-# 3. Accounts, Organizations, And Landing Zone
+## 3. Accounts, Organizations, And Landing Zone
 
 An AWS account exists to create a hard administrative boundary. Treating accounts as folders is one of the fastest ways to create production risk. A folder organizes things; an AWS account isolates permissions, billing, quotas, audit trails, and blast radius.
 
@@ -172,7 +817,7 @@ Why multiple accounts matter:
 - CloudTrail and security logs can be centralized
 - Service Control Policies can enforce guardrails
 
-## Service Control Policies
+### Service Control Policies
 
 SCPs solve the problem of account-level freedom becoming organization-level danger. They are organization-level guardrails. They do not grant permissions by themselves. They define the maximum permissions an account can use.
 
@@ -199,7 +844,7 @@ Production failure mode: a team deploys a valid IAM policy but still gets `Acces
 
 ---
 
-# 4. IAM From First Principles
+## 4. IAM From First Principles
 
 IAM exists because cloud infrastructure is controlled by APIs. In a traditional Linux server, authorization might mean file permissions, sudoers, SSH keys, and process ownership. In AWS, nearly every meaningful action is an API call: create an instance, read an object, decrypt a secret, change a route table, assume a role, delete a snapshot. IAM is the authorization system for those API calls.
 
@@ -221,7 +866,7 @@ Core parts:
 | Role | Assumable identity with temporary credentials |
 | Trust policy | Who is allowed to assume the role |
 
-## IAM Users vs Roles
+### IAM Users vs Roles
 
 Use IAM users rarely because long-lived human credentials age badly. They get copied into laptops, scripts, CI systems, and forgotten terminals. Prefer federation through IAM Identity Center or an external identity provider. For workloads, use roles because roles issue temporary credentials and can be scoped to the runtime identity.
 
@@ -232,7 +877,7 @@ Examples:
 - ECS task role gives each task its own scoped permissions.
 - EKS IRSA or Pod Identity gives Kubernetes workloads AWS permissions without long-lived keys.
 
-## Explicit Deny Wins
+### Explicit Deny Wins
 
 AWS policy evaluation gives priority to explicit deny. This is not trivia; it is the core safety mechanism that allows broad guardrails to override local mistakes. If one policy allows `s3:PutObject` but another policy explicitly denies it, the result is deny.
 
@@ -263,7 +908,7 @@ Senior explanation: IAM is distributed authorization for AWS API calls. You debu
 
 ---
 
-# 5. EC2: Virtual Machines In AWS
+## 5. EC2: Virtual Machines In AWS
 
 Amazon EC2 gives you virtual machines. You control the OS, packages, runtime, agent configuration, patching, and much of the operational burden.
 
@@ -279,7 +924,7 @@ Key configuration choices:
 | EBS volumes | Persistent block storage |
 | Placement group | Low latency, partitioning, or spreading |
 
-## Instance Families
+### Instance Families
 
 - General purpose: balanced workloads.
 - Compute optimized: CPU-heavy services.
@@ -289,7 +934,7 @@ Key configuration choices:
 
 SRE lesson: do not choose instance types by guessing. Use metrics: CPU, memory, disk IOPS, network, p95 latency, and saturation during peak.
 
-## User Data
+### User Data
 
 User data is useful for bootstrapping, but it should not become a fragile deployment system.
 
@@ -310,7 +955,7 @@ build production app on first boot
 silently ignore bootstrap failure
 ```
 
-## Purchasing Options
+### Purchasing Options
 
 | Option | Use Case | Risk |
 |---|---|---|
@@ -325,11 +970,11 @@ Production pattern: use On-Demand for baseline critical capacity, Spot for inter
 
 ---
 
-# 6. EC2 Networking And Security Groups
+## 6. EC2 Networking And Security Groups
 
 Every EC2 instance has network interfaces. Traffic is controlled mainly by security groups and route tables.
 
-## Security Groups
+### Security Groups
 
 Security groups are stateful, resource-level firewalls. They allow traffic; they do not create deny rules. If inbound traffic is allowed, response traffic is automatically allowed back.
 
@@ -343,7 +988,7 @@ App -> DB security group: allow DB port from App SG
 
 Use security group references instead of broad CIDR ranges when possible.
 
-## Important Ports
+### Important Ports
 
 | Port | Service |
 |---|---|
@@ -359,9 +1004,9 @@ SRE debugging question: "Is the traffic allowed at every hop: source SG, destina
 
 ---
 
-# 7. EC2 Storage: EBS, Instance Store, EFS, AMI
+## 7. EC2 Storage: EBS, Instance Store, EFS, AMI
 
-## EBS
+### EBS
 
 Elastic Block Store is persistent block storage for EC2. EBS volumes are AZ-scoped. An instance in `us-east-1a` cannot directly attach an EBS volume from `us-east-1b`.
 
@@ -374,7 +1019,7 @@ Use EBS for:
 
 EBS snapshots are stored in S3-managed infrastructure and can be copied across Regions.
 
-## EBS Volume Types
+### EBS Volume Types
 
 | Type | Best For |
 |---|---|
@@ -385,13 +1030,13 @@ EBS snapshots are stored in S3-managed infrastructure and can be copied across R
 
 SRE habit: use `gp3` intentionally because it decouples size from IOPS/throughput better than older defaults.
 
-## Instance Store
+### Instance Store
 
 Instance store is physically attached temporary storage. It is fast but ephemeral. Data disappears when the instance is stopped, terminated, or fails depending on instance behavior.
 
 Use it for caches, scratch space, and replicated systems. Do not use it as the only copy of important data.
 
-## EFS
+### EFS
 
 Elastic File System is managed NFS shared storage. It can be mounted by multiple compute resources across AZs.
 
@@ -404,7 +1049,7 @@ Use EFS for:
 
 Tradeoff: EFS is convenient, but performance mode, throughput mode, and cost need testing.
 
-## AMI
+### AMI
 
 An Amazon Machine Image is a template for launching EC2 instances. For production, prefer repeatable image pipelines.
 
@@ -416,18 +1061,18 @@ base AMI -> hardened AMI -> app AMI -> launch template -> Auto Scaling group
 
 ---
 
-# 8. Load Balancing And High Availability
+## 8. Load Balancing And High Availability
 
 High availability means the system keeps serving when common components fail. Scalability means the system can handle more load. They are related but not the same.
 
-## Vertical vs Horizontal Scaling
+### Vertical vs Horizontal Scaling
 
 - Vertical scaling: use a bigger machine.
 - Horizontal scaling: use more machines.
 
 Cloud-native designs usually prefer horizontal scaling for stateless services.
 
-## Elastic Load Balancing
+### Elastic Load Balancing
 
 | Load Balancer | Layer | Use Case |
 |---|---|---|
@@ -435,7 +1080,7 @@ Cloud-native designs usually prefer horizontal scaling for stateless services.
 | NLB | Layer 4 TCP/UDP/TLS | very high performance, static IP, non-HTTP |
 | Gateway Load Balancer | Layer 3/4 appliance flow | firewalls, inspection appliances |
 
-## Health Checks
+### Health Checks
 
 Load balancers route to healthy targets. AWS documentation notes that ALB target groups periodically send health check requests and route to healthy targets in enabled AZs.
 
@@ -446,7 +1091,7 @@ Design health checks carefully:
 - Do not make health checks so deep that one dependency blip removes every target.
 - Watch for the ALB fail-open behavior when every target is unhealthy.
 
-## Sticky Sessions
+### Sticky Sessions
 
 Sticky sessions keep a user on the same target. They can help legacy stateful apps but reduce flexibility.
 
@@ -461,7 +1106,7 @@ database in RDS/Aurora
 
 ---
 
-# 9. Auto Scaling Groups
+## 9. Auto Scaling Groups
 
 An Auto Scaling group manages a fleet of EC2 instances. AWS documentation describes two core behaviors: maintain desired capacity and scale dynamically using policies.
 
@@ -494,7 +1139,7 @@ SRE failure mode: ASG launches new instances, but they never become healthy beca
 
 ---
 
-# 10. VPC: AWS Networking Core
+## 10. VPC: AWS Networking Core
 
 A VPC is your private network boundary in a Region.
 
@@ -516,7 +1161,7 @@ Private data subnets:
   10.0.22.0/24 in AZ B
 ```
 
-## Public vs Private Subnet
+### Public vs Private Subnet
 
 A subnet is public if its route table has a route to an Internet Gateway and instances have public addressing. A subnet is private when it has no direct inbound internet path.
 
@@ -528,7 +1173,7 @@ Private app subnet: EC2, ECS, EKS nodes, Lambda ENIs
 Private data subnet: RDS, ElastiCache, internal services
 ```
 
-## Route Tables
+### Route Tables
 
 Route tables decide the next hop.
 
@@ -545,19 +1190,19 @@ S3 private access:
 pl-xxxx -> Gateway VPC Endpoint
 ```
 
-## NAT Gateway
+### NAT Gateway
 
 NAT Gateway allows private subnet workloads to initiate outbound IPv4 internet connections. It does not allow inbound internet connections to private instances.
 
 Important cost warning: NAT Gateway charges for hours and data processing. Heavy traffic to S3, ECR, CloudWatch, or other AWS services through NAT can become expensive. Prefer VPC endpoints where appropriate.
 
-## NACLs
+### NACLs
 
 Network ACLs are stateless subnet-level controls. They support allow and deny rules. Because they are stateless, return traffic must be explicitly allowed, including ephemeral ports.
 
 Use NACLs as coarse guardrails, not as the primary application firewall.
 
-## VPC Endpoints And PrivateLink
+### VPC Endpoints And PrivateLink
 
 VPC endpoints keep traffic private between your VPC and supported AWS services.
 
@@ -573,7 +1218,7 @@ Use endpoints to:
 - restrict access with endpoint policies
 - support private subnets without broad internet egress
 
-## VPC Flow Logs
+### VPC Flow Logs
 
 VPC Flow Logs record metadata about IP traffic. They do not capture packet payloads.
 
@@ -586,7 +1231,7 @@ Use them for:
 
 ---
 
-# 11. Route 53 And DNS
+## 11. Route 53 And DNS
 
 DNS maps names to answers. Route 53 is AWS's DNS and domain registration service.
 
@@ -600,12 +1245,12 @@ Core terms:
 | Alias | AWS-specific record pointing to AWS resources |
 | Health check | DNS failover signal |
 
-## Public vs Private Hosted Zones
+### Public vs Private Hosted Zones
 
 - Public hosted zone: resolvable from the internet.
 - Private hosted zone: resolvable only inside associated VPCs.
 
-## Routing Policies
+### Routing Policies
 
 | Policy | Use Case |
 |---|---|
@@ -622,7 +1267,7 @@ SRE caution: DNS failover is limited by TTL, resolver behavior, and health-check
 
 ---
 
-# 12. S3: Object Storage Backbone
+## 12. S3: Object Storage Backbone
 
 S3 stores objects in buckets. It is not a filesystem and not a block device. Think "key-value object store with HTTP APIs."
 
@@ -637,11 +1282,11 @@ Use S3 for:
 - ML datasets
 - event-driven ingestion
 
-## Buckets And Objects
+### Buckets And Objects
 
 Bucket names are globally unique. Objects have keys, metadata, content, version IDs when versioning is enabled, and optional tags.
 
-## S3 Security
+### S3 Security
 
 Control access with:
 
@@ -655,7 +1300,7 @@ Control access with:
 
 Default habit: keep Block Public Access on unless there is a deliberate, reviewed reason.
 
-## Versioning
+### Versioning
 
 AWS documentation states that S3 Versioning keeps multiple variants of an object and helps recover from accidental deletion or overwrite. Deletes create delete markers instead of immediately removing prior versions.
 
@@ -668,14 +1313,14 @@ Use versioning for:
 
 Remember: versions cost money because each version is stored.
 
-## Replication
+### Replication
 
 - Same-Region Replication: replicate inside a Region.
 - Cross-Region Replication: replicate to another Region.
 
 Replication needs versioning. It is useful for compliance, latency, account separation, and DR. It is not a substitute for understanding consistency, delete behavior, and KMS permissions.
 
-## Storage Classes
+### Storage Classes
 
 | Class | Use Case |
 |---|---|
@@ -688,7 +1333,7 @@ Replication needs versioning. It is useful for compliance, latency, account sepa
 | Glacier Deep Archive | lowest-cost long-term archive |
 | Express One Zone | high-performance single-AZ object access |
 
-## Lifecycle Rules
+### Lifecycle Rules
 
 Lifecycle rules transition or expire objects. Use them for logs, backups, and old versions.
 
@@ -702,7 +1347,7 @@ Application logs:
 365+ days: expire if policy allows
 ```
 
-## S3 Events
+### S3 Events
 
 S3 can send event notifications to Lambda, SQS, SNS, or EventBridge.
 
@@ -716,9 +1361,9 @@ Use cases:
 
 ---
 
-# 13. CloudFront, WAF, And Global Accelerator
+## 13. CloudFront, WAF, And Global Accelerator
 
-## CloudFront
+### CloudFront
 
 CloudFront is a CDN. It caches content at edge locations and forwards cache misses to origins such as S3, ALB, API Gateway, or custom HTTP servers.
 
@@ -736,11 +1381,11 @@ CloudFront vs S3 replication:
 - CloudFront improves read latency through caching.
 - S3 replication creates another copy of the object.
 
-## Cache Invalidation
+### Cache Invalidation
 
 Invalidations remove cached objects before TTL expiry. They are useful but should not be your only deployment strategy. Prefer versioned asset names for static files.
 
-## WAF
+### WAF
 
 AWS WAF protects HTTP(S) workloads with rules. It integrates with CloudFront, ALB, API Gateway, and other supported services.
 
@@ -752,7 +1397,7 @@ Use WAF for:
 - rate limiting
 - bot controls
 
-## Global Accelerator
+### Global Accelerator
 
 Global Accelerator provides static anycast IPs and routes users over the AWS global network to healthy regional endpoints.
 
@@ -763,9 +1408,9 @@ Choose:
 
 ---
 
-# 14. Databases: RDS, Aurora, DynamoDB, ElastiCache
+## 14. Databases: RDS, Aurora, DynamoDB, ElastiCache
 
-## RDS
+### RDS
 
 RDS is managed relational database hosting for engines such as PostgreSQL, MySQL, MariaDB, Oracle, and SQL Server.
 
@@ -787,13 +1432,13 @@ You still own:
 - backup retention choices
 - application retry behavior
 
-## RDS Multi-AZ
+### RDS Multi-AZ
 
 AWS documentation distinguishes Multi-AZ DB instance deployments and Multi-AZ DB cluster deployments. A classic Multi-AZ DB instance has a standby for failover but does not serve read traffic. Multi-AZ DB clusters can have readable standby instances depending on engine/support.
 
 SRE rule: Multi-AZ is high availability, not read scaling by default.
 
-## Read Replicas
+### Read Replicas
 
 Read replicas scale reads and can support reporting. They are usually asynchronous. They can lag.
 
@@ -805,7 +1450,7 @@ Use read replicas when:
 
 Do not assume replicas provide zero-data-loss failover.
 
-## Aurora
+### Aurora
 
 Aurora is AWS's cloud-native relational database compatible with MySQL or PostgreSQL. It separates compute from distributed storage and supports replicas, fast failover patterns, custom endpoints, and serverless modes.
 
@@ -815,11 +1460,11 @@ Use Aurora when:
 - read scaling and failover matter
 - you can accept Aurora-specific operational behavior and pricing
 
-## RDS Proxy
+### RDS Proxy
 
 RDS Proxy pools and reuses database connections. It is especially useful for Lambda or bursty applications that would otherwise exhaust DB connections.
 
-## DynamoDB
+### DynamoDB
 
 DynamoDB is a managed NoSQL key-value/document database. Design starts with access patterns, not normalized relational modeling.
 
@@ -842,7 +1487,7 @@ Capacity modes:
 
 Common mistake: creating a table first, then discovering you cannot query it efficiently. In DynamoDB, model queries first.
 
-## ElastiCache
+### ElastiCache
 
 ElastiCache provides managed Redis or Memcached-compatible caching.
 
@@ -864,11 +1509,11 @@ SRE warning: a cache outage should not become a total outage unless the business
 
 ---
 
-# 15. Messaging And Event-Driven Systems
+## 15. Messaging And Event-Driven Systems
 
 Messaging decouples producers and consumers. It helps absorb bursts and isolate failures.
 
-## SQS
+### SQS
 
 SQS is a queue. Producers send messages, consumers poll and process them.
 
@@ -889,7 +1534,7 @@ ALB/API -> app -> SQS -> worker ASG/ECS -> database
 
 Scale workers on queue depth per worker.
 
-## SNS
+### SNS
 
 SNS is pub/sub fanout. One message can go to many subscribers: SQS, Lambda, HTTP endpoints, email, SMS, and more.
 
@@ -899,32 +1544,32 @@ Pattern:
 S3 event -> SNS topic -> multiple SQS queues -> independent consumers
 ```
 
-## EventBridge
+### EventBridge
 
 EventBridge routes events using rules. It is useful for SaaS integrations, AWS service events, scheduled jobs, and event buses.
 
 Use EventBridge when you need event filtering/routing rather than simple queue buffering.
 
-## Kinesis Data Streams And Firehose
+### Kinesis Data Streams And Firehose
 
 - Kinesis Data Streams: real-time stream processing with shards and consumers.
 - Data Firehose: delivery service into destinations like S3, Redshift, OpenSearch, and third-party endpoints.
 
 Use Kinesis for ordered streaming and real-time processing. Use Firehose when you mainly need managed delivery.
 
-## Amazon MQ
+### Amazon MQ
 
 Amazon MQ is managed ActiveMQ/RabbitMQ-compatible messaging. Use it when migrating applications that already depend on those protocols.
 
 ---
 
-# 16. Containers: ECS, ECR, EKS, Fargate
+## 16. Containers: ECS, ECR, EKS, Fargate
 
-## ECR
+### ECR
 
 Elastic Container Registry stores container images. Use lifecycle policies to remove old images and vulnerability scanning where appropriate.
 
-## ECS
+### ECS
 
 Elastic Container Service runs containers with AWS-native orchestration.
 
@@ -946,7 +1591,7 @@ ECS concepts:
 
 Use ECS when you want containers without managing Kubernetes.
 
-## EKS
+### EKS
 
 Elastic Kubernetes Service provides a managed Kubernetes control plane. You still operate worker nodes, add-ons, networking, policies, upgrades, and workload design.
 
@@ -972,9 +1617,9 @@ Choose EKS when Kubernetes portability/ecosystem matters enough to justify the c
 
 ---
 
-# 17. Serverless: Lambda, API Gateway, Step Functions, Cognito
+## 17. Serverless: Lambda, API Gateway, Step Functions, Cognito
 
-## Lambda
+### Lambda
 
 Lambda runs functions without managing servers. You pay per request and execution duration.
 
@@ -1000,7 +1645,7 @@ Concurrency controls:
 - Reserved concurrency: guarantees and caps function concurrency.
 - Provisioned concurrency: keeps environments warm to reduce cold starts.
 
-## API Gateway
+### API Gateway
 
 API Gateway exposes APIs and integrates with Lambda, HTTP services, and AWS services.
 
@@ -1018,7 +1663,7 @@ Security options:
 - resource policies
 - throttling and usage plans
 
-## Step Functions
+### Step Functions
 
 Step Functions orchestrates workflows. Use it when business logic has multiple steps, retries, waits, branches, and compensating actions.
 
@@ -1029,7 +1674,7 @@ Good for:
 - human approval flows
 - long-running orchestration
 
-## Cognito
+### Cognito
 
 Cognito User Pools handle user sign-up/sign-in. Cognito Identity Pools exchange user identity for AWS credentials to access AWS resources directly.
 
@@ -1037,9 +1682,9 @@ SRE caution: direct client access to AWS resources must be tightly scoped and te
 
 ---
 
-# 18. Common Architecture Patterns
+## 18. Common Architecture Patterns
 
-## Stateless Web App
+### Stateless Web App
 
 Start:
 
@@ -1061,7 +1706,7 @@ Route 53
 
 Key idea: stateless app instances can be replaced at any time.
 
-## Stateful Web App
+### Stateful Web App
 
 State must move out of the instance:
 
@@ -1074,7 +1719,7 @@ State must move out of the instance:
 
 Sticky sessions can buy time for legacy apps, but they are not the end state for resilient design.
 
-## Serverless Website
+### Serverless Website
 
 ```text
 CloudFront
@@ -1087,7 +1732,7 @@ CloudFront
 
 Useful for low-ops apps, unpredictable traffic, and event-driven workflows.
 
-## Microservices
+### Microservices
 
 Microservices need more than small services. They require:
 
@@ -1103,9 +1748,9 @@ Without those, microservices become distributed confusion.
 
 ---
 
-# 19. Observability, Audit, And Operations
+## 19. Observability, Audit, And Operations
 
-## CloudWatch Metrics
+### CloudWatch Metrics
 
 Metrics are numeric time series. Use them for dashboards, alarms, autoscaling, and SLOs.
 
@@ -1117,13 +1762,13 @@ Important examples:
 - Lambda errors, duration, throttles, concurrent executions
 - SQS approximate age of oldest message and queue depth
 
-## CloudWatch Logs
+### CloudWatch Logs
 
 Centralize application and system logs. Use structured JSON logs where possible.
 
 CloudWatch Logs Insights can query logs during incidents.
 
-## CloudWatch Alarms
+### CloudWatch Alarms
 
 Alarm on user impact and saturation, not only resource usage.
 
@@ -1138,7 +1783,7 @@ Good alarms:
 
 Noisy alarms destroy trust. Tune thresholds and add runbooks.
 
-## CloudTrail
+### CloudTrail
 
 CloudTrail records AWS API activity. It is the audit trail for "who changed what."
 
@@ -1149,7 +1794,7 @@ Use CloudTrail for:
 - unauthorized access investigation
 - EventBridge rules triggered by API calls
 
-## AWS Config
+### AWS Config
 
 AWS Config records resource configuration history and evaluates rules.
 
@@ -1161,7 +1806,7 @@ Use it for:
 - compliance evidence
 - remediation automation
 
-## CloudWatch vs CloudTrail vs Config
+### CloudWatch vs CloudTrail vs Config
 
 | Service | Best Question |
 |---|---|
@@ -1171,9 +1816,9 @@ Use it for:
 
 ---
 
-# 20. Security, Encryption, And Threat Detection
+## 20. Security, Encryption, And Threat Detection
 
-## Encryption
+### Encryption
 
 Three common layers:
 
@@ -1181,7 +1826,7 @@ Three common layers:
 - at rest: encrypted storage
 - client-side: app encrypts before sending to AWS
 
-## KMS
+### KMS
 
 AWS KMS manages encryption keys used by many AWS services.
 
@@ -1194,22 +1839,22 @@ Key ideas:
 
 KMS access requires both key policy and IAM/resource permissions to line up.
 
-## Secrets Manager vs SSM Parameter Store
+### Secrets Manager vs SSM Parameter Store
 
 | Service | Best For |
 |---|---|
 | Secrets Manager | secrets with rotation, database credentials, multi-Region secrets |
 | SSM Parameter Store | configuration values and simpler secrets |
 
-## ACM
+### ACM
 
 AWS Certificate Manager issues and manages TLS certificates for supported AWS services such as ALB, CloudFront, and API Gateway.
 
-## CloudHSM
+### CloudHSM
 
 CloudHSM gives dedicated hardware security modules. Use it for strict compliance or custom cryptographic requirements. Most teams should start with KMS.
 
-## WAF, Shield, Firewall Manager
+### WAF, Shield, Firewall Manager
 
 | Service | Purpose |
 |---|---|
@@ -1217,7 +1862,7 @@ CloudHSM gives dedicated hardware security modules. Use it for strict compliance
 | Shield | DDoS protection |
 | Firewall Manager | central policy management across accounts |
 
-## GuardDuty, Inspector, Macie
+### GuardDuty, Inspector, Macie
 
 | Service | Detects |
 |---|---|
@@ -1229,9 +1874,9 @@ SRE mindset: detection is only useful if routed to owners with a response proces
 
 ---
 
-# 21. Data, Analytics, And Search
+## 21. Data, Analytics, And Search
 
-## Athena
+### Athena
 
 Athena queries data in S3 using SQL. It is serverless and useful for logs, data lake exploration, and ad hoc analysis.
 
@@ -1242,21 +1887,21 @@ Performance habits:
 - compress data
 - avoid scanning unnecessary files
 
-## Redshift
+### Redshift
 
 Redshift is a data warehouse for analytical queries. Use it for large-scale BI and structured analytics.
 
-## OpenSearch
+### OpenSearch
 
 OpenSearch supports search, log analytics, and observability use cases. It is not a drop-in replacement for every database. Plan shard count, storage, retention, and query patterns.
 
-## EMR, Glue, Lake Formation
+### EMR, Glue, Lake Formation
 
 - EMR: managed big data clusters such as Spark/Hadoop.
 - Glue: ETL, crawlers, and Data Catalog.
 - Lake Formation: permissions and governance for data lakes.
 
-## MSK vs Kinesis
+### MSK vs Kinesis
 
 - Kinesis: AWS-native streaming.
 - MSK: managed Apache Kafka for Kafka-compatible workloads.
@@ -1265,7 +1910,7 @@ Choose based on ecosystem, operational model, retention, consumer model, and tea
 
 ---
 
-# 22. Machine Learning Services To Recognize
+## 22. Machine Learning Services To Recognize
 
 For SRE interviews, know what these services do, not every API:
 
@@ -1287,9 +1932,9 @@ SRE angle: ML systems still need IAM, networking, data governance, monitoring, c
 
 ---
 
-# 23. Hybrid Networking And Migration
+## 23. Hybrid Networking And Migration
 
-## Site-to-Site VPN
+### Site-to-Site VPN
 
 Encrypted IPSec tunnels over the internet between on-premises and AWS.
 
@@ -1299,33 +1944,33 @@ Use for:
 - backup path for Direct Connect
 - lower-cost connectivity
 
-## Direct Connect
+### Direct Connect
 
 Dedicated network connectivity from on-premises to AWS. It is useful for predictable latency, private connectivity, and high data transfer needs.
 
 Important: Direct Connect is not encrypted by default at the link layer; use VPN over DX or application encryption where required.
 
-## Transit Gateway
+### Transit Gateway
 
 Transit Gateway is a hub for connecting many VPCs and networks. It reduces full-mesh peering complexity.
 
-## Storage Gateway, DataSync, Transfer Family
+### Storage Gateway, DataSync, Transfer Family
 
 - Storage Gateway: hybrid access to cloud storage through file, volume, or tape patterns.
 - DataSync: managed transfer between on-premises and AWS storage.
 - Transfer Family: managed SFTP/FTPS/FTP endpoints backed by AWS storage.
 
-## Snow Family
+### Snow Family
 
 Snowball/Snowcone/Snowmobile move large data sets when network transfer is too slow or expensive.
 
 ---
 
-# 24. Disaster Recovery And Backup
+## 24. Disaster Recovery And Backup
 
 DR is about recovering from serious failures. HA is about staying available through common failures.
 
-## RPO And RTO
+### RPO And RTO
 
 | Term | Meaning |
 |---|---|
@@ -1339,7 +1984,7 @@ RPO 5 minutes = can lose up to 5 minutes of data
 RTO 30 minutes = service must be restored within 30 minutes
 ```
 
-## DR Strategies
+### DR Strategies
 
 | Strategy | Cost | Recovery Speed |
 |---|---|---|
@@ -1350,17 +1995,17 @@ RTO 30 minutes = service must be restored within 30 minutes
 
 No tested restore means no real backup.
 
-## AWS Backup
+### AWS Backup
 
 AWS Backup centralizes backup policies across supported AWS services. Use vault lock for stronger protection against deletion or tampering where required.
 
-## DMS And Migration
+### DMS And Migration
 
 Database Migration Service helps migrate databases and can support continuous replication for migration windows. Schema Conversion Tool helps convert between database engines.
 
 ---
 
-# 25. Cost Engineering For SREs
+## 25. Cost Engineering For SREs
 
 Cost is a reliability signal. Sudden cost spikes often indicate runaway systems.
 
@@ -1391,9 +2036,9 @@ SRE practice: every production service should have cost ownership, tags, dashboa
 
 ---
 
-# 26. Infrastructure As Code And Operations Tools
+## 26. Infrastructure As Code And Operations Tools
 
-## CloudFormation
+### CloudFormation
 
 CloudFormation defines AWS resources as templates. It gives repeatability, reviewability, and drift detection.
 
@@ -1407,7 +2052,7 @@ Benefits:
 
 Risk: templates can still encode bad architecture. IaC makes mistakes repeatable too.
 
-## Systems Manager
+### Systems Manager
 
 Useful SSM capabilities:
 
@@ -1419,13 +2064,13 @@ Useful SSM capabilities:
 
 Prefer Session Manager over public bastion SSH when possible.
 
-## Elastic Beanstalk
+### Elastic Beanstalk
 
 Elastic Beanstalk is a higher-level platform for deploying apps on AWS-managed patterns. It can be useful for simpler app hosting but hides details that SREs still need to understand.
 
 ---
 
-# 27. Well-Architected Framework
+## 27. Well-Architected Framework
 
 AWS Well-Architected has six pillars:
 
@@ -1451,9 +2096,9 @@ Use these questions during design reviews:
 
 ---
 
-# 28. SRE Incident Playbooks
+## 28. SRE Incident Playbooks
 
-## AccessDenied After Deployment
+### AccessDenied After Deployment
 
 Likely causes:
 
@@ -1474,7 +2119,7 @@ aws cloudtrail lookup-events --lookup-attributes AttributeKey=EventName,Attribut
 
 Then inspect IAM, resource policy, SCP, and KMS policy.
 
-## Service Unreachable
+### Service Unreachable
 
 Check in order:
 
@@ -1488,7 +2133,7 @@ Check in order:
 8. App is listening on expected port.
 9. App logs show requests.
 
-## One AZ Failure
+### One AZ Failure
 
 Check:
 
@@ -1507,7 +2152,7 @@ Fix:
 - test AZ evacuation
 - use zonal dashboards
 
-## NAT Cost Spike
+### NAT Cost Spike
 
 Check:
 
@@ -1523,7 +2168,7 @@ Fix:
 - deploy NAT per AZ for HA and local routing
 - reduce unnecessary egress
 
-## Database Saturation
+### Database Saturation
 
 Check:
 
@@ -1546,43 +2191,43 @@ Fix:
 
 ---
 
-# 29. Interview-Ready Explanations
+## 29. Interview-Ready Explanations
 
-## Public vs Private Subnet
+### Public vs Private Subnet
 
 A public subnet has a route to an Internet Gateway and resources can be publicly reachable if they have public IPs and permissive security rules. A private subnet does not expose workloads directly to the internet. Private workloads usually use NAT Gateway for outbound internet or VPC endpoints for private AWS service access.
 
-## Security Group vs NACL
+### Security Group vs NACL
 
 Security groups are stateful resource-level allow rules. NACLs are stateless subnet-level allow/deny rules. Use security groups as the main control and NACLs as coarse subnet guardrails.
 
-## RDS Multi-AZ vs Read Replica
+### RDS Multi-AZ vs Read Replica
 
 Multi-AZ is mainly for availability and failover. A read replica is mainly for read scaling and can lag because replication is asynchronous. Do not use read replicas as your only DR story unless the RPO/RTO impact is understood.
 
-## ALB vs NLB
+### ALB vs NLB
 
 ALB is Layer 7 and understands HTTP/HTTPS routing by host, path, headers, and target groups. NLB is Layer 4 and is best for very high performance, TCP/UDP/TLS, static IP needs, and non-HTTP protocols.
 
-## SQS vs SNS vs EventBridge
+### SQS vs SNS vs EventBridge
 
 SQS is a queue for buffering work. SNS is pub/sub fanout. EventBridge is event routing with filtering and event buses.
 
-## ECS vs EKS
+### ECS vs EKS
 
 ECS is simpler and AWS-native for containers. EKS is Kubernetes and gives ecosystem portability but adds operational complexity. Choose EKS when Kubernetes capabilities or organizational standards justify the cost.
 
-## Lambda vs Containers
+### Lambda vs Containers
 
 Lambda is excellent for event-driven, short-lived, spiky workloads. Containers are better for long-running services, custom runtimes, background daemons, and workloads needing more control.
 
-## CloudFront vs Global Accelerator
+### CloudFront vs Global Accelerator
 
 CloudFront is a CDN and edge HTTP platform with caching. Global Accelerator provides static anycast IPs and routes to healthy regional endpoints over the AWS global network, including non-cacheable TCP/UDP patterns.
 
 ---
 
-# 30. PDF Topic-By-Topic Senior SRE Study Notes
+## 30. PDF Topic-By-Topic Senior SRE Study Notes
 
 This section has been split into dedicated topic files for easier teaching and review. Start here:
 
@@ -1620,11 +2265,11 @@ Topic files:
 
 ---
 
-# 31. Teaching Deep Dives For Interview Week
+## 31. Teaching Deep Dives For Interview Week
 
 This section is written as a teaching script. Use it to explain AWS aloud. For each topic, start with the operational pain, then describe the mechanism, then explain what fails in production and how you would debug it.
 
-## VPC Packet Flow: The Most Important AWS Networking Story
+### VPC Packet Flow: The Most Important AWS Networking Story
 
 A VPC exists because workloads need a private network boundary in the cloud. In Linux, you reason about interfaces, routes, iptables, listening ports, and DNS. In AWS, the same thinking still applies, but the controls are distributed across VPC constructs: subnets, route tables, security groups, NACLs, gateways, endpoints, load balancers, and ENIs.
 
@@ -1672,7 +2317,7 @@ only from trusted tiers, and VPC endpoints for AWS services to reduce NAT cost
 and improve control.
 ```
 
-## IAM Request Flow: How AWS Decides Yes Or No
+### IAM Request Flow: How AWS Decides Yes Or No
 
 IAM exists because AWS is API-driven infrastructure. Every serious action is an API call. Starting an EC2 instance, reading an S3 object, decrypting a secret, updating a route table, registering an ECS task, or assuming a role all pass through authorization.
 
@@ -1709,7 +2354,7 @@ request. Who is the principal at runtime, what API was called, what resource ARN
 which conditions applied, and where could an explicit deny be coming from?
 ```
 
-## ALB, Target Groups, And Auto Scaling: Reliability Is A Feedback Loop
+### ALB, Target Groups, And Auto Scaling: Reliability Is A Feedback Loop
 
 A load balancer exists because individual compute instances are replaceable. You do not want users to know which EC2 instance, ECS task, or pod serves them. The ALB becomes the stable entry point, while target groups represent pools of backend capacity.
 
@@ -1748,7 +2393,7 @@ signals. Most outages come from bad health checks, bad bootstrap, wrong security
 group paths, insufficient warmup, or scaling on the wrong metric.
 ```
 
-## S3: Object Storage, Not A Filesystem
+### S3: Object Storage, Not A Filesystem
 
 S3 exists because applications need durable object storage without managing disks, RAID, filesystems, backup servers, or storage clusters. It is a regional object store. You put and get objects by key. It is not POSIX. You do not mount it like a normal Linux filesystem and expect rename, append, locking, or directory semantics to behave like ext4 or NFS.
 
@@ -1771,7 +2416,7 @@ and recovery behavior. For debugging, I check IAM, bucket policy, Block Public
 Access, KMS, endpoint policy, object key, and CloudTrail data events if enabled.
 ```
 
-## RDS And Aurora: Managed Database Does Not Mean No Database Operations
+### RDS And Aurora: Managed Database Does Not Mean No Database Operations
 
 RDS exists because running databases on raw EC2 is operationally expensive. Someone must handle backups, patching, failover, monitoring, storage growth, parameter changes, and replacement. RDS manages much of that control plane, but it does not remove database engineering.
 
@@ -1816,7 +2461,7 @@ availability, read replicas improve read scaling, backups protect recovery point
 and the app still needs correct pooling, retries, migrations, and failover behavior.
 ```
 
-## SQS, SNS, EventBridge: Decoupling Is A Reliability Tool
+### SQS, SNS, EventBridge: Decoupling Is A Reliability Tool
 
 Messaging exists because synchronous systems amplify failure. If the API must write to five downstream services before responding, one slow dependency becomes a user-facing outage. Queues and events let you absorb bursts, retry work, isolate consumers, and recover asynchronously.
 
@@ -1837,7 +2482,7 @@ DLQs for poison messages, and monitor oldest message age because that reflects
 user-visible processing delay.
 ```
 
-## ECS, EKS, And Lambda: Compute Is An Operational Contract
+### ECS, EKS, And Lambda: Compute Is An Operational Contract
 
 AWS gives several compute models because teams want different levels of control.
 
@@ -1860,7 +2505,7 @@ and Lambda when the workload is event-driven and fits the runtime model. Then I
 design IAM, networking, logs, scaling, rollout, and failure handling around that choice.
 ```
 
-## Observability: Metrics Tell You What, Logs Tell You Why, Traces Tell You Where
+### Observability: Metrics Tell You What, Logs Tell You Why, Traces Tell You Where
 
 CloudWatch, CloudTrail, Config, and VPC Flow Logs answer different questions. Mixing them up leads to slow incidents.
 
@@ -1893,9 +2538,9 @@ plane changes, Config shows drift, and VPC Flow Logs help with network path evid
 
 ---
 
-# 32. Hands-On Labs
+## 32. Hands-On Labs
 
-## Beginner
+### Beginner
 
 1. Create a VPC with two public and two private subnets.
 2. Launch EC2 in a private subnet behind an ALB.
@@ -1903,7 +2548,7 @@ plane changes, Config shows drift, and VPC Flow Logs help with network path evid
 4. Enable S3 versioning and recover a deleted object.
 5. Create a CloudWatch alarm for EC2 status check failure.
 
-## Intermediate
+### Intermediate
 
 1. Build a three-tier app path: Route 53 -> ALB -> ASG -> RDS.
 2. Convert RDS Single-AZ to Multi-AZ and observe failover behavior.
@@ -1911,7 +2556,7 @@ plane changes, Config shows drift, and VPC Flow Logs help with network path evid
 4. Add VPC endpoints for S3 and CloudWatch Logs; compare NAT traffic.
 5. Use CloudTrail to investigate a deliberate IAM deny.
 
-## Advanced
+### Advanced
 
 1. Deploy ECS or EKS workloads in private subnets.
 2. Use task roles or IRSA/Pod Identity for workload permissions.
@@ -1921,7 +2566,7 @@ plane changes, Config shows drift, and VPC Flow Logs help with network path evid
 
 ---
 
-# 33. Memory Review
+## 33. Memory Review
 
 Beginner recall:
 
@@ -1957,7 +2602,7 @@ Production recall:
 
 ---
 
-# 34. Senior SRE Summary
+## 34. Senior SRE Summary
 
 Strong AWS SRE architecture is private by default, multi-AZ for critical paths, least-privilege by design, observable at every layer, and cost-aware. During incidents, classify the failure before changing things: identity, network path, compute health, dependency saturation, AZ/Region scope, data integrity, or deployment regression.
 

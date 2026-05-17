@@ -388,3 +388,819 @@ Monitoring: checking known-unknowns (is the service up? Is CPU high?). Observabi
 
 
 <AIChatWidget domain="observability" title="Ask AI about Observability" />
+
+---
+
+## [SRE] Foundations: Observability, SLOs, And Incident Response Premium Teaching Guide
+
+## Foundations: Observability, SLOs, And Incident Response Premium Teaching Guide
+
+Reliable systems are built by seeing clearly, deciding calmly, and learning continuously.
+
+Observability gives visibility into behavior. SLOs define reliability targets. Incident response restores service under pressure.
+
+This guide teaches observability from first principles to production-grade reliability operations.
+
+---
+
+## How To Use This Module
+
+Study in layers:
+
+1. **Beginner Layer** — metrics, logs, traces, alerts.
+2. **Intermediate Layer** — SLIs, SLOs, dashboards, runbooks.
+3. **Advanced Layer** — burn-rate alerts, tracing strategy, incident command.
+4. **Production SRE Layer** — outages, mitigations, postmortems, alert quality.
+5. **Interview Layer** — explain reliability tradeoffs clearly.
+
+---
+
+## Memory Palace: Hospital Emergency Room
+
+| Concept | Analogy | Meaning |
+|---|---|---|
+| Metrics | Vital signs | Quantitative health signals |
+| Logs | Doctor notes | Event evidence |
+| Traces | Patient journey | Request path |
+| Alert | Emergency alarm | Needs action now |
+| SLO | Treatment target | Reliability objective |
+| Error Budget | Spare risk capacity | Allowed unreliability |
+| IC | Lead doctor | Coordinates response |
+| Runbook | Emergency procedure | Known response steps |
+| Postmortem | Case review | Learn and improve |
+
+Senior questions first:
+
+- Are users hurting?
+- How many?
+- Is it getting worse?
+- What is the fastest safe mitigation?
+
+---
+
+## Beginner Layer: Monitoring vs Observability
+
+Monitoring asks:
+
+> Did a known bad thing happen?
+
+Observability asks:
+
+> Why is the system behaving this way?
+
+Three core signals:
+
+- Metrics = trends and alerting
+- Logs = exact events
+- Traces = request path across services
+
+---
+
+## Beginner Layer: Golden Signals / RED / USE
+
+### Golden Signals
+
+- Latency
+- Traffic
+- Errors
+- Saturation
+
+### RED
+
+- Rate
+- Errors
+- Duration
+
+### USE
+
+- Utilization
+- Saturation
+- Errors
+
+Use RED for services. Use USE for infrastructure.
+
+---
+
+## Beginner Layer: Metrics Foundations
+
+Track:
+
+- requests per second
+- error rate
+- p95 and p99 latency
+- queue depth
+- CPU and memory
+- disk and network pressure
+
+Important truth:
+
+> Average latency can look healthy while p99 is painful.
+
+Metric types:
+
+- Counter
+- Gauge
+- Histogram
+- Summary
+
+---
+
+## Beginner Layer: Logging Foundations
+
+Use structured logs.
+
+```json
+{"level":"error","service":"checkout","trace_id":"abc123","message":"payment timeout"}
+```
+
+Include:
+
+- timestamp UTC
+- level
+- service
+- trace or request id
+- useful context
+
+Never leak secrets.
+
+---
+
+## Beginner Layer: Tracing Foundations
+
+```text
+frontend -> api -> auth -> payments -> db
+```
+
+Tracing helps answer:
+
+- where time is spent
+- which dependency failed
+- which user path is degraded
+
+Sampling guidance:
+
+- keep errors
+- sample healthy traffic
+- increase during incidents when safe
+
+---
+
+## Intermediate Layer: SLI / SLO / SLA
+
+### SLI
+
+Measured user experience.
+
+Example:
+
+Fraction of checkout requests succeeding under 500ms.
+
+### SLO
+
+Target objective.
+
+Example:
+
+99.9% over rolling 28 days.
+
+### SLA
+
+External commercial promise.
+
+Usually looser than SLO.
+
+---
+
+## Intermediate Layer: Error Budgets
+
+99.9% means 0.1% unreliability budget.
+
+Use it to guide risk:
+
+- healthy budget -> ship faster
+- budget exhausted -> prioritize reliability
+
+Error budgets align product speed with operational reality.
+
+---
+
+## Intermediate Layer: Alerting Philosophy
+
+Page humans only for actionable user-impacting issues.
+
+Good pages:
+
+- sustained error spike
+- severe burn rate
+- sustained latency breach
+- synthetic checkout failing
+
+Bad pages:
+
+- one pod restart
+- CPU briefly high
+- disk 70%
+- transient blips without impact
+
+Alert on symptoms. Investigate causes.
+
+---
+
+## Intermediate Layer: Dashboards That Help
+
+Top row:
+
+1. request rate
+2. error rate
+3. p95/p99 latency
+4. saturation
+
+Second row:
+
+- pods / restarts
+- CPU / memory
+- queue depth
+
+Third row:
+
+- dependencies
+- deploy markers
+- feature flags
+
+A dashboard should answer a question in under 10 seconds.
+
+---
+
+## Advanced Layer: Burn Rate Thinking
+
+- 14x burn = severe active issue
+- 3x burn = meaningful degradation
+- 1x burn = on target
+
+Burn-rate alerts tie signals to commitments rather than arbitrary thresholds.
+
+---
+
+## Advanced Layer: Incident Lifecycle
+
+### Detect
+
+Alert, user report, synthetic probe.
+
+### Triage
+
+- scope
+- user impact
+- worsening or stable
+- recent changes
+
+### Mitigate
+
+1. rollback
+2. disable feature
+3. reroute traffic
+4. scale out
+5. shed load
+6. restart last
+
+### Communicate
+
+Clear regular updates.
+
+### Resolve
+nMetrics normal and understood.
+
+### Learn
+
+Postmortem with tracked actions.
+
+---
+
+## Advanced Layer: Incident Roles
+
+| Role | Responsibility |
+|---|---|
+| Incident Commander | Coordination |
+| Tech Lead | Debugging and mitigation |
+| Comms | Stakeholder updates |
+| SMEs | Focused expertise |
+
+---
+
+## Production SRE Layer: Real Incidents
+
+### CPU High, Users Fine
+
+Observe first. Do not auto-page on infrastructure noise alone.
+
+### Errors After Deploy
+
+If confidence is high, rollback quickly before deep analysis.
+
+### Users Slow, Metrics Fine
+
+Check p99/p999, region split, traces, synthetic flows.
+
+### Nightly Noisy Alerts
+
+Fix alerts, not people.
+
+### Dependency Brownout
+
+Your service may be healthy internally while users fail externally. Inspect downstream dependencies.
+
+---
+
+## Production SRE Layer: Troubleshooting Flow
+
+### Traffic Drop
+
+Check:
+
+- load balancer
+- DNS
+- deploy markers
+- upstream routing
+
+### Error Spike
+
+Check:
+
+- latest deploy
+- dependency errors
+- auth changes
+- saturation
+
+### Latency Increase
+
+Check:
+
+- p95/p99 split
+- traces
+- queue depth
+- database latency
+
+### Alert Storm
+
+Check:
+
+- root dependency causing fan-out alerts
+- duplicate rules
+- noisy thresholds
+
+---
+
+## Postmortems That Matter
+
+Include:
+
+- timeline
+- impact
+- detection quality
+- root cause chain
+- mitigation effectiveness
+- prevention actions
+- owners and due dates
+
+Blameless means focus on system improvement, not avoiding accountability.
+
+---
+
+## Tools To Know
+
+- Prometheus
+- Grafana
+- Alertmanager
+- Loki
+- OpenSearch / Elasticsearch
+- OpenTelemetry
+- Jaeger / Tempo
+- PagerDuty / Opsgenie
+
+---
+
+## Interview Layer: Strong Answers
+
+### Monitoring vs Observability?
+
+> Monitoring detects known failure conditions. Observability helps explain unknown behavior using telemetry.
+
+### Why averages mislead?
+
+> Averages hide tail pain. Many users can suffer while the mean looks normal.
+
+### Why burn-rate alerts?
+
+> They map incidents to SLO risk, helping prioritize what truly threatens commitments.
+
+### How do you run a SEV1?
+
+> Establish command, assess impact, mitigate quickly, communicate clearly, and capture a clean timeline.
+
+---
+
+## Labs
+
+### Beginner
+
+1. Build one service dashboard.
+2. Add latency and error alerts.
+3. Add structured logs.
+
+### Intermediate
+
+1. Define an SLO and budget.
+2. Add synthetic probe.
+3. Trace a slow endpoint.
+
+### Advanced
+
+1. Add burn-rate alerts.
+2. Run a mock incident drill.
+3. Write a postmortem.
+4. Remove 50% noisy alerts safely.
+
+---
+
+## Memory Review
+
+- Why is p99 often better than average?
+- Why should alerts map to actions?
+- What does an error budget buy you?
+- Why rollback before deep debugging sometimes?
+- Why do postmortems need owners?
+
+---
+
+## Senior Summary
+
+> I page only on user-impacting symptoms tied to SLO risk, then use metrics, logs, and traces to narrow blast radius quickly. During incidents I prioritize mitigation over elegant root-cause hunting, communicate clearly, and convert outages into tracked reliability improvements.
+
+---
+
+## [SRE] Foundations: Prometheus, Grafana, And Alertmanager Premium Teaching Guide
+
+## Foundations: Prometheus, Grafana, And Alertmanager Premium Teaching Guide
+
+Prometheus, Grafana, and Alertmanager form one of the most common observability stacks used by SRE and platform teams.
+
+Prometheus collects metrics and evaluates rules. Grafana visualizes data. Alertmanager routes alerts to humans and systems.
+
+This guide teaches the stack from first principles to production-grade operations.
+
+---
+
+## How To Use This Module
+
+Study in layers:
+
+1. **Beginner Layer** — metrics, scraping, dashboards, alerts.
+2. **Intermediate Layer** — PromQL, exporters, rules, routing.
+3. **Advanced Layer** — cardinality, recording rules, scaling, SLO alerts.
+4. **Production SRE Layer** — missing metrics, noisy alerts, bad dashboards.
+5. **Interview Layer** — explain a real metrics platform clearly.
+
+---
+
+## Memory Palace: Hospital Monitoring Ward
+
+| Tool | Analogy | Meaning |
+|---|---|---|
+| Prometheus | Bedside monitor | Continuously reads signals |
+| Grafana | Nurse station screen | Visual overview |
+| Alertmanager | Paging desk | Sends alerts to responders |
+| Exporter | Sensor adapter | Converts system signals |
+| Rule | Escalation policy | Trigger condition |
+| Dashboard | Ward board | Shared situational awareness |
+
+---
+
+## Beginner Layer: Metrics Model
+
+A metric is usually:
+
+```text
+name + labels + value + time
+```
+
+Example:
+
+```text
+http_requests_total{service="api",status="500"}
+```
+
+Labels create dimensions for filtering and aggregation.
+
+---
+
+## Beginner Layer: Metric Types
+
+| Type | Meaning | Use |
+|---|---|---|
+| Counter | Only increases | requests, errors |
+| Gauge | Current value | memory, queue depth |
+| Histogram | Bucketed observations | latency |
+| Summary | Client-side quantiles | niche use |
+
+Important rule:
+
+Use `rate()` with counters.
+
+---
+
+## Beginner Layer: Pull Model
+
+Prometheus usually scrapes targets over HTTP.
+
+```text
+app /metrics <- Prometheus scrape every interval
+```
+
+Benefits:
+
+- central scheduling
+- target health visibility
+- easier service discovery
+
+---
+
+## Beginner Layer: First Useful Queries
+
+```promql
+up
+rate(http_requests_total[5m])
+process_resident_memory_bytes
+sum(rate(http_requests_total[5m])) by (service)
+```
+
+---
+
+## Intermediate Layer: RED And USE Dashboards
+
+### RED for services
+
+- Rate
+- Errors
+- Duration
+
+### USE for infrastructure
+
+- Utilization
+- Saturation
+- Errors
+
+Start dashboards with these before vanity metrics.
+
+---
+
+## Intermediate Layer: Exporters
+
+Common exporters:
+
+- node_exporter
+- kube-state-metrics
+- blackbox_exporter
+- postgres_exporter
+- redis_exporter
+- nginx exporter
+
+Exporters expose system facts. They do not replace thinking.
+
+---
+
+## Intermediate Layer: Alert Rules
+
+Example pattern:
+
+```text
+High error rate for 5 minutes
+```
+
+Good alerts include:
+
+- severity
+- owner/team
+- summary
+- runbook link
+- clear action
+
+Use `for:` to avoid noisy short spikes.
+
+---
+
+## Intermediate Layer: Alertmanager
+
+Alertmanager handles:
+
+- grouping
+- deduplication
+- silences
+- inhibition
+- routing
+- notification delivery
+
+Example:
+
+```text
+warning -> Slack
+critical -> PagerDuty
+```
+
+---
+
+## Advanced Layer: Histograms And Percentiles
+
+Use histograms for p95/p99 latency.
+
+Important truth:
+
+Do not average percentiles.
+
+Use bucket aggregation first, then quantiles.
+
+Tail latency often matters more than averages.
+
+---
+
+## Advanced Layer: Cardinality
+
+Cardinality = number of unique time series.
+
+Dangerous labels:
+
+- user_id
+- request_id
+- trace_id
+- full URL with IDs
+- random GUIDs
+
+High cardinality causes:
+
+- high memory use
+- slow queries
+- large storage growth
+
+Design labels intentionally.
+
+---
+
+## Advanced Layer: Recording Rules
+
+Use recording rules to precompute expensive queries.
+
+Good for:
+
+- repeated dashboards
+- SLO math
+- expensive histograms
+- faster alerts
+
+---
+
+## Advanced Layer: Scaling Prometheus
+
+Paths:
+
+- bigger single instance
+- federation
+- sharding
+- Thanos
+- Mimir/Cortex style systems
+
+Use complexity only when needed.
+
+---
+
+## Advanced Layer: SLO Burn Alerts
+
+Better than arbitrary CPU pages.
+
+Burn alerts page when reliability commitments are being consumed too quickly.
+
+This aligns paging with user impact.
+
+---
+
+## Production SRE Layer: Real Incidents
+
+### Grafana Shows No Data
+
+Check:
+
+- time range
+- datasource
+- query labels
+- target scrape health
+
+### Target Down (`up=0`)
+
+Check:
+
+- app running
+- port/path correct
+- network policy/firewall
+- service discovery labels
+
+### Prometheus Memory High
+
+Likely causes:
+
+- cardinality explosion
+- too many targets
+- expensive queries
+
+### Alert Never Paged
+
+Check:
+
+- rule firing?
+- routed correctly?
+- silence active?
+- receiver healthy?
+
+### Dashboard Looked Fine But Users Slow
+
+Cause often:
+
+- averages only
+n- no p95/p99
+- no dependency panels
+
+---
+
+## Production SRE Layer: Dashboard Design
+
+Top row:
+
+1. request rate
+2. error rate
+3. p95/p99 latency
+4. saturation
+
+Second row:
+
+- resources
+- dependency latency
+- queue depth
+- deploy markers
+
+A dashboard should answer a question in under 10 seconds.
+
+---
+
+## Interview Layer: Strong Answers
+
+### Why Prometheus pull model?
+
+> Centralized scraping simplifies discovery, health visibility, and target control.
+
+### Counter vs Gauge?
+
+> Counter only increases and is used with rate functions. Gauge represents a current value.
+
+### Why is cardinality dangerous?
+
+> Too many unique label combinations increase memory, storage, and query cost.
+
+### How would you page reliably?
+
+> Use actionable alerts tied to user impact or SLO burn, with ownership and runbooks.
+
+---
+
+## Labs
+
+### Beginner
+
+1. Scrape node_exporter.
+2. Query `up`.
+3. Build one CPU dashboard.
+
+### Intermediate
+
+1. Build RED dashboard.
+2. Create error-rate alert.
+3. Route warnings and critical alerts differently.
+
+### Advanced
+
+1. Simulate cardinality problem.
+2. Add recording rules.
+3. Build burn-rate alerts.
+4. Configure inhibition.
+
+---
+
+## Memory Review
+
+- Why use `rate()` with counters?
+- Why are user IDs bad labels?
+- Why do averages hide pain?
+- What is inhibition?
+- Why should dashboards begin with RED metrics?
+
+---
+
+## Senior Summary
+
+> I design metrics platforms around actionable low-cardinality signals. Services expose counters, gauges, and histograms. Prometheus scrapes and evaluates rules, Grafana visualizes RED and USE dashboards, and Alertmanager routes only actionable alerts with clear ownership. I control cardinality, precompute expensive queries, and align paging with SLO risk.
