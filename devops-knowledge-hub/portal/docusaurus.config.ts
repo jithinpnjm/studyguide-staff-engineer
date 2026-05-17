@@ -62,20 +62,25 @@ const config: Config = {
           label: 'Knowledge Base',
         },
         {
-          to: '/discover',
-          label: 'Discover',
+          to: '/docs/interview-prep',
+          label: 'Interview Prep',
           position: 'left',
         },
         {
-          href: 'http://localhost:3000',
-          label: 'Admin UI',
+          to: '/docs/aws-deep-dive',
+          label: 'AWS Deep Dive',
+          position: 'left',
+        },
+        {
+          href: 'https://github.com/jithinpnjm/studyguide-staff-engineer',
+          label: 'GitHub',
           position: 'right',
         },
       ],
     },
     footer: {
       style: 'dark',
-      copyright: `DevOps Knowledge Hub — Local Knowledge Base • Built with Docusaurus`,
+      copyright: `DevOps Knowledge Hub — SRE & DevOps Study Portal • Built with Docusaurus`,
     },
     prism: {
       theme: prismThemes.github,
