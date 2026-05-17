@@ -13,7 +13,7 @@ Beginner mental model:
 user process -> system calls -> kernel -> CPU / memory / disk / network
 ```
 
-When production fails, you need to move from “the app is slow” to “which Linux resource or dependency is under pressure?”
+When production fails, you need to move from "the app is slow" to "which Linux resource or dependency is under pressure?"
 
 ---
 
@@ -30,6 +30,57 @@ Linux knowledge helps you answer:
 - Why does a container behave differently from the host?
 
 Kubernetes and cloud platforms hide some details, but incidents often expose the Linux layer underneath.
+
+---
+
+## Linux Boot Sequence
+
+Understanding the boot sequence helps diagnose startup failures.
+
+```text
+BIOS/UEFI -> GRUB -> Kernel -> initramfs -> systemd -> services
+```
+
+### What Happens At Each Stage
+
+**BIOS/UEFI:** Firmware initialises hardware, performs Power-On Self Test (POST), then locates a bootable device.
+
+What can go wrong: bad BIOS settings, corrupted firmware, wrong boot device order.
+
+**GRUB (bootloader):** Loads the kernel image and initramfs from `/boot`, passes kernel parameters.
+
+What can go wrong: corrupted GRUB config, wrong partition UUID in `/etc/grub.d/`, missing kernel image after a bad kernel update.
+
+```bash
+# Recover GRUB from live USB:
+sudo mount /dev/sdXn /mnt
+sudo grub-install --root-directory=/mnt /dev/sdX
+sudo update-grub
+```
+
+**Kernel:** The kernel decompresses itself, initialises drivers, mounts the root filesystem.
+
+What can go wrong: kernel panic (incompatible module, corrupt filesystem), hardware not supported by kernel version.
+
+```bash
+# View kernel messages from last boot:
+journalctl -xb
+dmesg | head -100
+```
+
+**initramfs (initial RAM filesystem):** A minimal root filesystem loaded into RAM. Handles early disk setup (LVM, RAID, encrypted volumes) before the real root is mounted.
+
+What can go wrong: missing modules for RAID or LVM, wrong cryptsetup passphrase, broken initramfs after kernel update. Fix by regenerating: `update-initramfs -u` (Debian/Ubuntu) or `dracut -f` (RHEL).
+
+**systemd (PID 1):** The init system. Mounts filesystems, starts services in dependency order.
+
+What can go wrong: failed unit prevents other units from starting, cyclic dependency, missing environment file, ExecStart path wrong.
+
+```bash
+# Check what failed at boot:
+systemctl --failed
+journalctl -b -p err --no-pager
+```
 
 ---
 
@@ -96,7 +147,7 @@ A symlink points to a path, not directly to the same inode.
 
 ---
 
-## File Permissions
+## File Permissions — Full Reference
 
 Permission layout:
 
@@ -125,26 +176,67 @@ Numeric permissions:
 Common examples:
 
 ```bash
-chmod 755 script.sh
-chmod 644 config.yml
-chmod 600 private-key.pem
-chmod 1777 /tmp
+chmod 755 script.sh        # owner rwx, group/other rx
+chmod 644 config.yml       # owner rw, group/other r
+chmod 600 private-key.pem  # owner rw only, no group/other access
+chmod 1777 /tmp            # world-writable with sticky bit
 ```
 
-Special bits:
-
-| Bit | Meaning |
-|---|---|
-| setuid | Run with file owner's identity |
-| setgid | Run with file group; directories inherit group |
-| sticky bit | On shared dirs, only file owner can delete own files |
-
-Check permissions:
+### Symbolic chmod
 
 ```bash
-ls -l /path/to/file
+chmod u+x script.sh        # add execute for owner
+chmod g-w config.yml       # remove write for group
+chmod o=r file.txt         # set other to read-only
+chmod a+r file.txt         # add read for all (user, group, other)
+chmod u=rwx,g=rx,o= file   # explicit assignment
+```
+
+### umask
+
+`umask` controls the default permissions for newly created files and directories.
+
+```bash
+umask             # show current mask (commonly 0022)
+umask 0027        # set restrictive mask: owner full, group read-only, no other
+```
+
+When `umask` is `0022`, a new file created with mode `0666` gets `0644`, and a new directory with `0777` gets `0755`.
+
+### Setuid, Setgid, Sticky Bit
+
+```bash
+chmod u+s /usr/bin/passwd   # setuid: runs as file owner (root), not caller
+chmod g+s /shared/dir       # setgid: new files inherit directory group
+chmod +t /tmp               # sticky bit: only owner can delete own files
+```
+
+Real examples:
+
+```bash
+ls -l /usr/bin/passwd
+# -rwsr-xr-x 1 root root ... /usr/bin/passwd
+# 's' in owner execute = setuid set
+
 ls -ld /tmp
-id username
+# drwxrwxrwt ... /tmp
+# 't' in others execute = sticky bit set
+```
+
+Numeric special bits (prepend to 3-digit mode):
+
+```text
+4xxx = setuid
+2xxx = setgid
+1xxx = sticky
+```
+
+Example: `chmod 4755 binary` sets setuid + 755.
+
+Check full permission path:
+
+```bash
+namei -l /path/to/file    # shows every directory permission in the path
 ```
 
 ---
@@ -185,6 +277,329 @@ If a user was added to a group but permissions still fail, they may need a new l
 
 ---
 
+## Essential Commands With Real One-Liners
+
+### find
+
+```bash
+find /var/log -type f -name "*.log"                         # all log files
+find /tmp -mtime +7 -delete                                  # delete files older than 7 days
+find / -xdev -size +1G -ls 2>/dev/null                      # files larger than 1 GB
+find /etc -type f -perm -004 -ls                            # world-readable config files
+find /var/lib/docker -xdev -type f | wc -l                  # count Docker inode usage
+find / -xdev -printf '%h\n' 2>/dev/null | sort | uniq -c | sort -rn | head  # top inode dirs
+```
+
+### grep
+
+```bash
+grep -r "FATAL" /var/log/app/                               # recursive search
+grep -i "error" /var/log/syslog                             # case insensitive
+grep -v "INFO" app.log                                       # exclude lines
+grep -n "OOM" /var/log/kern.log                             # show line numbers
+grep -c "timeout" access.log                                 # count occurrences
+grep -E "ERROR|WARN|FATAL" app.log                          # extended regex alternation
+grep -A3 -B3 "stack trace" app.log                          # context lines around match
+```
+
+### awk
+
+```bash
+awk '{print $1}' access.log                                  # first field (IP)
+awk '{print $9}' access.log | sort | uniq -c | sort -rn     # HTTP status code summary
+awk -F: '{print $1}' /etc/passwd                            # usernames from passwd
+awk '$3 > 100 {print $1, $3}' report.txt                    # filter by numeric column
+awk 'NR>1 {sum += $2} END {print sum}' data.csv             # sum a column
+ss -tan | awk 'NR>1 {print $1}' | sort | uniq -c            # socket state summary
+```
+
+### sed
+
+```bash
+sed -n '1,20p' file.txt                                     # print lines 1-20
+sed 's/DEBUG/INFO/g' app.log                                # replace all occurrences
+sed '/^#/d' config.conf                                     # delete comment lines
+sed -i.bak 's/old/new/g' file.txt                           # in-place edit with backup
+sed -n '/ERROR/,/END/p' app.log                             # print between patterns
+```
+
+### xargs
+
+```bash
+find /tmp -name "*.tmp" | xargs rm                          # delete found files
+find /var/log -name "*.log" | xargs grep -l "ERROR"         # find logs containing ERROR
+cat hosts.txt | xargs -I{} ssh {} uptime                    # run command on each host
+find . -type f | xargs wc -l | sort -rn | head              # line count per file
+```
+
+### cut
+
+```bash
+cut -d: -f1 /etc/passwd                                     # extract usernames
+cut -d, -f1,3 data.csv                                      # first and third CSV fields
+cut -c1-10 file.txt                                         # first 10 characters per line
+```
+
+### sort
+
+```bash
+sort -n numbers.txt                                         # numeric sort
+sort -rn numbers.txt                                        # reverse numeric sort
+sort -k2 -t: file.txt                                       # sort by second field
+du -sh /var/* | sort -rh                                    # sort by human-readable size
+```
+
+### uniq
+
+```bash
+sort file.txt | uniq                                        # remove duplicates
+sort file.txt | uniq -c                                     # count each unique line
+sort file.txt | uniq -d                                     # show only duplicates
+grep ERROR app.log | sort | uniq -c | sort -rn             # error frequency count
+```
+
+### wc
+
+```bash
+wc -l file.txt                                              # line count
+wc -c file.txt                                              # byte count
+find /var -name "*.log" | wc -l                            # count files
+ls /proc/PID/fd | wc -l                                    # open file descriptor count
+```
+
+### tr
+
+```bash
+echo "hello" | tr '[:lower:]' '[:upper:]'                  # uppercase
+echo "a:b:c" | tr ':' '\n'                                 # replace colon with newline
+cat file.txt | tr -d '\r'                                   # remove Windows carriage returns
+echo "  spaces  " | tr -s ' '                              # squeeze repeated spaces
+```
+
+---
+
+## Redirection And Piping
+
+```bash
+command > file.txt          # redirect stdout, overwrite
+command >> file.txt         # redirect stdout, append
+command 2> error.log        # redirect stderr
+command 2>&1                # merge stderr into stdout
+command > file.txt 2>&1     # both stdout and stderr to file
+command | tee file.txt      # stdout to both terminal and file
+command1 | command2         # pipe stdout of command1 to stdin of command2
+command < input.txt         # feed file as stdin
+```
+
+Here-doc (heredoc):
+
+```bash
+cat <<EOF > /etc/app/config.ini
+[server]
+port = 8080
+log_level = info
+EOF
+```
+
+Null device:
+
+```bash
+command 2>/dev/null         # discard stderr
+command >/dev/null 2>&1     # discard all output
+```
+
+---
+
+## Package Management
+
+### Debian / Ubuntu (apt)
+
+```bash
+sudo apt update                          # refresh package index
+sudo apt upgrade                         # upgrade installed packages
+sudo apt install -y nginx                # install a package
+sudo apt remove nginx                    # remove package, keep config
+sudo apt purge nginx                     # remove package and config
+sudo apt autoremove                      # remove orphaned dependencies
+apt search nginx                         # search for a package
+apt show nginx                           # show package details
+dpkg -l | grep nginx                     # list installed matching pattern
+dpkg -L nginx                            # list files in installed package
+```
+
+### RHEL / CentOS / Amazon Linux (yum/dnf)
+
+```bash
+sudo yum update                          # update all packages
+sudo yum install -y nginx                # install
+sudo yum remove nginx                    # remove
+yum search nginx                         # search
+yum info nginx                           # show package info
+rpm -qa | grep nginx                     # list installed matching pattern
+rpm -ql nginx                            # list files in installed package
+sudo dnf update                          # dnf is the modern replacement for yum
+```
+
+---
+
+## SSH Basics And Key-Based Authentication
+
+### Key-based auth setup
+
+```bash
+# Generate a key pair on your local machine:
+ssh-keygen -t ed25519 -C "user@machine"
+
+# Copy public key to remote host:
+ssh-copy-id user@host
+
+# Manual method:
+cat ~/.ssh/id_ed25519.pub | ssh user@host "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"
+```
+
+### SSH config aliases
+
+```bash
+# ~/.ssh/config
+Host bastion
+    HostName 10.0.0.5
+    User deploy
+    IdentityFile ~/.ssh/bastion_key
+
+Host prod-app
+    HostName 10.0.1.20
+    User ubuntu
+    ProxyJump bastion
+    IdentityFile ~/.ssh/prod_key
+```
+
+Then simply: `ssh prod-app`
+
+### File transfer
+
+```bash
+scp local-file.txt user@host:/remote/path/     # copy file to remote
+scp user@host:/remote/file.txt ./local/        # copy file from remote
+scp -r local-dir/ user@host:/remote/path/      # copy directory
+```
+
+### rsync
+
+```bash
+rsync -avz local-dir/ user@host:/remote/dir/         # sync local to remote
+rsync -avz --dry-run local-dir/ user@host:/remote/   # preview before syncing
+rsync -avz --exclude '*.log' local-dir/ user@host:/remote/  # exclude pattern
+rsync -avz --bwlimit=10000 local/ user@host:/remote/ # limit bandwidth to 10 MB/s
+rsync -avz --delete local-dir/ user@host:/remote/    # delete files not in source
+```
+
+---
+
+## Cron And Scheduled Jobs
+
+### Crontab syntax
+
+```text
+* * * * * command
+| | | | |
+| | | | +-- Day of week (0-7, 0 and 7 = Sunday)
+| | | +---- Month (1-12)
+| | +------ Day of month (1-31)
+| +-------- Hour (0-23)
++---------- Minute (0-59)
+```
+
+Common cron expressions:
+
+```bash
+0 2 * * *    command     # daily at 02:00
+0 * * * *    command     # every hour on the hour
+*/15 * * * * command     # every 15 minutes
+0 2 * * 0    command     # every Sunday at 02:00
+@reboot      command     # on every system boot
+@hourly      command     # hourly shorthand
+@daily       command     # daily shorthand
+```
+
+### Managing crontabs
+
+```bash
+crontab -e                    # edit current user's crontab
+crontab -l                    # list current user's crontab
+sudo crontab -u appuser -l    # list another user's crontab
+crontab -r                    # remove all crontabs (dangerous)
+```
+
+System-wide cron directories:
+
+```bash
+ls /etc/cron.daily/          # scripts run daily
+ls /etc/cron.hourly/
+ls /etc/cron.d/              # additional crontab files
+```
+
+### at — one-off jobs
+
+```bash
+at now + 30 minutes <<'EOF'
+/path/to/script.sh
+EOF
+
+at 02:00 tomorrow <<'EOF'
+/opt/app/backup.sh
+EOF
+
+atq                           # list queued jobs
+atrm <job-number>             # remove a queued job
+```
+
+Debug cron problems:
+
+```bash
+journalctl -u cron --since "1 hour ago"     # Debian/Ubuntu
+journalctl -u crond --since "1 hour ago"    # RHEL/CentOS
+grep CRON /var/log/syslog | tail -20
+```
+
+---
+
+## Environment Variables
+
+```bash
+echo $PATH                          # print PATH
+echo $HOME                          # print home directory
+printenv                            # list all environment variables
+env                                 # list environment, or run command in modified environment
+export MY_VAR="value"               # set and export to child processes
+unset MY_VAR                        # remove variable
+```
+
+### Modifying PATH
+
+```bash
+export PATH=$PATH:/usr/local/bin
+export PATH=/opt/custom/bin:$PATH   # prepend (higher priority)
+```
+
+### Startup Files
+
+| File | When loaded | Typical use |
+|---|---|---|
+| `~/.bash_profile` | Login shell | Set PATH, export vars, source .bashrc |
+| `~/.bashrc` | Interactive non-login shell | Aliases, functions, PS1 |
+| `~/.profile` | Login shell (sh/bash/dash) | Portable environment setup |
+| `/etc/profile` | All users, login shell | System-wide settings |
+| `/etc/environment` | All sessions (PAM-based) | System-wide env vars |
+
+```bash
+source ~/.bashrc            # reload without a new shell
+. ~/.bashrc                 # same as source
+```
+
+Difference: `.bash_profile` runs once at login (SSH, TTY login). `.bashrc` runs every time you open a terminal. Usually `.bash_profile` sources `.bashrc` to ensure consistency.
+
+---
+
 ## Processes
 
 A process is a running program. Every process has a PID and parent process.
@@ -209,13 +624,13 @@ Process states:
 Signals:
 
 ```bash
-kill -15 PID   # graceful termination
-kill -9 PID    # force kill
-kill -1 PID    # reload for many daemons
+kill -15 PID   # graceful termination (SIGTERM)
+kill -9 PID    # force kill (SIGKILL)
+kill -1 PID    # reload for many daemons (SIGHUP)
 pkill -f pattern
 ```
 
-Use `SIGTERM` before `SIGKILL` unless the process is causing immediate harm.
+Use `SIGTERM` before `SIGKILL` unless the process is causing immediate harm. `SIGKILL` cannot be handled and gives the process no chance to flush data or close connections.
 
 ---
 
@@ -372,3 +787,7 @@ kernel/hardware problem
 6. Disk can fail by bytes or by inodes.
 7. Services need process state, logs, listening ports, and health checks.
 8. Always observe before changing production systems.
+9. The boot sequence matters: BIOS/UEFI, GRUB, kernel, initramfs, systemd each has its own failure modes.
+10. `umask` and special bits (setuid, setgid, sticky) are tested frequently in interviews.
+11. Redirection and piping are core tools for log analysis and incident investigation.
+12. Cron and at schedule automated work; check the journal when scheduled jobs do not run.
