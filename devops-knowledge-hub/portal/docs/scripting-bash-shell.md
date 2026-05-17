@@ -1,4 +1,10 @@
-# Bash/Shell Scripting for DevOps/SRE — Zero to Hero
+---
+title: "💻 Bash & Shell Scripting"
+sidebar_position: 16
+description: "Zero to hero study guide for Bash & Shell Scripting — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## Why Bash for SRE?
 
@@ -538,3 +544,21 @@ Strict mode (`set -euo pipefail`), trap for cleanup on exit, logging with timest
 
 **"Bash vs Python for automation — when do you choose which?"**
 Bash for gluing Unix tools, simple file ops, and one-liners that stay < 50 lines. Python once you need data structures, retry logic, async I/O, SDK clients, or anything that will grow. If you're adding `awk`, `sed`, and `grep` in the same script, consider Python.
+
+
+
+---
+
+## 📁 Source Documents
+
+> 4 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[Shell Scripting] 1741163111410](http://localhost:8765/api/documents/b00d3446-cedd-40c4-a285-b217ad2ec2de/view) | PDF | beginner |
+| [[Shell Scripting] 1741963318824](http://localhost:8765/api/documents/27f13a2e-c377-4585-a150-a2ffb1f12699/view) | PDF | intermediate |
+| [[Linux] 1745729250800](http://localhost:8765/api/documents/bb5c4ca6-50ec-4ba1-8445-a7a3778cf46a/view) | PDF | intermediate |
+| [[Linux] Linux Cheat Sheet](http://localhost:8765/api/documents/c17c28a0-0b92-4d92-a43a-15fae6bca704/view) | PDF | beginner |
+
+
+<AIChatWidget domain="scripting-bash-shell" title="Ask AI about Bash & Shell Scripting" />

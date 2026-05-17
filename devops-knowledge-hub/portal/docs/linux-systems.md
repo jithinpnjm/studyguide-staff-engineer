@@ -1,4 +1,10 @@
-# Linux & Systems — Zero to Hero
+---
+title: "🐧 Linux & Systems"
+sidebar_position: 9
+description: "Zero to hero study guide for Linux & Systems — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## 🎯 Why This Domain Matters
 
@@ -439,3 +445,48 @@ Processes have separate address spaces; threads share address space within a pro
 13. **Kernel tuning requires benchmarking** — sysctl changes should be validated with production workloads
 14. **Disk full stops writes immediately** — monitor at 80%, alert at 85%, never hit 100%
 15. **The process tree reveals architecture** — `ps --forest` shows you how your system is actually organized
+
+
+
+---
+
+## 📁 Source Documents
+
+> 31 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[Linux] 1740016028922](http://localhost:8765/api/documents/4a89af80-41ac-4fc1-9432-5ed8f1216223/view) | PDF | beginner |
+| [[Linux] 1740016371759](http://localhost:8765/api/documents/337366ab-dbd7-449b-89d7-1b10980bbb66/view) | PDF | beginner |
+| [[Linux] 1741878559328](http://localhost:8765/api/documents/2420300e-06e1-4e6a-b055-b724accdc6cd/view) | PDF | intermediate |
+| [[Linux] 1741953295160](http://localhost:8765/api/documents/07847559-6b17-4b33-b51c-378a879af9e4/view) | PDF | intermediate |
+| [[Linux] 1742166489504](http://localhost:8765/api/documents/33062d1c-da34-43bc-8009-c297c09f4fa3/view) | PDF | beginner |
+| [[Linux] 1742972904431](http://localhost:8765/api/documents/2d590413-3d96-48ac-bda1-f864440057cd/view) | PDF | beginner |
+| [[Linux] 1743019011401](http://localhost:8765/api/documents/2be6ced4-f948-4b77-b5f3-367cd4cd3f50/view) | PDF | intermediate |
+| [[Linux] 1743193266079](http://localhost:8765/api/documents/2f317611-06a5-484b-82cb-ca4857af8db5/view) | PDF | intermediate |
+| [[Linux] 1743348519032](http://localhost:8765/api/documents/2c56d411-a128-428f-96d0-18683d0150ae/view) | PDF | beginner |
+| [[Linux] 1744135868388](http://localhost:8765/api/documents/c7660f77-c762-4d51-9b84-f083b2fbaffd/view) | PDF | beginner |
+| [[Linux] Basic Level Commands](http://localhost:8765/api/documents/1ef03cc7-8eaf-49b2-a20d-d3d9a8993c62/view) | PDF | beginner |
+| [[Linux] BootProcess](http://localhost:8765/api/documents/d09afe03-8c80-48eb-921e-6939841b5880/view) | GIF | intermediate |
+| [[Linux] Curl Commands](http://localhost:8765/api/documents/aab5bd5b-4e01-4511-b86b-5af6c95b3427/view) | JPG | beginner |
+| [[Linux] DevopsCheatsheet](http://localhost:8765/api/documents/bac7c8b5-b577-4a8c-b614-1dde63152661/view) | PDF | beginner |
+| [[Linux] Linux FS](http://localhost:8765/api/documents/528e95ad-9d66-4672-811e-77cfaa6fd662/view) | GIF | intermediate |
+| [[Linux] What is LVM](http://localhost:8765/api/documents/b0e5d4f2-e9cb-4619-8065-d47959875cd2/view) | PDF | intermediate |
+| [[Interview Ouestions > Linux] 1738956449752](http://localhost:8765/api/documents/385d0965-5bd0-4d7b-b9a1-9d1295f2c336/view) | PDF | beginner |
+| [[Interview Ouestions > Linux] 1739758169462](http://localhost:8765/api/documents/d8573449-f941-406a-bdcc-5567fc3da7d5/view) | PDF | intermediate |
+| [[Interview Ouestions > Linux] 1741025303181](http://localhost:8765/api/documents/6e8986d5-2201-44da-8d0a-876606ceb3d1/view) | PDF | beginner |
+| [[Interview Ouestions > Linux] 1741228624828](http://localhost:8765/api/documents/56f29976-51a2-4853-bf92-ab0953b37aca/view) | PDF | beginner |
+| [[Interview Ouestions > Linux] 1741588566278](http://localhost:8765/api/documents/f6a3a094-5b49-4886-aa74-4ae71584ce84/view) | PDF | intermediate |
+| [[Interview Ouestions > Linux] 1741678379903](http://localhost:8765/api/documents/c25a395c-49d5-4d89-9aad-77415283ebad/view) | PDF | beginner |
+| [[Interview Ouestions > Linux] 1741682113389](http://localhost:8765/api/documents/a731f05c-8c22-44d9-a652-c8804457969f/view) | PDF | beginner |
+| [[Interview Ouestions > Linux] 1742058246535](http://localhost:8765/api/documents/3040c4db-c832-4c3e-8adc-edcf6a3dedbd/view) | PDF | intermediate |
+| [[Interview Ouestions > Linux] 1742526608815](http://localhost:8765/api/documents/0e91b5ab-bebf-4608-b27d-09e7171354f2/view) | JPG | intermediate |
+| [[Interview Ouestions > Linux] 1745044439807](http://localhost:8765/api/documents/63c9e2ec-016e-41d2-aa09-8c2be1b6c82d/view) | PDF | intermediate |
+| [[Interview Ouestions > Linux] 1745926735252](http://localhost:8765/api/documents/9866d64b-6f56-4752-b4c7-c9d923cf9049/view) | PDF | staff-level |
+| [[Bash Scripting] 1739951943036](http://localhost:8765/api/documents/244bd729-ffb6-4d0f-9a49-a978d4d3a6a1/view) | PDF | intermediate |
+| [[Bash Scripting] 1741491098763](http://localhost:8765/api/documents/976d4b31-e0c4-45c5-b510-c6128eaeb75f/view) | PDF | intermediate |
+| [[Bash Scripting] 1741835354329](http://localhost:8765/api/documents/267f0877-c084-4a0b-9574-6b361a5c2632/view) | PDF | intermediate |
+| [[Bash Scripting] 1741874554309](http://localhost:8765/api/documents/a866f9a4-ec7c-46cc-b62a-133cf60bd856/view) | PDF | intermediate |
+
+
+<AIChatWidget domain="linux-systems" title="Ask AI about Linux & Systems" />

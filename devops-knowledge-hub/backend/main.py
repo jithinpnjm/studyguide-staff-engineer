@@ -469,6 +469,21 @@ def get_study_guide(domain: str):
 _guide_gen_status: dict = {"running": False, "done": 0, "total": 0, "current": "", "errors": []}
 
 
+@app.put("/api/study-guide/{domain}")
+async def save_study_guide_directly(domain: str, body: dict):
+    """Save guide content directly — used when content is generated outside Gemini."""
+    content = body.get("content", "").strip()
+    if not content:
+        raise HTTPException(400, "content is required")
+    doc_count = body.get("doc_count", 0)
+    from pathlib import Path
+    guides_dir = Path(__file__).parent.parent / "study-guides"
+    guides_dir.mkdir(parents=True, exist_ok=True)
+    (guides_dir / f"{domain}.md").write_text(content, encoding="utf-8")
+    database.save_study_guide(domain, content, doc_count)
+    return {"domain": domain, "chars": len(content), "saved": True}
+
+
 @app.post("/api/study-guide/generate-all")
 async def generate_all_study_guides_endpoint(background_tasks: BackgroundTasks):
     global _guide_gen_status

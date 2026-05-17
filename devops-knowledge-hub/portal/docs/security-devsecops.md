@@ -1,4 +1,10 @@
-# Security & DevSecOps — Zero to Hero
+---
+title: "🔐 Security & DevSecOps"
+sidebar_position: 6
+description: "Zero to hero study guide for Security & DevSecOps — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## 🎯 Why This Domain Matters
 
@@ -424,3 +430,23 @@ A1 Broken Access Control → RBAC + AuthZ middleware; A2 Cryptographic Failures 
 8. **Runtime detection closes the gap** — Falco catches what admission controllers miss
 9. **RBAC audit quarterly** — permissions drift over time; unused bindings are attack surface
 10. **Assume breach** — design for the attacker already being inside; east-west controls matter
+
+
+
+---
+
+## 📁 Source Documents
+
+> 6 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[SonarQube] 1743044997847](http://localhost:8765/api/documents/30f47db8-5271-459c-be81-ba8aaedeb5ed/view) | PDF | intermediate |
+| [[Terraform] 1742484778408 (1)](http://localhost:8765/api/documents/fa631ff9-e3a7-457d-902c-5548c094cffa/view) | PDF | intermediate |
+| [[Kubernetes] 1741415798350](http://localhost:8765/api/documents/1094e2f6-7b5c-47e2-a85c-96f2197d05cb/view) | PDF | intermediate |
+| [[Kubernetes] 1741753193057](http://localhost:8765/api/documents/31037995-2de8-4c05-8a4b-3baf919b98b0/view) | PDF | intermediate |
+| [[Kubernetes] 1747111565780](http://localhost:8765/api/documents/55b4f9f1-0e64-4e21-8284-402e03206b9f/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1742535550458](http://localhost:8765/api/documents/108e500a-230e-40ff-b348-ac13a26b2eb6/view) | PDF | staff-level |
+
+
+<AIChatWidget domain="security-devsecops" title="Ask AI about Security & DevSecOps" />

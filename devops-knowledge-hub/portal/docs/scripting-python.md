@@ -1,4 +1,10 @@
-# Python for DevOps/SRE — Zero to Hero
+---
+title: "🐍 Python for DevOps"
+sidebar_position: 15
+description: "Zero to hero study guide for Python for DevOps — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## Why Python for SRE?
 
@@ -491,3 +497,28 @@ Async (`asyncio` + `httpx`) for I/O-bound concurrency (checking 100 endpoints si
 
 **"How do you test scripts that shell out?"**
 Mock `subprocess.run` with `unittest.mock.patch`. For integration tests, use a temp directory with a known fake binary on `PATH`, or spin up a container with the real dependency.
+
+
+
+---
+
+## 📁 Source Documents
+
+> 11 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[Python] 1740664864114](http://localhost:8765/api/documents/974d8978-e45e-47e7-96b1-a07438cfe2ff/view) | PDF | intermediate |
+| [[Python] 1741038570892](http://localhost:8765/api/documents/73209711-f738-4d94-849d-343332e35466/view) | PDF | beginner |
+| [[Python] 1741239986744](http://localhost:8765/api/documents/6fff2590-ca5d-4f4e-9adf-e48af9e74efc/view) | GIF | beginner |
+| [[Python] 1741253261354](http://localhost:8765/api/documents/ac976e53-5c2a-4785-8726-0ff6821eb217/view) | PDF | beginner |
+| [[Python] 1741281074429](http://localhost:8765/api/documents/ce3b65fb-f3e2-48d3-acc5-0fec444c4761/view) | PDF | beginner |
+| [[Python] 1741324724561](http://localhost:8765/api/documents/3e48cc59-e5be-4777-8d9b-f953a3ccaab9/view) | PDF | intermediate |
+| [[Python] 1741333023890](http://localhost:8765/api/documents/f0243b07-94e5-4077-9d17-8c6de8583d5d/view) | PDF | beginner |
+| [[Python] 1741666147747](http://localhost:8765/api/documents/cce7cb8b-2da7-472f-8d07-29c34c79cc4c/view) | PDF | beginner |
+| [[Python] 1743595344907](http://localhost:8765/api/documents/ecaf9ff5-baf4-49e6-8512-e1fa9538c092/view) | PDF | intermediate |
+| [[Interview Ouestions > Python] 1741948994647](http://localhost:8765/api/documents/b781e107-1783-4c8e-8a28-1fad606a2754/view) | PDF | intermediate |
+| [[Interview Ouestions > Python] 1742192621363](http://localhost:8765/api/documents/22187a94-3403-4cbe-b400-2f373854cad0/view) | PDF | intermediate |
+
+
+<AIChatWidget domain="scripting-python" title="Ask AI about Python for DevOps" />

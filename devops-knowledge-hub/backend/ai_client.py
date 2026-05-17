@@ -43,6 +43,12 @@ TASK_MODEL_MAP = {
 }
 
 
+TASK_MAX_TOKENS = {
+    "study_guide": 65536,
+    "extract_concepts": 8192,
+}
+
+
 def get_model(task: str, json_output: bool = False):
     _ensure_configured()
     import google.generativeai as genai
@@ -50,7 +56,7 @@ def get_model(task: str, json_output: bool = False):
     model_name = MODELS[tier]
     config = genai.GenerationConfig(
         temperature=0.2 if json_output else 0.4,
-        max_output_tokens=4096,
+        max_output_tokens=TASK_MAX_TOKENS.get(task, 4096),
         response_mime_type="application/json" if json_output else "text/plain",
     )
     return genai.GenerativeModel(model_name, generation_config=config)

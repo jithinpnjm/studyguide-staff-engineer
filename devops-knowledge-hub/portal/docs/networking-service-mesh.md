@@ -1,4 +1,10 @@
-# Networking & Service Mesh — Zero to Hero
+---
+title: "🌐 Networking & Service Mesh"
+sidebar_position: 7
+description: "Zero to hero study guide for Networking & Service Mesh — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## 🎯 Why This Domain Matters
 
@@ -405,3 +411,33 @@ DNS lookup (CoreDNS) → ClusterIP VIP → iptables DNAT rule (kube-proxy) or eB
 8. **Connection pools are not optional at scale** — direct DB connections in each app instance do not scale
 9. **VPC CIDR blocks are permanent** — plan for 5 years of growth; exhaustion is painful to fix
 10. **Service mesh is a platform decision** — standardize one, onboard all services, partial adoption misses the value
+
+
+
+---
+
+## 📁 Source Documents
+
+> 16 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[Networking] 1738955510720](http://localhost:8765/api/documents/33d80aff-b17b-495d-9396-1fe2254e9923/view) | GIF | beginner |
+| [[Networking] 1739452806105](http://localhost:8765/api/documents/0a3f8d11-c6e8-4ba9-8028-2468793ffedb/view) | PDF | intermediate |
+| [[Networking] 1739673064982](http://localhost:8765/api/documents/d1ce8ada-060b-4933-9c3d-a4c1199ed76e/view) | PDF | intermediate |
+| [[Networking] 1740977831021](http://localhost:8765/api/documents/407de76a-63db-4631-9478-67f2a4aedc3e/view) | PDF | intermediate |
+| [[Networking] 1741058781601](http://localhost:8765/api/documents/767ff50d-7255-43ee-abfd-1c495882c2c1/view) | GIF | intermediate |
+| [[Networking] 1741181628357](http://localhost:8765/api/documents/d5771dce-c34f-450a-bf37-4f792cddb071/view) | GIF | beginner |
+| [[Networking] 1741621496189](http://localhost:8765/api/documents/c4f10060-ec9b-4ef1-998a-7b94863c2ab9/view) | PDF | beginner |
+| [[Networking] 1741812166393](http://localhost:8765/api/documents/8e182cf1-c776-48d5-bed5-24f0269d8352/view) | PDF | intermediate |
+| [[Networking] 1741952549699](http://localhost:8765/api/documents/42bc85cc-96ba-4518-b0d1-e258088b5845/view) | PDF | intermediate |
+| [[Networking] 1742142781707](http://localhost:8765/api/documents/988093a7-b44b-43fd-a07d-f38b4215de43/view) | GIF | intermediate |
+| [[Networking] 1742451526995](http://localhost:8765/api/documents/12b69ffa-21ed-416e-bb5e-0022e51b8d1e/view) | PDF | intermediate |
+| [[Networking] 1742703649267](http://localhost:8765/api/documents/6cacfd3e-3a09-4e61-8a7d-ff745ee56f14/view) | PDF | intermediate |
+| [[Networking] 1742917401613](http://localhost:8765/api/documents/ac724d76-b8d2-420e-9c50-2d894f78ae84/view) | PDF | intermediate |
+| [[Networking] 1743956653585](http://localhost:8765/api/documents/a0935b00-b313-439d-9d6d-ef8398d99c96/view) | GIF | beginner |
+| [[Networking and Load Balancing] 1741300806823](http://localhost:8765/api/documents/81a85cfd-c6c6-445e-9e94-98220616247a/view) | PDF | intermediate |
+| [[Forward proxy VS Reverse proxy] 1741925310987](http://localhost:8765/api/documents/42969fe7-cb97-4a7b-8662-b6a7878e1794/view) | JPG | intermediate |
+
+
+<AIChatWidget domain="networking-service-mesh" title="Ask AI about Networking & Service Mesh" />

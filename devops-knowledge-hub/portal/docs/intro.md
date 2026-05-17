@@ -1,44 +1,48 @@
 ---
 title: DevOps Knowledge Hub
-description: Staff & Principal SRE Study Portal
+sidebar_position: 0
+description: Staff & Principal SRE — Zero to Hero Study Portal
 ---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 # DevOps Knowledge Hub
 
-> **317 documents** across 11 domains
+> **317 source documents** · **13 study guides generated** · Staff/Principal SRE level
 
-_Last regenerated: 2026-05-16 21:19_
+_Last updated: 2026-05-17 09:37_
 
-## Documents by domain
+This portal is your comprehensive study companion. Each domain page is a **fully written, AI-synthesised
+"Zero to Hero" guide** covering concepts, tools, architecture patterns, failure modes, and interview prep —
+synthesised from your personal document library.
 
-| Domain | Count |
-|--------|-------|
-| ☸️ [Kubernetes & Containers](kubernetes-containers/study-guide) | 82 |
-| 🚀 [General DevOps](general-devops/study-guide) | 71 |
-| ☁️ [Cloud Platforms](cloud-platforms/study-guide) | 38 |
-| 🏗️ [Infrastructure as Code](infrastructure-as-code/study-guide) | 35 |
-| 🐧 [Linux & Systems](linux-systems/study-guide) | 35 |
-| 🔄 [CI/CD & GitOps](cicd-gitops/study-guide) | 25 |
-| 🌐 [Networking & Service Mesh](networking-service-mesh/study-guide) | 16 |
-| 🗄️ [Databases & Storage](databases-storage/study-guide) | 6 |
-| 📊 [Observability](observability/study-guide) | 4 |
-| 🛠️ [Platform Engineering](platform-engineering/study-guide) | 3 |
-| 🔐 [Security & DevSecOps](security-devsecops/study-guide) | 2 |
+## 📚 Domains
 
-## Quick stats
+| Domain | Docs | Guide |
+|--------|------|-------|
+| ☸️ [Kubernetes & Containers](kubernetes-containers) | 78 | ✅ |
+| 🔄 [CI/CD & GitOps](cicd-gitops) | 30 | ✅ |
+| 📊 [Observability](observability) | 4 | ✅ |
+| ☁️ [Cloud Platforms](cloud-platforms) | 38 | ✅ |
+| 🏗️ [Infrastructure as Code](infrastructure-as-code) | 33 | ✅ |
+| 🔐 [Security & DevSecOps](security-devsecops) | 6 | ✅ |
+| 🌐 [Networking & Service Mesh](networking-service-mesh) | 16 | ✅ |
+| 🐧 [Linux & Systems](linux-systems) | 31 | ✅ |
+| 🗄️ [Databases & Storage](databases-storage) | 6 | ✅ |
+| 🛠️ [Platform Engineering](platform-engineering) | 4 | ✅ |
+| 🐍 [Python for DevOps](scripting-python) | 11 | ✅ |
+| 💻 [Bash & Shell Scripting](scripting-bash-shell) | 4 | ✅ |
+| 🚀 [General DevOps](general-devops) | 56 | ✅ |
 
-| Metric | Value |
-|--------|-------|
-| Total documents | 317 |
-| Unread | 314 |
-| Concept cards generated | 0 |
-| Study guides | 0 |
-| Uncategorized | 0 |
+**Legend:** ✅ Study guide ready · ⏳ Generate from Admin UI → Study Guides tab
 
-## How to use this portal
+## 🚀 Quick Start
 
-- Browse by domain in the sidebar
-- Each domain has a **📖 Study Guide** — AI-synthesized staff-level overview
-- Individual document pages have an **inline viewer** and **AI chat**
-- Use **CMD+K** to search across all documents
-- Click the microphone icon for voice Q&A
+1. Pick a domain below and read the full study guide
+2. Use the **🤖 AI chat button** on any page to ask questions
+3. Add more documents via [Admin UI](http://localhost:3000) → Add Content
+4. Regenerate guides as your library grows: Admin UI → Study Guides → Generate All
+
+---
+
+<AIChatWidget title="Ask AI anything about DevOps" />

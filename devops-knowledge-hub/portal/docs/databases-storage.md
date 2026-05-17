@@ -1,4 +1,10 @@
-# Databases & Storage — Zero to Hero
+---
+title: "🗄️ Databases & Storage"
+sidebar_position: 10
+description: "Zero to hero study guide for Databases & Storage — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## 🎯 Why This Domain Matters
 
@@ -472,3 +478,23 @@ Expand-contract: add new column nullable, deploy dual-write code, background bac
 13. **DynamoDB: model access patterns first, schema second** — opposite of relational design
 14. **Synchronous replication for financial data** — async = potential data loss on failover
 15. **Operators for databases on Kubernetes** — CloudNativePG encodes DBA expertise into automation
+
+
+
+---
+
+## 📁 Source Documents
+
+> 6 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[SQL] 1742608741345](http://localhost:8765/api/documents/ad51fafd-90b9-4ce4-95ec-69a316fff1c8/view) | PDF | beginner |
+| [[SQL] 1742842635695](http://localhost:8765/api/documents/25dea5fd-094c-4fd1-b628-159884081ec2/view) | PDF | intermediate |
+| [[SQL] 1741579681964](http://localhost:8765/api/documents/4cb3fbc7-45d0-4087-9d32-081729076a96/view) | JPG | intermediate |
+| [[Kafka] 1717051812367](http://localhost:8765/api/documents/6e4e7104-59c1-4fa7-8de4-edf55677eeb2/view) | PDF | intermediate |
+| [[Kafka] 1743221022913](http://localhost:8765/api/documents/d4daec79-7975-4a6d-8336-d7d271f90f03/view) | GIF | intermediate |
+| [[Kafka] 1743868191016](http://localhost:8765/api/documents/7ea6cce5-8e6f-4c8d-a456-a0401af609e6/view) | GIF | intermediate |
+
+
+<AIChatWidget domain="databases-storage" title="Ask AI about Databases & Storage" />

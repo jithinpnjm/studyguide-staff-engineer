@@ -1,4 +1,10 @@
-# General DevOps — Zero to Hero
+---
+title: "🚀 General DevOps"
+sidebar_position: 19
+description: "Zero to hero study guide for General DevOps — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## 🎯 Why This Domain Matters
 
@@ -401,3 +407,73 @@ Error budget policy: when error budget is healthy, features take priority. When 
 13. **Golden paths are better than mandates** — make the right thing easy, don't just prohibit the wrong thing
 14. **Incidents are learning opportunities** — the org that learns fastest from incidents outpaces the org that has none
 15. **Staff impact is measured in team outcomes** — your success is their success; optimize for multiplying others
+
+
+
+---
+
+## 📁 Source Documents
+
+> 56 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[Kubernetes] 1741086805451](http://localhost:8765/api/documents/f217548f-2688-486b-ba63-17c67968dbdd/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1739350186567](http://localhost:8765/api/documents/9e2377fc-1bdf-43d5-81c5-7ae407558a4c/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1740038451939](http://localhost:8765/api/documents/4070e0f6-9123-4253-a78a-ae59b71daa6a/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1741057376527](http://localhost:8765/api/documents/f171ab3d-67cf-473a-9209-cdfd2b773bad/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1741158897242](http://localhost:8765/api/documents/0b96803b-b742-452f-b42f-5e5478c4f007/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1741289776765](http://localhost:8765/api/documents/eea43ff5-4aeb-4718-af8a-3da74746a4d5/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1741690657142](http://localhost:8765/api/documents/7beb91e7-529d-4483-b21d-2f8e235f55b8/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1742792006184](http://localhost:8765/api/documents/15c7de75-b84c-498f-9184-bc6dc560df47/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1742908693407](http://localhost:8765/api/documents/3434cf09-06e2-4bcc-a00a-011a799cb3c0/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1743480014957](http://localhost:8765/api/documents/c545703d-0988-4b1b-8500-6dcfa5b8a20f/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1744087241476](http://localhost:8765/api/documents/de1827f4-4d38-45d2-a095-ec2b250a7a01/view) | PDF | intermediate |
+| [[DevOps Project] 1737207662757](http://localhost:8765/api/documents/662d5092-18ce-4e74-a4a8-cfb4608f8110/view) | PDF | intermediate |
+| [[DevOps Project] 1738955159666](http://localhost:8765/api/documents/390eab01-cde0-45bf-abe5-30d75548a680/view) | PDF | intermediate |
+| [[DevOps Project] 1740654019583](http://localhost:8765/api/documents/fd9df949-acb0-4fff-95b3-0bf374a48a53/view) | PDF | intermediate |
+| [[DevOps Project] 1740729611936](http://localhost:8765/api/documents/1f7c5e60-6e5a-4546-b2f8-dc7152d78e9c/view) | PDF | intermediate |
+| [[DevOps Project] 1741098367133](http://localhost:8765/api/documents/c1d2139f-317e-477e-91d5-5c255206df0c/view) | PDF | intermediate |
+| [[DevOps Project] 1741369679997](http://localhost:8765/api/documents/05ed8bde-59f1-4142-b368-0349cc406ba9/view) | PDF | intermediate |
+| [[DevOps Project] 1741635839744](http://localhost:8765/api/documents/3aca18da-59e2-4624-b787-77340c37c6ab/view) | PDF | intermediate |
+| [[DevOps Project] 1741756911094](http://localhost:8765/api/documents/69bb4ab5-36a0-4a73-adc8-1733453b7e87/view) | PDF | intermediate |
+| [[DevOps Project] 1741790293486](http://localhost:8765/api/documents/95536531-1826-47d1-a4d4-9bdeda063434/view) | PDF | intermediate |
+| [[DevOps Project] 1742311863484](http://localhost:8765/api/documents/709c45af-bbae-4055-b8d5-f62752335eef/view) | PDF | intermediate |
+| [[DevOps Project] 1742966572145](http://localhost:8765/api/documents/c9c2b99c-8418-483b-88f9-a9fc1a654e57/view) | PDF | intermediate |
+| [[DevOps Project] 1743266590512](http://localhost:8765/api/documents/c58117a6-57cd-43d4-86d1-3f107023b27e/view) | PDF | intermediate |
+| [[DevOps Project] 1743334831320](http://localhost:8765/api/documents/9a0a0e93-65a5-427f-a546-259060a656c9/view) | PDF | intermediate |
+| [[DevOps Project] 1743766195959](http://localhost:8765/api/documents/3a6f7841-7006-406e-b8e6-9674045cdaf7/view) | PDF | intermediate |
+| [[Devops Basics] 1736914849295](http://localhost:8765/api/documents/5a76b696-1004-4d5f-8940-c44230532228/view) | JPG | intermediate |
+| [[Devops Basics] 1737370337903](http://localhost:8765/api/documents/bc3c152b-588e-4065-a960-7407da1ce665/view) | PDF | intermediate |
+| [[Devops Basics] 1738331990586](http://localhost:8765/api/documents/22e16ef8-fe08-4b6e-9d87-ed5897dbfec8/view) | JPG | intermediate |
+| [[Devops Basics] 1739335485797](http://localhost:8765/api/documents/ee212ccf-fc6f-440e-9096-d6123feea37f/view) | PDF | intermediate |
+| [[Devops Basics] 1740449948723](http://localhost:8765/api/documents/983f349d-e36c-4662-b661-8b33d305a784/view) | JPG | intermediate |
+| [[Devops Basics] 1741064431881](http://localhost:8765/api/documents/5de999d0-64d6-4587-9d25-a9fb2ef59583/view) | PDF | intermediate |
+| [[Devops Basics] 1741097780729](http://localhost:8765/api/documents/0cce284e-4841-4491-82e7-c6a2f51ca0df/view) | PDF | intermediate |
+| [[Devops Basics] 1741145965555](http://localhost:8765/api/documents/bdb3f356-ec5c-48f4-9755-1884e6808307/view) | PDF | intermediate |
+| [[Devops Basics] 1741161356897](http://localhost:8765/api/documents/b75a2293-9be5-43d1-ba06-e21456797b15/view) | PDF | intermediate |
+| [[Devops Basics] 1741237198047](http://localhost:8765/api/documents/582f3497-1d4b-4939-8228-c8c11741c67b/view) | PDF | intermediate |
+| [[Devops Basics] 1741340858440](http://localhost:8765/api/documents/07d7e349-fd15-49d0-9c7d-707e1344a201/view) | PDF | intermediate |
+| [[Devops Basics] 1741345339087](http://localhost:8765/api/documents/32d051a4-3fed-43d5-9b9f-38329723200e/view) | PDF | intermediate |
+| [[Devops Basics] 1741712739616](http://localhost:8765/api/documents/225b4056-aa56-46fa-b5e7-ce6b66523e04/view) | PDF | intermediate |
+| [[Devops Basics] 1741842043430](http://localhost:8765/api/documents/0353c415-c220-49ef-ad7d-59c11ff83497/view) | PDF | intermediate |
+| [[Devops Basics] 1742121097608](http://localhost:8765/api/documents/d141526b-e364-426d-9c89-c7cf87757102/view) | JPG | intermediate |
+| [[Devops Basics] 1742212225327](http://localhost:8765/api/documents/eeb4c1b5-13f0-4c18-a171-4988e33c779b/view) | PDF | intermediate |
+| [[Devops Basics] 1742385077227](http://localhost:8765/api/documents/80750ca5-0696-474b-9be3-b8d2a5708745/view) | PDF | intermediate |
+| [[Devops Basics] 1742987096763](http://localhost:8765/api/documents/e502add0-b5f0-49b6-8cf3-a00e7ba586a6/view) | PDF | intermediate |
+| [[Devops Basics] 1743017528482](http://localhost:8765/api/documents/7369639c-c231-4d6b-b8ce-70d6b5480b4a/view) | PDF | intermediate |
+| [[Devops Basics] 1743136473717](http://localhost:8765/api/documents/50f1f332-fc1b-44d4-a063-ec8ae82749d7/view) | PDF | intermediate |
+| [[Devops Basics] 1743212462526](http://localhost:8765/api/documents/4614cfb9-6798-49cf-974a-0a12ad8ffe2f/view) | PDF | intermediate |
+| [[Devops Basics] 1743354678448](http://localhost:8765/api/documents/f09d6758-657a-433d-9f6e-5cfab889c7b1/view) | PDF | intermediate |
+| [[Devops Basics] 1743491078937](http://localhost:8765/api/documents/432d457b-ebf8-434b-a044-e1b82456c662/view) | PDF | intermediate |
+| [[Devops Basics] 1743572145128](http://localhost:8765/api/documents/acb00d11-1f59-4306-9880-64be3bd4cb59/view) | PDF | intermediate |
+| [[Devops Basics] 1743733196853](http://localhost:8765/api/documents/69b66cd2-8b6c-4d5f-931a-991ac6ebd0b2/view) | PDF | intermediate |
+| [[Devops Basics] 1743820734698](http://localhost:8765/api/documents/5c34dcd6-8e52-4cd0-9f57-8d80eea30c22/view) | PDF | intermediate |
+| [[Devops Basics] 1743972148538](http://localhost:8765/api/documents/061deb0e-e494-4452-883f-b9839b25a5d4/view) | PDF | intermediate |
+| [[Devops Basics] 1744281264972](http://localhost:8765/api/documents/3f51c742-309e-44fc-a0f9-bc7fe8c28ae3/view) | PDF | intermediate |
+| [[Devops Basics] 1744792519484](http://localhost:8765/api/documents/81c2fcc1-4a06-4732-8445-c997833ffeb9/view) | PDF | intermediate |
+| [[General Topics] 1737442589895](http://localhost:8765/api/documents/19a6699a-a598-49f6-a7d4-62b2f1954221/view) | JPG | intermediate |
+| [[General Topics] 1738956549511](http://localhost:8765/api/documents/efc91eaf-5e71-4dbd-8950-ca44516c6ed0/view) | JPG | intermediate |
+
+
+<AIChatWidget domain="general-devops" title="Ask AI about General DevOps" />

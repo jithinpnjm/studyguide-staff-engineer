@@ -1,4 +1,10 @@
-# CI/CD & GitOps — Zero to Hero
+---
+title: "🔄 CI/CD & GitOps"
+sidebar_position: 2
+description: "Zero to hero study guide for CI/CD & GitOps — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## 🎯 Why This Domain Matters
 
@@ -421,3 +427,47 @@ Expand-contract pattern: (1) add column nullable, (2) write to both old+new, (3)
 13. **Secret scanning in pre-commit is the last line of defense** — committed secrets are compromised
 14. **Quality gates must be binary** — warning-only gates are no gates at all
 15. **Design for developer experience first** — the best pipeline is one that developers trust and never work around
+
+
+
+---
+
+## 📁 Source Documents
+
+> 30 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[SonarQube] 1740567845276](http://localhost:8765/api/documents/699f7255-3756-4944-a41d-7b0f9d2762c6/view) | PDF | intermediate |
+| [[Terraform] 1742535124517](http://localhost:8765/api/documents/413d5837-a4dd-4e4e-8770-e3a41e387ff3/view) | PDF | intermediate |
+| [[Kubernetes] 1741982484517](http://localhost:8765/api/documents/fd216c2c-db69-4047-98ce-e51cab099c39/view) | PDF | advanced |
+| [[Github Action] 1743347890536](http://localhost:8765/api/documents/dc9902a1-517f-45df-a20f-693f492451ea/view) | PDF | intermediate |
+| [[Interview Ouestions > Azure Devops] 1743182144138](http://localhost:8765/api/documents/f4dba52e-8f0f-49b6-b19e-d40bf91b055d/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1741085969236](http://localhost:8765/api/documents/ec731113-983c-4eab-84a5-3b4e07484e62/view) | PDF | intermediate |
+| [[Interview Ouestions > Devops] 1743105247143](http://localhost:8765/api/documents/98755c76-2eba-4330-8590-15b4dd9a0f01/view) | PDF | intermediate |
+| [[Interview Ouestions > Jenkins] 1742587738930](http://localhost:8765/api/documents/917dd181-58a2-44a5-b98e-8973573c90dd/view) | PDF | intermediate |
+| [[Interview Ouestions > Jenkins] 1742998084619](http://localhost:8765/api/documents/3ea45dcd-8d77-45c0-89b5-0d767e5344f1/view) | PDF | intermediate |
+| [[Jenkins] 1716983029017](http://localhost:8765/api/documents/948b361e-e84c-4299-8d25-14977b428fd4/view) | PDF | intermediate |
+| [[Jenkins] 1717577931872](http://localhost:8765/api/documents/a047a719-3333-4760-98f5-48ce60123915/view) | PDF | intermediate |
+| [[Jenkins] 1735258490619](http://localhost:8765/api/documents/9bfbda92-0f09-4737-82b9-a7067751e493/view) | PDF | intermediate |
+| [[Jenkins] 1739519968806](http://localhost:8765/api/documents/7e7af140-0d8d-4bbf-af6d-0553ec0da098/view) | PDF | intermediate |
+| [[Jenkins] 1740831168229](http://localhost:8765/api/documents/f5b28a49-d12b-4d09-b9d8-bfc2649035c6/view) | GIF | intermediate |
+| [[Jenkins] 1741510633643](http://localhost:8765/api/documents/d922f7ae-4e68-403d-8462-673b46de209f/view) | PDF | intermediate |
+| [[Jenkins] 1741625031410](http://localhost:8765/api/documents/dc99bf8c-e0e4-4954-a9cd-5ba69bac63d8/view) | PDF | intermediate |
+| [[Jenkins] 1742878809115](http://localhost:8765/api/documents/1b90f9fd-faf7-40ef-8061-1a83eaabb2b7/view) | PDF | intermediate |
+| [[ArgoCD] 1743618800322](http://localhost:8765/api/documents/7225d464-6c0e-44b0-9293-f48ef945884d/view) | PDF | intermediate |
+| [[Azure DevOps] 1740145317159](http://localhost:8765/api/documents/41aa9076-0b8f-4e62-b4be-36bc6daae103/view) | PDF | intermediate |
+| [[Azure-Devops] 1741939519541](http://localhost:8765/api/documents/1848dc04-1e93-4b51-a8d9-c978596e1a4a/view) | PDF | intermediate |
+| [[Azure-Devops] 1742899728232](http://localhost:8765/api/documents/9e860ec9-8597-491c-9c0c-2270d9826ac5/view) | PDF | intermediate |
+| [[Git] 1739357836335](http://localhost:8765/api/documents/5e693bb2-a8af-48b0-9f06-14c05b6b0e15/view) | PDF | intermediate |
+| [[Git] 1740051760233](http://localhost:8765/api/documents/d73c2cb9-526f-456f-9c7b-5a9474ecc10c/view) | PDF | intermediate |
+| [[Git] 1740577213205](http://localhost:8765/api/documents/2291323f-0453-4ac6-84fc-fca985318de5/view) | PDF | intermediate |
+| [[Git] 1740913277336](http://localhost:8765/api/documents/a1a93cde-8bdb-4c4b-84c2-5e8b8a1b303b/view) | GIF | intermediate |
+| [[Git] 1741064210999](http://localhost:8765/api/documents/8a09b2a8-569f-4119-b6ba-fa8eaaf188b2/view) | JPG | intermediate |
+| [[Git] 1744261184001](http://localhost:8765/api/documents/a30114cf-8ddf-490d-b87b-9e5ade7250ed/view) | PDF | intermediate |
+| [[Github Action] 1739811510268](http://localhost:8765/api/documents/d60d49b0-4dbe-42eb-bccd-2a00a527243e/view) | PDF | intermediate |
+| [[Github Action] 1742387729023](http://localhost:8765/api/documents/4c828e7d-ac95-4ced-b4d9-8c894aeb46f6/view) | PDF | intermediate |
+| [[Github Action] 1742550678420](http://localhost:8765/api/documents/ae40dc6b-4bb9-4905-a8f8-b7b4471a9d19/view) | PDF | intermediate |
+
+
+<AIChatWidget domain="cicd-gitops" title="Ask AI about CI/CD & GitOps" />

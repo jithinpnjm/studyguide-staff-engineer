@@ -1,4 +1,10 @@
-# Infrastructure as Code — Zero to Hero
+---
+title: "🏗️ Infrastructure as Code"
+sidebar_position: 5
+description: "Zero to hero study guide for Infrastructure as Code — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## 🎯 Why This Domain Matters
 
@@ -417,3 +423,50 @@ State maps configuration to real resource IDs. Without state, Terraform cannot k
 13. **Drift detection via scheduled plan** — catch out-of-band changes before they cause incidents
 14. **Environments should be code-identical** — only variables differ between prod and staging
 15. **Provider version pinning is mandatory** — unexpected provider upgrades break plans
+
+
+
+---
+
+## 📁 Source Documents
+
+> 33 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [Ever tried creating 40+ resources in Terraform… manually?I did. And trust me — it wasn’t pretty.It started with a simple task:“Create multiple resourc](http://localhost:8765/api/documents/278c7c8d-27a5-4d0e-a207-13224c964e78/view) | PDF | intermediate |
+| [🔷 Terraform Commands every Cloud & DevOps Engineer must know.I spent weeks figuring these out the hard way.So you don't have to. 👇Here's what's insi](http://localhost:8765/api/documents/a027f48c-1d68-48be-84ca-3e6dba73321e/view) | PDF | beginner |
+| [[Terraform] 1717830360443](http://localhost:8765/api/documents/4c8ba86b-77d0-4a92-83d1-93f84fb633ec/view) | PDF | intermediate |
+| [[Terraform] 1736593028339](http://localhost:8765/api/documents/70c9b615-363d-4508-b30c-48b59160aea8/view) | PDF | intermediate |
+| [[Terraform] 1739757834489](http://localhost:8765/api/documents/a57a3d19-45c2-42fd-b637-893080fae455/view) | PDF | beginner |
+| [[Terraform] 1740494163216](http://localhost:8765/api/documents/4a05c405-8b3d-4637-a0b1-fae7b8e18611/view) | PDF | intermediate |
+| [[Terraform] 1740568379524](http://localhost:8765/api/documents/7194c138-4199-4e41-8d8f-6bdf558c4225/view) | JPG | intermediate |
+| [[Terraform] 1740933815319](http://localhost:8765/api/documents/cb85e86e-ac47-47cc-be29-d1b22987866a/view) | GIF | intermediate |
+| [[Terraform] 1740988836293](http://localhost:8765/api/documents/897459b7-00ed-41d7-ae55-038afc3697b0/view) | JPG | beginner |
+| [[Terraform] 1741005142596](http://localhost:8765/api/documents/d07da1a2-1dfb-4d79-8acc-eb2a146729dd/view) | PDF | intermediate |
+| [[Terraform] 1741083320866](http://localhost:8765/api/documents/54f73e2a-fc5b-45ab-baf2-95efa4e42c9a/view) | PDF | intermediate |
+| [[Terraform] 1741199449054](http://localhost:8765/api/documents/9d3fcbd0-dbd9-41f7-9da3-226049e1e3a8/view) | PDF | beginner |
+| [[Terraform] 1742329415810](http://localhost:8765/api/documents/fb705b97-997e-4f4a-b068-605ee311df36/view) | PDF | advanced |
+| [[Terraform] 1742554001206](http://localhost:8765/api/documents/3ced7657-d5ad-4eb4-9c92-2f006511cbcb/view) | PDF | intermediate |
+| [[Interview Ouestions > Terraform] 1742118855439](http://localhost:8765/api/documents/836b9728-8a3e-4402-99e5-fcbd253a1667/view) | PDF | intermediate |
+| [[Interview Ouestions > Terraform] 1743042112556](http://localhost:8765/api/documents/9d7b5e4b-a689-4a6b-84c9-411b0964ddca/view) | PDF | intermediate |
+| [[Interview Ouestions > Terraform] 1743698850584](http://localhost:8765/api/documents/a9d6f0b6-12c1-46da-a9e8-281e741f90d4/view) | PDF | intermediate |
+| [[Ansible] 1742841059776](http://localhost:8765/api/documents/79568eb5-efed-482e-ad51-a82aa8fe71d6/view) | PDF | intermediate |
+| [[Ansible] 1742962506665](http://localhost:8765/api/documents/95d3118e-fc5d-4d87-89b4-e3eaa6b1e292/view) | PDF | intermediate |
+| [[Ansible] 1743103114439](http://localhost:8765/api/documents/00b9b043-d500-45bc-b905-f3710ad00a41/view) | PDF | intermediate |
+| [[Ansible] 1745639523662](http://localhost:8765/api/documents/198bb52d-e2f2-4650-9e21-147b47ed95da/view) | PDF | intermediate |
+| [[Ansible Project] 1742935190645](http://localhost:8765/api/documents/ab1ba151-1f1a-45f7-8e96-82f4ad64a1c3/view) | PDF | intermediate |
+| [[Ansible] 1716535623125](http://localhost:8765/api/documents/ec4ca2a3-45a1-44bd-9758-f3c0ba9bfa59/view) | PDF | intermediate |
+| [[Ansible] 1716550574444](http://localhost:8765/api/documents/42d94b8d-a7cb-453a-9d97-001555a909f4/view) | PDF | intermediate |
+| [[Ansible] 1716969662087](http://localhost:8765/api/documents/c4912e44-5c0c-4a1e-96d6-431f0eab8697/view) | PDF | intermediate |
+| [[Ansible] 1737026027284](http://localhost:8765/api/documents/df98f6fa-ac3b-4f32-a7f1-1dff55096827/view) | PDF | intermediate |
+| [[Ansible] 1737034905202](http://localhost:8765/api/documents/f2112e8a-d135-4c22-9699-a1f50565cef8/view) | PDF | intermediate |
+| [[Ansible] 1737467766708](http://localhost:8765/api/documents/12132481-2c93-4809-97fe-efe4634b10c4/view) | PDF | intermediate |
+| [[Ansible] 1738957091302](http://localhost:8765/api/documents/168a1e97-5260-4b70-96b6-f2bf3cc691b9/view) | PDF | intermediate |
+| [[Ansible] 1739454856220](http://localhost:8765/api/documents/1fb4de22-074b-4266-8eda-0ab8fa9eeb8c/view) | PDF | intermediate |
+| [[Ansible] 1741161475316](http://localhost:8765/api/documents/64d4ab9f-9bce-4fd7-aab4-99c799a3c9ae/view) | PDF | intermediate |
+| [[Ansible] 1742555646606](http://localhost:8765/api/documents/47c44c27-3129-48cf-8cc8-cdba0ade36c0/view) | JPG | intermediate |
+| [[Ansible] 1742747990462](http://localhost:8765/api/documents/944b1f96-7071-414e-84e2-864ac11a1a72/view) | PDF | intermediate |
+
+
+<AIChatWidget domain="infrastructure-as-code" title="Ask AI about Infrastructure as Code" />

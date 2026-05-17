@@ -1,4 +1,10 @@
-# Observability — Zero to Hero
+---
+title: "📊 Observability"
+sidebar_position: 3
+description: "Zero to hero study guide for Observability — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## 🎯 Why This Domain Matters
 
@@ -364,3 +370,21 @@ Monitoring: checking known-unknowns (is the service up? Is CPU high?). Observabi
 8. **Alert fatigue kills on-call culture** — >10 alerts per shift = something needs tuning, not acknowledging
 9. **Loki is Prometheus for logs** — same query pattern, much cheaper than Elasticsearch at scale
 10. **Runbooks must answer: what, why, and what to do** — incomplete runbooks waste incident response time
+
+
+
+---
+
+## 📁 Source Documents
+
+> 4 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[Prometheus+Grafana] 1741106482909](http://localhost:8765/api/documents/5203a528-59d3-4f0d-8673-c1afa3d27f3a/view) | PDF | intermediate |
+| [[Prometheus+Grafana] 1741579830045](http://localhost:8765/api/documents/6c8c8c2b-fe2c-4dcb-8a83-17c015d231d0/view) | PDF | intermediate |
+| [[Prometheus+Grafana] 1742060929644](http://localhost:8765/api/documents/a809c9f4-40d4-482e-a9f3-0dfe2ad581e2/view) | PDF | intermediate |
+| [[Grafana+Prometheus] 1738604702921](http://localhost:8765/api/documents/d2060a34-e60b-49a4-a6e9-00260acdeb54/view) | PDF | intermediate |
+
+
+<AIChatWidget domain="observability" title="Ask AI about Observability" />

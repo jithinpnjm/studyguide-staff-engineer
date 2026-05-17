@@ -1,4 +1,10 @@
-# Cloud Platforms — Zero to Hero
+---
+title: "☁️ Cloud Platforms"
+sidebar_position: 4
+description: "Zero to hero study guide for Cloud Platforms — concepts, tools, architecture, production operations, and interview prep."
+---
+
+import AIChatWidget from '@site/src/components/AIChatWidget';
 
 ## 🎯 Why This Domain Matters
 
@@ -357,3 +363,55 @@ Data stored redundantly across multiple devices in multiple facilities. Reed-Sol
 13. **Multi-cloud = 2x complexity** — legitimately useful when different teams have different best-fit clouds, not for "resilience"
 14. **Permission boundaries constrain privilege escalation** — every team that creates IAM roles needs permission boundaries
 15. **Cost visibility drives culture** — showback dashboards make teams accountable without policy enforcement
+
+
+
+---
+
+## 📁 Source Documents
+
+> 38 documents ingested in this domain. These are the references the study guide was synthesised from.
+
+| Title | Type | Level |
+|-------|------|-------|
+| [[Interview Ouestions > AWS] 1740481218475](http://localhost:8765/api/documents/6763812a-0c43-459c-9ffb-fd718547d150/view) | PDF | intermediate |
+| [[Interview Ouestions > AWS] 1742299190477](http://localhost:8765/api/documents/57f1e37d-b908-4c72-a7f2-b0fdb28e1d6c/view) | PDF | intermediate |
+| [[Interview Ouestions > AWS] 1742594468346](http://localhost:8765/api/documents/f3a36d99-543e-4b51-9ecf-15a532e8d884/view) | PDF | intermediate |
+| [[Interview Ouestions > AWS] 1742907702778](http://localhost:8765/api/documents/6b4204c9-fdb6-4a16-82ac-1ba7798cbe51/view) | PDF | intermediate |
+| [[Interview Ouestions > AWS] 1743213934595](http://localhost:8765/api/documents/259d170c-e42d-4640-a1c9-df3f8a01ec47/view) | PDF | intermediate |
+| [[Interview Ouestions > AWS] 1744341582188](http://localhost:8765/api/documents/21b2d4ee-05a0-499e-94d7-6bdec9572199/view) | PDF | beginner |
+| [[Interview Ouestions > AWS] 1744528152341](http://localhost:8765/api/documents/12d1ea60-7e79-4170-a97a-5e16d1eaecab/view) | PDF | intermediate |
+| [[Cloud] 1741014066651](http://localhost:8765/api/documents/28e3745f-f33d-4adf-9bfd-0dfee031da73/view) | GIF | intermediate |
+| [[Cloud] 1742486017920](http://localhost:8765/api/documents/b839cd4d-a1dd-4427-8be1-7a5f5530284f/view) | JPEG | intermediate |
+| [[AWS] 1715766666676](http://localhost:8765/api/documents/365845b0-ea5a-40b2-8e47-43fb47107b92/view) | PDF | intermediate |
+| [[AWS] 1715777988770](http://localhost:8765/api/documents/1b6aef68-09a4-4b62-b44e-0f572bc42f88/view) | PDF | intermediate |
+| [[AWS] 1715841621629](http://localhost:8765/api/documents/4bec8eaa-275c-4691-a2aa-f4c44951eeae/view) | PDF | intermediate |
+| [[AWS] 1715853766265](http://localhost:8765/api/documents/c43eab7e-20a3-42f5-a7b5-58218b2cd159/view) | PDF | intermediate |
+| [[AWS] 1715931207787](http://localhost:8765/api/documents/20e2f452-4dab-40d1-995b-503dec48b067/view) | PDF | intermediate |
+| [[AWS] 1715947755978](http://localhost:8765/api/documents/c6117c5f-a7a3-4dee-acb8-6e11568c2858/view) | PDF | intermediate |
+| [[AWS] 1717401305606](http://localhost:8765/api/documents/7aa95fa4-89fe-47ef-9270-9e8aeee45bc5/view) | PDF | intermediate |
+| [[AWS] 1739433738237](http://localhost:8765/api/documents/c77c520e-274d-4200-a885-930eb485b020/view) | PDF | intermediate |
+| [[AWS] 1740139007494](http://localhost:8765/api/documents/fbeea5e0-2f32-46dd-a693-b964d2df29a2/view) | PDF | intermediate |
+| [[AWS] 1741041066379](http://localhost:8765/api/documents/ed112916-cc3a-47bd-a506-2de47ab6be15/view) | PDF | intermediate |
+| [[AWS] 1741582799827](http://localhost:8765/api/documents/4e449e98-b5cc-4cae-8b00-ea6e25b6b5a6/view) | PDF | intermediate |
+| [[AWS] 1742022228916](http://localhost:8765/api/documents/087c035d-4fc4-44ba-99f7-5d78f26b0d73/view) | PDF | intermediate |
+| [[AWS] 1742196859172](http://localhost:8765/api/documents/b2d73887-8bbd-45c2-8405-21d048be8d2c/view) | PDF | intermediate |
+| [[AWS] 1742219693416](http://localhost:8765/api/documents/fc7910d9-20fd-401f-9103-e53b0e9a6bee/view) | PDF | intermediate |
+| [[AWS] 1742799371457](http://localhost:8765/api/documents/0fa148ba-d7a5-45af-b3a6-0f60bbdf31b4/view) | PDF | intermediate |
+| [[AWS] 1743125089007](http://localhost:8765/api/documents/c0deb12f-7197-4344-8052-76810329588a/view) | PDF | intermediate |
+| [[AWS] 1743199677628](http://localhost:8765/api/documents/7eee4257-b691-49b4-b764-325ae92df4bc/view) | PDF | intermediate |
+| [[AWS] 1743235509575](http://localhost:8765/api/documents/8e57491b-dd67-4ca8-a708-3f11bcc84d47/view) | PDF | intermediate |
+| [[AWS] 1743308568084](http://localhost:8765/api/documents/c98a23b4-1e43-45fc-aeae-0ff9d55b14c3/view) | PDF | intermediate |
+| [[AWS] 1743432961400](http://localhost:8765/api/documents/c17ec038-1187-4f45-a9d6-b63f3d3e7e65/view) | PDF | intermediate |
+| [[AWS] 1743610196964](http://localhost:8765/api/documents/e2652f4f-5fa1-4f76-8806-38ea38e1916f/view) | PDF | intermediate |
+| [[AWS] 1743864144477](http://localhost:8765/api/documents/e5133540-df51-499d-91aa-04159a789ab5/view) | PDF | intermediate |
+| [[AWS] 1744019595388](http://localhost:8765/api/documents/9c6b828b-0599-4d6a-9793-2d6800aca66d/view) | PDF | intermediate |
+| [[AWS] 1744070473484](http://localhost:8765/api/documents/970276c7-9102-439d-a332-780823ef6da7/view) | PDF | intermediate |
+| [[AWS] 1745155962198](http://localhost:8765/api/documents/c6ed091c-0f6c-41bf-9f02-8d1783bed142/view) | PDF | intermediate |
+| [[AWS Project] 1740891716593](http://localhost:8765/api/documents/ff2dbab1-e2c6-438c-8224-08e4e5343da2/view) | PDF | intermediate |
+| [[AWS Project] 1741852152845](http://localhost:8765/api/documents/375178c2-c7e7-4a60-9792-51e286762935/view) | PDF | intermediate |
+| [[AWS Project] 1742325702393](http://localhost:8765/api/documents/09615c9f-bbf4-41ac-82c1-034f262f0733/view) | PDF | intermediate |
+| [[AWS Project] 1742532545292](http://localhost:8765/api/documents/e71e8051-5618-4b54-b28b-21e057317c3a/view) | PDF | intermediate |
+
+
+<AIChatWidget domain="cloud-platforms" title="Ask AI about Cloud Platforms" />
