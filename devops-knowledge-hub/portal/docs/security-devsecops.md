@@ -4,9 +4,7 @@ sidebar_position: 6
 description: "Zero to hero study guide for Security & DevSecOps — concepts, tools, architecture, production operations, and interview prep."
 ---
 
-import AIChatWidget from '@site/src/components/AIChatWidget';
-
-## 🎯 Why This Domain Matters
+## Why This Domain Matters
 
 Security is no longer the team at the end of the pipeline that approves releases. DevSecOps integrates security into every stage of development and operations. For a Staff/Principal SRE, security is a design constraint, not a post-hoc check — it determines architecture, tooling choices, and operational procedures.
 
@@ -14,7 +12,7 @@ The cost of fixing a security issue multiplies at every stage: free at design, c
 
 ---
 
-## 📋 Prerequisites & Mental Models
+## Core Mental Models
 
 **Defense in depth** — no single security control is sufficient. Layer controls: network segmentation, IAM, encryption, vulnerability scanning, runtime detection. An attacker must bypass ALL layers.
 
@@ -22,415 +20,792 @@ The cost of fixing a security issue multiplies at every stage: free at design, c
 
 **Assume breach** — design systems as if attackers are already inside. East-west traffic controls (NetworkPolicies, mTLS), runtime threat detection, and audit logging matter as much as perimeter defenses.
 
-**Security is a feedback loop** — shift left, measure, iterate. Security is never "done."
+**Shift left** — catch security issues as early as possible. Code review, SAST, secret scanning, and IaC scanning happen before any code is deployed.
 
 ---
 
-## 🔷 Core Concepts
+## Securing CI/CD Pipelines
 
-### RBAC (Role-Based Access Control)
+CI/CD pipelines are high-value attack targets — a compromised pipeline can deploy malicious code to production. Security must be built into every stage.
 
-**In Kubernetes:**
+**Key controls for pipeline security:**
+- Use secrets management tools like HashiCorp Vault or AWS Secrets Manager — never hardcode credentials
+- Enforce Role-Based Access Control (RBAC) to limit who can trigger, modify, or approve pipeline stages
+- Enable HTTPS for all inter-service communication and use signed artifacts to verify build integrity
+- Integrate vulnerability scanners (Trivy, Snyk) into the pipeline — fail builds on critical findings
+- Monitor and log all pipeline activities and set up alerts for anomalies (unexpected deployments, config changes)
+- Regularly audit and update pipeline configurations and dependencies
+
+**Pipeline security stages:**
+1. Source control: branch protection, required code reviews, secret scanning
+2. Build: SAST (SonarQube), dependency scanning (Snyk, Dependabot), IaC scanning (tfsec, Checkov)
+3. Container: image scanning (Trivy, Clair), base image policy enforcement
+4. Deploy: signed artifacts, RBAC, environment approval gates
+5. Runtime: Pod Security Admission, runtime threat detection, audit logging
+
+---
+
+## Source Code Security
+
+**Protecting the repository:**
+- Enable branch protection rules and require code reviews before merging
+- Scan repositories for hardcoded secrets using tools like GitGuardian or `git-secrets`
+- Integrate static code analysis tools like SonarQube for vulnerability detection on every PR
+- Use dependency management tools like Dependabot or Snyk to auto-detect vulnerable packages
+- Store sensitive files (`.env`, certificates, keys) securely — never commit them to the repository
+- Educate developers on secure coding practices (OWASP Top 10, input validation, output encoding)
+
+---
+
+## SonarQube — Static Code Analysis
+
+SonarQube is a widely used static code analysis and code quality tool that detects vulnerabilities, bugs, code smells, and security issues.
+
+### Key Concepts
+
+**Static Code Analysis:**
+- Identifies bugs, security vulnerabilities, and code smells in source code without executing it
+- Supports multiple programming languages: Java, Python, JavaScript, C#, Go, and 25+ others
+- Maintains code quality and consistency across teams
+
+**Quality Gates:**
+- Defines thresholds for code quality based on issues, code coverage, duplications, and maintainability
+- Enforces pass/fail conditions in CI/CD pipelines
+- Blocks insecure or low-quality code from being deployed — a failed Quality Gate stops the pipeline
+
+**Security Vulnerability Detection:**
+- Detects security flaws based on OWASP Top 10, SANS 25, and CWE guidelines
+- Helps meet compliance requirements: ISO 27001, GDPR, PCI DSS
+- Identifies injection vulnerabilities, insecure deserialization, hardcoded credentials, and more
+
+**CI/CD Integration:**
+- Works with GitHub Actions, GitLab CI/CD, Jenkins, Azure DevOps, Bitbucket Pipelines
+- Scans every commit, pull request, or deployment for security and quality issues
+- Provides automated real-time feedback to developers in their PR workflow
+
+### Running SonarQube Locally
+
+```bash
+sonar-scanner \
+  -Dsonar.projectKey=my-project \
+  -Dsonar.sources=src \
+  -Dsonar.host.url=http://localhost:9000 \
+  -Dsonar.login=my-token
+```
+
+This analyzes source code and sends results to the SonarQube dashboard at `http://localhost:9000`.
+
+### SonarQube in GitHub Actions
+
 ```yaml
-# ServiceAccount per workload
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: api-service
-  namespace: production
+jobs:
+  sonarqube_scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Run SonarQube Scanner
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=my-project \
+            -Dsonar.sources=src \
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+```
+
+### SonarQube in Jenkins
+
+```groovy
+pipeline {
+  agent any
+  stages {
+    stage('SonarQube Scan') {
+      steps {
+        withSonarQubeEnv('SonarQube') {
+          sh 'sonar-scanner \
+            -Dsonar.projectKey=my-project \
+            -Dsonar.sources=src'
+        }
+      }
+    }
+    stage('Quality Gate') {
+      steps {
+        timeout(time: 5, unit: 'MINUTES') {
+          waitForQualityGate abortPipeline: true
+        }
+      }
+    }
+  }
+}
+```
+
+**SonarLint** provides IDE-based analysis — developers get feedback before even committing code.
+
 ---
-# Role: minimum permissions
+
+## TFsec — Terraform IaC Security Scanning
+
+TFsec is an Aqua Security open-source static analysis tool for scanning Terraform configurations for security vulnerabilities and misconfigurations. It identifies risks before infrastructure is deployed.
+
+### Key Concepts
+
+**IaC Security Scanning:**
+- Analyzes `.tf` files to detect security misconfigurations
+- Enforces cloud security best practices for AWS, Azure, and Google Cloud
+- Identifies overly permissive IAM roles, unencrypted storage, open security groups
+
+**Policy-as-Code and Compliance:**
+- Uses built-in rules aligned with CIS Benchmarks, NIST, and OWASP
+- Supports custom rule definitions to align with internal security policies
+- Enforces least privilege access and encryption requirements
+
+**Severity Levels:**
+- Critical, High, Medium, Low
+- Findings categorized with remediation recommendations
+- Reports in JSON, JUnit, CSV, and SARIF formats
+
+**CI/CD Integration:**
+- Works with GitHub Actions, GitLab CI/CD, Jenkins, Azure DevOps
+- Blocks Terraform code merges if security violations are detected
+- Automates security scanning before `terraform apply`
+
+### Running TFsec
+
+```bash
+# Scan entire Terraform project
+tfsec /path/to/terraform
+
+# Output findings with severity levels and remediation recommendations
+tfsec . --format json > tfsec-results.json
+
+# Generate SARIF report (for GitHub Security tab)
+tfsec . --format sarif > tfsec.sarif
+
+# Ignore a specific rule with justification
+# Add inline comment to .tf file:
+# tfsec:ignore:aws-s3-enable-bucket-encryption
+```
+
+### TFsec in Jenkins
+
+```groovy
+stage('TFScan') {
+  steps {
+    dir('terraform') {
+      sh '''
+        echo "Running TFScan..."
+        tfsec . > tfsec-results.json || { echo "TFSec scan failed"; exit 1; }
+      '''
+    }
+    archiveArtifacts artifacts: 'terraform/tfsec-results.json', allowEmptyArchive: true
+  }
+}
+```
+
+### Common TFsec Findings
+
+- S3 bucket without server-side encryption enabled
+- Security group with port 0-65535 open to `0.0.0.0/0`
+- IAM policy with wildcard `*` permissions
+- RDS instance without encrypted storage
+- EKS cluster without logging enabled
+- EC2 instance with public IP and no security group restrictions
+
+---
+
+## Container Security
+
+### Securing Docker Images
+
+Docker images are a common attack vector — they may contain outdated packages, hardcoded secrets, or run as root unnecessarily.
+
+**Best practices:**
+- Use minimal base images (Alpine, distroless) to reduce attack surface
+- Scan images with tools like Trivy, Clair, or Snyk before deployment
+- Avoid using the `latest` tag — use immutable tags with specific version hashes
+- Regularly update base images and remove unused ones from registries
+- Implement Docker Content Trust to sign and verify images
+- Never run containers as root unless absolutely required
+
+**Example Dockerfile following security best practices:**
+```dockerfile
+FROM alpine:3.18
+
+# Create non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Install only required dependencies
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /app
+COPY --chown=appuser:appgroup ./bin/myapp .
+
+# Switch to non-root user
+USER appuser
+
+EXPOSE 8080
+ENTRYPOINT ["./myapp"]
+```
+
+### Trivy — Container Vulnerability Scanning
+
+Trivy (by Aqua Security) is a comprehensive vulnerability scanner for containers, filesystems, and IaC.
+
+```bash
+# Scan a Docker image
+trivy image nginx:latest
+
+# Scan and output JSON
+trivy image --format json --output results.json nginx:latest
+
+# Scan only HIGH and CRITICAL
+trivy image --severity HIGH,CRITICAL nginx:latest
+
+# Scan a local filesystem
+trivy fs /path/to/project
+
+# Scan Kubernetes cluster
+trivy k8s --report summary cluster
+
+# Scan in CI — exit code 1 if vulnerabilities found
+trivy image --exit-code 1 --severity CRITICAL myapp:latest
+```
+
+**Trivy in GitHub Actions:**
+```yaml
+- name: Run Trivy vulnerability scanner
+  uses: aquasecurity/trivy-action@master
+  with:
+    image-ref: myapp:${{ github.sha }}
+    format: 'sarif'
+    output: 'trivy-results.sarif'
+    severity: 'CRITICAL,HIGH'
+    exit-code: '1'
+
+- name: Upload Trivy scan results to GitHub Security tab
+  uses: github/codeql-action/upload-sarif@v2
+  with:
+    sarif_file: 'trivy-results.sarif'
+```
+
+### Seccomp — Secure Computing Mode
+
+Seccomp restricts the system calls that a container can execute. By limiting system calls to a defined allowlist, it reduces the attack surface even if the container process is compromised.
+
+Kubernetes allows applying a seccomp profile via `securityContext`:
+```yaml
+securityContext:
+  seccompProfile:
+    type: RuntimeDefault
+```
+
+`RuntimeDefault` applies the container runtime's default seccomp profile, which blocks many dangerous syscalls.
+
+---
+
+## Kubernetes Security
+
+### SecurityContext
+
+The `SecurityContext` controls security settings for a pod or container. Common misconfigurations cause `CrashLoopBackOff` with `permission denied` errors.
+
+**Diagnosing SecurityContext issues:**
+```bash
+# Check SecurityContext settings on a pod
+kubectl get pod <pod-name> -o yaml | grep -i securityContext -A 10
+
+# Check security-related errors
+kubectl describe pod <pod-name>
+
+# Check Pod Security Policies or Admission Controls
+kubectl get psp
+kubectl describe psp <policy-name>
+```
+
+**Recommended SecurityContext settings:**
+```yaml
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  runAsNonRoot: true
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+```
+
+**If the app requires root (rebuild the image to avoid this):**
+```yaml
+securityContext:
+  runAsUser: 0
+```
+
+After modifying, apply and verify:
+```bash
+kubectl apply -f deployment.yaml
+kubectl delete pod <pod-name>   # force recreation
+kubectl logs <pod-name> -f
+```
+
+If the application does not require root, rebuild the Docker image with `USER 1000` to run as a non-root user.
+
+### Kubernetes RBAC (Role-Based Access Control)
+
+RBAC is Kubernetes' security mechanism for managing permissions. It controls what users, groups, and service accounts can do with Kubernetes resources.
+
+**Two key processes in RBAC:**
+1. **Authentication** — verifying the identity (Are you who you claim to be?)
+2. **Authorization** — determining permitted actions (What can you do?)
+
+**RBAC Objects:**
+
+| Object | Description |
+|--------|-------------|
+| User | A real person (developer, DevOps engineer, auditor) |
+| Group | A collection of users sharing access needs |
+| Service Account | An automated process or application running inside the cluster |
+| Role | Namespace-scoped permissions |
+| ClusterRole | Cluster-wide permissions |
+| RoleBinding | Binds a Role to a User/Group/ServiceAccount in a namespace |
+| ClusterRoleBinding | Binds a ClusterRole across the entire cluster |
+
+**Role vs ClusterRole:**
+- Role provides namespace-based permissions (access limited to a specific namespace)
+- ClusterRole provides cluster-wide permissions (access across all namespaces)
+
+**Example Role — read-only access to pods in a namespace:**
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: api-role
+  name: pod-reader
   namespace: production
 rules:
-- apiGroups: [""]
-  resources: ["configmaps"]
-  verbs: ["get", "list"]
-- apiGroups: [""]
-  resources: ["secrets"]
-  resourceNames: ["api-config"]  # named resources only
-  verbs: ["get"]
----
-# RoleBinding: connect SA to Role
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "watch"]
+```
+
+**RoleBinding — assign the Role to a user:**
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: api-binding
+  name: pod-reader-binding
+  namespace: production
 subjects:
-- kind: ServiceAccount
-  name: api-service
+  - kind: User
+    name: jane
+    apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
-  name: api-role
+  name: pod-reader
   apiGroup: rbac.authorization.k8s.io
 ```
 
-**Audit RBAC quarterly:**
-```bash
-kubectl auth can-i --list --as=system:serviceaccount:production:api-service
-kubectl get clusterrolebinding -o json | jq '.items[] | select(.subjects[]?.name == "system:unauthenticated")'
-```
-
-**Common RBAC mistakes:**
-- Binding `cluster-admin` to application service accounts
-- Using `*` verbs or resources (wildcard grants)
-- Forgetting to scope with `resourceNames` for Secrets
-- Not auditing bindings after team changes
-
-### Kubernetes Pod Security
-
-**Pod Security Standards** (enforced via admission):
+**ClusterRole for cluster-wide read access:**
 ```yaml
-# Apply to namespace
-labels:
-  pod-security.kubernetes.io/enforce: restricted  # enforce restricted standard
-  pod-security.kubernetes.io/warn: restricted      # warn in kubectl output
-  pod-security.kubernetes.io/audit: restricted     # audit log violations
-```
-
-**Restricted standard requires:**
-- `runAsNonRoot: true`
-- `allowPrivilegeEscalation: false`
-- `capabilities: {drop: [ALL]}`
-- `readOnlyRootFilesystem: true`
-- `seccompProfile: {type: RuntimeDefault}`
-
-**Kyverno policy enforcement:**
-```yaml
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
 metadata:
-  name: require-signed-images
-spec:
-  validationFailureAction: Enforce
-  rules:
-  - name: verify-signature
-    match:
-      any:
-      - resources: {kinds: [Pod]}
-    verifyImages:
-    - imageReferences: ["*"]
-      attestors:
-      - entries:
-        - keyless:
-            subject: "https://github.com/myorg/*"
-            issuer: "https://token.actions.githubusercontent.com"
-```
-
-### Secrets Management
-
-**Never store secrets in:**
-- Git repositories (even private ones — breach exposes all history)
-- Environment variables set in Deployment manifests (visible to anyone with `kubectl get pod -o yaml`)
-- Container images
-- Log files
-
-**Secrets management stack:**
-
-**1. HashiCorp Vault** — the gold standard for dynamic secrets:
-```
-Application authenticates via Kubernetes ServiceAccount token (Vault K8s auth method)
-Vault validates with Kubernetes API
-Vault issues short-lived secret (database password, API key)
-Application uses secret, secret expires automatically
-```
-
-Dynamic database credentials: Vault creates a unique DB user per request, grants minimum permissions, TTL of 1 hour. Compromised credential is useless after TTL.
-
-**2. External Secrets Operator (ESO):**
-```yaml
-apiVersion: external-secrets.io/v1beta1
-kind: ExternalSecret
-metadata:
-  name: api-secrets
-spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    name: aws-secrets-manager
-    kind: ClusterSecretStore
-  target:
-    name: api-secrets     # creates this K8s Secret
-  data:
-  - secretKey: DB_PASSWORD
-    remoteRef:
-      key: production/api/db
-      property: password
-```
-
-**3. Sealed Secrets (Bitnami):** encrypt K8s Secrets with a cluster-side key, store encrypted form in Git.
-
-### Static Application Security Testing (SAST)
-
-**SonarQube rules and integration:**
-```yaml
-# In CI (GitHub Actions)
-- name: SonarQube Scan
-  uses: SonarSource/sonarqube-scan-action@v2
-  env:
-    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
-
-# Quality Gate: block PR merge if:
-# - New vulnerabilities introduced
-# - Security hotspots not reviewed
-# - Reliability rating drops below A
-```
-
-**Semgrep** — lightweight SAST, rules as YAML, runs fast in CI:
-```yaml
+  name: cluster-reader
 rules:
-- id: no-hardcoded-secrets
-  patterns:
-  - pattern: password = "$SECRET"
-  - pattern-not: password = ""
-  message: "Hardcoded password detected"
-  severity: ERROR
+  - apiGroups: [""]
+    resources: ["nodes", "namespaces", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
 ```
 
-**gitleaks** — pre-commit and CI secret scanning:
-```bash
-gitleaks detect --source . --verbose
-```
-
-### Container Image Security
-
-**Trivy** — fast, comprehensive scanner:
-```bash
-# Scan image
-trivy image --severity CRITICAL,HIGH myapp:latest
-
-# Scan in CI, fail on CRITICAL
-trivy image --exit-code 1 --severity CRITICAL myapp:${TAG}
-
-# Scan Kubernetes manifests for misconfigs
-trivy config ./k8s/
-
-# Scan IaC (Terraform, Helm)
-trivy fs --security-checks config ./terraform/
-```
-
-**Cosign image signing:**
-```bash
-# Sign image (keyless, uses OIDC from GitHub Actions)
-cosign sign --yes ghcr.io/org/myapp:${SHA}
-
-# Verify signature
-cosign verify --certificate-identity-regexp="https://github.com/myorg"               --certificate-oidc-issuer="https://token.actions.githubusercontent.com"               ghcr.io/org/myapp:${SHA}
-```
-
-**Image hardening checklist:**
-- [ ] Multi-stage build — no build tools in final image
-- [ ] Non-root user (`USER 1000`)
-- [ ] No SUID binaries
-- [ ] Minimal base image (distroless or UBI minimal)
-- [ ] No secrets in image layers
-- [ ] Pinned base image digest (not tag)
-- [ ] SBOM generated and attested
-
-### IaC Security — tfsec / Checkov
-
-```bash
-# Scan Terraform
-tfsec ./terraform --soft-fail=false
-
-# Checkov (also scans Helm, K8s manifests, Dockerfiles)
-checkov -d ./terraform --framework terraform
-
-# In CI: fail on HIGH or CRITICAL
-checkov -d . --check HIGH,CRITICAL
-```
-
-Common findings:
-- Security group allows 0.0.0.0/0 on SSH/RDP
-- S3 bucket without encryption or access logging
-- RDS not using Multi-AZ or encryption
-- Lambda without VPC and no resource-based policy restriction
-- EC2 using IMDSv1 (vulnerable to SSRF → credential theft)
-
-### Network Security
-
-**Zero-trust networking principles:**
-1. Never trust, always verify — authenticate and authorize every request
-2. Least-privilege access — users and services get minimum needed
-3. Assume breach — monitor all traffic, log all access
-
-**mTLS via service mesh:** every service call is authenticated (certificate) and encrypted (TLS). No plaintext internal traffic.
-
-**AWS Security Groups:**
-- Inbound: only allow what's needed (no 0.0.0.0/0 on 22/3389)
-- Outbound: consider restricting (uncommon but valuable for data exfiltration prevention)
-- Use SG-to-SG references: `source = sg-xxxxxxxx` instead of CIDR ranges
-
----
-
-## 🛠️ Tools & Ecosystem
-
-| Category | Tools |
-|----------|-------|
-| SAST | SonarQube, Semgrep, Snyk Code |
-| SCA (dependencies) | Snyk Open Source, OWASP Dependency-Check, Trivy |
-| Container scanning | Trivy, Grype, Clair |
-| IaC scanning | tfsec, Checkov, Snyk IaC |
-| Secret scanning | gitleaks, truffleHog, GitGuardian |
-| Image signing | Cosign (Sigstore) |
-| Runtime security | Falco, Tetragon (eBPF) |
-| Policy enforcement | Kyverno, OPA/Gatekeeper |
-| Secrets management | HashiCorp Vault, AWS Secrets Manager, External Secrets Operator |
-| Compliance | AWS Config, Prowler, Steampipe |
-
-### Falco — Runtime Threat Detection
-
-Detects anomalous behavior at runtime:
+**Service Account RBAC — give a monitoring tool read access:**
 ```yaml
-# Detect unexpected outbound connections
-- rule: Unexpected outbound connection in container
-  desc: Detect unexpected outbound connections from a container
-  condition: >
-    outbound and container.id != host
-    and not proc.name in (allowed_processes)
-  output: >
-    Unexpected connection (user=%user.name command=%proc.cmdline
-    container=%container.id image=%container.image.repository:%container.image.tag
-    connection=%fd.name)
-  priority: WARNING
-```
-
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitoring-agent
+  namespace: monitoring
 ---
-
-## 🏗️ Architecture Patterns
-
-### DevSecOps Pipeline
-
-```
-Developer workstation:
-  pre-commit: gitleaks (secrets), terraform fmt, helm lint
-
-PR stage (GitHub Actions):
-  - SAST: Semgrep, SonarQube scan
-  - SCA: Snyk/Trivy for dependency vulnerabilities
-  - IaC scan: tfsec/Checkov
-  - Build image
-  - Container scan: Trivy (fail on CRITICAL)
-  - Sign image: Cosign
-  - SonarQube quality gate
-
-Staging deploy:
-  - Kyverno verifies image signature
-  - Integration + security tests (DAST via OWASP ZAP)
-
-Production deploy:
-  - Kyverno policy checks (image signed, non-root, read-only FS)
-  - Falco runtime monitoring active
-  - Network policies enforced
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: monitoring-agent-binding
+subjects:
+  - kind: ServiceAccount
+    name: monitoring-agent
+    namespace: monitoring
+roleRef:
+  kind: ClusterRole
+  name: cluster-reader
+  apiGroup: rbac.authorization.k8s.io
 ```
 
-### Supply Chain Security (SLSA)
-
-SLSA (Supply chain Levels for Software Artifacts) framework levels:
-- **SLSA 1:** Build is scripted/automated (basic provenance)
-- **SLSA 2:** Version-controlled build + hosted build service (tamper-resistant provenance)
-- **SLSA 3:** Source verified + hardened build (non-falsifiable provenance)
-- **SLSA 4:** Two-party review, hermetic builds
-
-Target SLSA 2 as minimum for production software. Use GitHub Actions with Sigstore attestations.
-
----
-
-## ⚙️ Production Operations
-
-### Security Posture Assessment
-
-Regular activities:
-- **Weekly:** review GuardDuty/Falco findings, check for new Critical CVEs in images
-- **Monthly:** audit IAM bindings, rotate credentials, review security group changes
-- **Quarterly:** penetration test on critical endpoints, RBAC audit, access review, DR test
-- **Annually:** full security assessment, compliance audit
-
-### Incident Response for Security Events
-
-1. **Contain:** isolate affected systems (cordon K8s nodes, quarantine EC2, revoke IAM credentials)
-2. **Collect:** snapshot logs, network flows, memory if needed
-3. **Analyse:** determine scope, attack vector, data accessed
-4. **Eradicate:** remove malware, close vulnerability, rotate all credentials
-5. **Recover:** restore from clean backup, validate integrity
-6. **Learn:** post-mortem, update detections, improve controls
-
-**Key investigation commands:**
+**Audit RBAC — check what permissions a user has:**
 ```bash
-# Check recent IAM activity (CloudTrail)
-aws cloudtrail lookup-events --lookup-attributes AttributeKey=Username,AttributeValue=suspicious-user
+kubectl auth can-i get pods --as=jane -n production
+kubectl auth can-i delete deployments --as=jane -n production
+kubectl auth can-i '*' '*' --as=jane   # check admin
+```
 
-# Check K8s audit log for suspicious API calls
-kubectl get events --sort-by='.lastTimestamp' -A | grep -i "forbidden\|unauthorized"
+### Network Policies for Security
 
-# Falco alert review
-kubectl logs -n falco -l app=falco | grep -i "warning\|error" | tail -50
+Network Policies restrict pod-to-pod communication. Without a NetworkPolicy, all pods in the cluster can reach all other pods.
+
+**Debug network policy blocking communication:**
+```bash
+# List existing policies
+kubectl get networkpolicy -n <namespace>
+
+# Inspect a specific policy
+kubectl describe networkpolicy <policy-name> -n <namespace>
+```
+
+**Allow pods in the same namespace to communicate:**
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+```
+
+### SSL/TLS Certificate Management
+
+SSL (Secure Sockets Layer) and TLS (Transport Layer Security) encrypt data between clients and servers. TLS 1.2 and 1.3 are the currently secure versions.
+
+**Key benefits in DevOps:**
+- Data encryption: prevents unauthorized access and MITM attacks
+- Authentication: ensures client communicates with the intended server
+- Data integrity: protects against tampering during transmission
+- Regulatory compliance: GDPR, PCI-DSS, HIPAA requirements
+
+**Let's Encrypt with Certbot (NGINX):**
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Obtain and configure certificate
+sudo certbot --nginx -d example.com -d www.example.com
+
+# Test auto-renewal
+sudo certbot renew --dry-run
+
+# Certbot auto-renewal cron (added automatically)
+# 0 */12 * * * root certbot renew --quiet
+```
+
+**cert-manager in Kubernetes (automatic certificate provisioning):**
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: my-tls
+  namespace: production
+spec:
+  secretName: my-tls-secret
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - api.example.com
+```
+
+**NGINX SSL configuration:**
+```nginx
+server {
+    listen 443 ssl;
+    server_name example.com;
+
+    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+
+    # Enforce TLS 1.2 and 1.3
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # Strong cipher suites
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256;
+    ssl_prefer_server_ciphers off;
+
+    # HSTS — force HTTPS for 1 year
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # OCSP Stapling
+    ssl_stapling on;
+    ssl_stapling_verify on;
+}
+```
+
+**Inspect a TLS certificate:**
+```bash
+openssl s_client -connect api.example.com:443
+openssl s_client -connect api.example.com:443 | openssl x509 -noout -dates
+```
+
+**Monitor certificate expiry:**
+```bash
+# Check expiry date
+echo | openssl s_client -servername example.com -connect example.com:443 2>/dev/null \
+  | openssl x509 -noout -enddate
+
+# Alert if certificate expires within 30 days
+cert_expiry=$(echo | openssl s_client -connect example.com:443 2>/dev/null \
+  | openssl x509 -noout -enddate | cut -d= -f2)
 ```
 
 ---
 
-## 📊 Security Metrics
+## Secrets Management
 
+### HashiCorp Vault
+
+Vault is the standard for secrets management in DevOps environments. It stores, rotates, and audits access to secrets.
+
+**Dynamic secrets** — Vault generates short-lived credentials on demand:
+1. Enable the appropriate secrets engine (database, AWS, PKI)
+2. Create roles that specify access policies
+3. Use Vault's API or CLI to generate secrets with a short TTL
+4. Monitor and revoke secrets when no longer needed
+
+**Configuring dynamic database secrets:**
+```bash
+# Enable database secrets engine
+vault secrets enable database
+
+# Configure a PostgreSQL connection
+vault write database/config/my-postgres \
+    plugin_name=postgresql-database-plugin \
+    allowed_roles="app-role" \
+    connection_url="postgresql://{{username}}:{{password}}@postgres:5432/mydb" \
+    username="vault-admin" \
+    password="vault-password"
+
+# Create a role with short TTL
+vault write database/roles/app-role \
+    db_name=my-postgres \
+    creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO \"{{name}}\";" \
+    default_ttl="1h" \
+    max_ttl="24h"
+
+# Generate credentials
+vault read database/creds/app-role
 ```
-Mean Time to Detect (MTTD): how long from compromise to detection
-Mean Time to Respond (MTTR): how long to contain after detection
-Vulnerability SLA compliance: % of Critical CVEs patched within 24h
-Failed authentication rate: baseline and alert on spike
-Policy violation rate: Kyverno/OPA denials per day
+
+**Unsealing Vault:**
+When Vault is sealed, its encryption keys are inaccessible and it cannot serve requests.
+```bash
+# Manual unseal (requires unseal keys from initialization)
+vault operator unseal <unseal-key-1>
+vault operator unseal <unseal-key-2>
+vault operator unseal <unseal-key-3>
+
+# Auto-unseal with AWS KMS (preferred for production)
+# Configure in vault.hcl:
+seal "awskms" {
+  region     = "us-east-1"
+  kms_key_id = "alias/vault-unseal-key"
+}
+```
+
+### Terraform State Security
+
+Terraform state files can contain sensitive values (credentials, private keys). Secure them:
+```hcl
+terraform {
+  backend "s3" {
+    bucket         = "my-terraform-state"
+    key            = "prod/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true           # server-side encryption
+    dynamodb_table = "terraform-locks"  # state locking
+    kms_key_id     = "alias/terraform-state-key"
+  }
+}
+```
+
+Additional controls:
+- Enable versioning on the S3 bucket for rollback capability
+- Use role-based access to restrict who can read or write the state file
+- Avoid storing secrets directly in Terraform resources — use Vault provider or AWS Secrets Manager data sources instead
+
+---
+
+## IaC Security Scanning
+
+Tools for scanning Infrastructure as Code configurations before deployment:
+
+| Tool | Targets | Key Feature |
+|------|---------|-------------|
+| tfsec | Terraform | CIS Benchmarks, custom rules |
+| Checkov | Terraform, CloudFormation, K8s, Dockerfiles | Multi-platform, SARIF output |
+| Terrascan | Terraform, Helm, Kubernetes | Policy-as-Code, OPA |
+| TFLint | Terraform | Linting and provider-specific rules |
+| kube-score | Kubernetes manifests | Security and reliability scoring |
+
+**Checkov scan:**
+```bash
+# Install
+pip install checkov
+
+# Scan Terraform directory
+checkov -d /path/to/terraform
+
+# Scan Kubernetes manifests
+checkov -d /path/to/k8s --framework kubernetes
+
+# Scan Dockerfile
+checkov -f Dockerfile
+
+# Output JSON for CI integration
+checkov -d . --output json > checkov-results.json
 ```
 
 ---
 
-## 🎓 Staff/Principal Engineer Perspective
+## Compliance and Audit
 
-**Security champions model** — embed security advocates in each team rather than centralizing security. Platform team provides tools and guardrails; security champions enforce and educate.
+### What Checkov and tfsec Detect
 
-**Security as code** — policies (Kyverno, OPA), security tests, compliance checks are all code in Git. They get reviewed, tested, and deployed like application code.
+- S3 buckets without encryption, versioning, or access logging
+- Security groups with `0.0.0.0/0` open on dangerous ports
+- IAM roles with `*:*` permissions (wildcard)
+- Missing MFA requirements on IAM users
+- Unencrypted RDS instances or EBS volumes
+- Kubernetes containers running as root
+- Missing resource limits on Kubernetes containers
+- Secrets stored in environment variables instead of secret stores
 
-**Threat modeling** — for new systems, spend 2 hours: enumerate assets, identify threats (STRIDE model), rate risk, design mitigations. This is the highest-leverage security activity and requires a Staff engineer's system-level thinking.
+### Kubernetes CIS Benchmarks
 
-**The cost of "we'll add security later"** — it never happens. Security requirements must be in the initial design. The earlier a control is implemented, the cheaper it is.
-
----
-
-## 💥 Failure Modes & Incident Patterns
-
-**Compromised CI/CD pipeline** — attacker poisons build, inserts backdoor into artifact. Prevention: SLSA provenance, Cosign signing, pin action versions to SHA.
-
-**SSRF → metadata endpoint** — web app allows fetching arbitrary URLs → attacker fetches `http://169.254.169.254/latest/meta-data/iam/security-credentials/` → gets EC2 instance credentials. Prevention: use IMDSv2 (hop limit=1), restrict outbound HTTP from app tier.
-
-**Secret committed to Git** — developer accidentally commits API key. Even if reverted, the commit is in history and the key must be rotated immediately. Prevention: pre-commit hooks with gitleaks, GitGuardian monitoring.
-
-**Over-privileged Lambda/ECS role** — role can read all S3 buckets. Compromised function reads all data. Prevention: IAM least privilege, resource-level policies, AWS Config rules checking overly permissive policies.
-
----
-
-## 💼 Interview Prep
-
-**"How do you secure a Kubernetes cluster?"**
-RBAC (least privilege, per-workload SA), Pod Security Standards (restricted), NetworkPolicies (default-deny), mTLS via service mesh, image signing + Kyverno verification, Secrets via ESO/Vault, audit logging to centralized SIEM, Falco for runtime detection.
-
-**"Walk through OWASP Top 10 for a web application in your platform"**
-A1 Broken Access Control → RBAC + AuthZ middleware; A2 Cryptographic Failures → TLS everywhere, secrets in Vault; A3 Injection → parameterized queries in ORM, SAST; A7 Identity failures → SSO/OIDC, MFA; A9 Known vulnerable components → Snyk in CI, automatic dependency PRs.
+Use `kube-bench` to audit a Kubernetes cluster against CIS Benchmarks:
+```bash
+# Run kube-bench on a node
+kubectl apply -f https://raw.githubusercontent.com/aquasecurity/kube-bench/main/job.yaml
+kubectl logs job/kube-bench
+```
 
 ---
 
-## 📚 Key Takeaways
+## DevSecOps Pipeline — Full Example
 
-1. **Shift left is cheaper** — security in pre-commit is free; in production is catastrophic
-2. **Least privilege is a design principle** — design every component with minimum needed permissions
-3. **Secrets in Git = compromised secrets** — pre-commit hooks and GitGuardian are your last lines of defense
-4. **SAST + container scanning in every pipeline** — not optional, not configurable to skip
-5. **Sign your images** — Cosign + Kyverno admission verification closes the supply chain gap
-6. **mTLS = no plaintext internal traffic** — service mesh provides this without code changes
-7. **Dynamic secrets over static secrets** — Vault dynamic DB credentials reduce credential theft impact
-8. **Runtime detection closes the gap** — Falco catches what admission controllers miss
-9. **RBAC audit quarterly** — permissions drift over time; unused bindings are attack surface
-10. **Assume breach** — design for the attacker already being inside; east-west controls matter
+A complete GitHub Actions pipeline with security scanning at every stage:
 
+```yaml
+name: DevSecOps Pipeline
 
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+
+  sast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: SonarQube Scan
+        run: |
+          sonar-scanner \
+            -Dsonar.projectKey=my-project \
+            -Dsonar.sources=src \
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+  iac-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: TFsec scan
+        run: tfsec ./terraform --format sarif > tfsec.sarif
+      - name: Checkov scan
+        run: checkov -d ./kubernetes --framework kubernetes --output sarif > checkov.sarif
+
+  build-and-scan:
+    runs-on: ubuntu-latest
+    needs: [secret-scan, sast]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Docker image
+        run: docker build -t myapp:${{ github.sha }} .
+      - name: Trivy container scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: myapp:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-and-scan, iac-scan]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to staging
+        run: kubectl apply -f ./kubernetes/
+```
 
 ---
+
+## Interview Preparation
+
+**Common DevSecOps interview questions:**
+
+1. **How would you secure a CI/CD pipeline?**
+   - Secrets management via Vault or AWS Secrets Manager (never hardcoded)
+   - RBAC to limit who can trigger or modify pipelines
+   - SAST (SonarQube) on every PR
+   - Container scanning (Trivy) before push to registry
+   - IaC scanning (tfsec, Checkov) before `terraform apply`
+   - Signed artifacts and image verification
+   - Audit logging of all pipeline activities
+
+2. **What happens when Vault is sealed, and how do you unseal it?**
+   - When sealed, encryption keys are inaccessible — Vault cannot serve requests
+   - Manual unseal: provide the threshold number of unseal keys generated at initialization (typically 3 of 5)
+   - Auto-unseal: configure Vault to use a cloud KMS (AWS KMS, Azure Key Vault) — Vault unseals automatically on restart without human intervention
+
+3. **What is the role of seccomp in container security?**
+   - Seccomp restricts the Linux system calls a container can make
+   - Reduces attack surface — compromised process cannot call dangerous syscalls (e.g., `ptrace`, `mount`)
+   - Apply via `securityContext.seccompProfile.type: RuntimeDefault` in Kubernetes pod spec
+
+4. **How do you secure Terraform state files?**
+   - Store in S3 with SSE-KMS encryption enabled
+   - Enable state locking with DynamoDB to prevent concurrent operations
+   - Restrict access with IAM roles and bucket policies
+   - Enable S3 versioning for rollback capability
+   - Never store raw secrets in Terraform resources — use data sources to reference secrets from Vault or Secrets Manager
+
+5. **A pod is in CrashLoopBackOff due to a permission denied error. What do you check?**
+   - `kubectl describe pod` — look for security context errors
+   - `kubectl get pod -o yaml | grep -i securityContext -A 10` — check runAsUser, allowPrivilegeEscalation
+   - Check if PSP or Pod Security Admission is restricting the pod
+   - Check if the container image requires root — rebuild with `USER 1000` if possible
+   - If root is needed temporarily: set `runAsUser: 0` and plan image rebuild
+
+6. **What tools do you use for IaC security scanning and what do they find?**
+   - tfsec: Terraform misconfigs — open security groups, unencrypted storage, missing IAM conditions
+   - Checkov: multi-platform (Terraform, K8s, Dockerfiles) — compliance violations against CIS, NIST
+   - Terrascan: uses OPA policies for custom organizational rules
+   - All integrate into CI/CD to block merges on HIGH/CRITICAL findings
+
+7. **Explain RBAC in Kubernetes. How does it differ from AWS IAM?**
+   - Kubernetes RBAC: Role/ClusterRole defines what actions are allowed on which resources. RoleBinding/ClusterRoleBinding assigns these to Users, Groups, or ServiceAccounts
+   - AWS IAM: policies attached to users/roles/groups; resource-level and action-level control; trust policies define who can assume a role
+   - Key difference: Kubernetes RBAC is namespace-scoped (Role) or cluster-scoped (ClusterRole); AWS IAM operates at account or resource ARN level

@@ -4,414 +4,820 @@ sidebar_position: 7
 description: "Zero to hero study guide for Networking & Service Mesh — concepts, tools, architecture, production operations, and interview prep."
 ---
 
-import AIChatWidget from '@site/src/components/AIChatWidget';
+## Why This Domain Matters
 
-## 🎯 Why This Domain Matters
-
-Networking is the invisible glue holding distributed systems together. Latency, packet loss, DNS failures, and misconfigured firewall rules cause incidents that are notoriously hard to diagnose without deep networking knowledge. Service meshes are the modern answer to securing and observing service-to-service communication without modifying application code.
+Networking is the foundation of every DevOps environment. Latency, DNS failures, misconfigured firewall rules, and misrouted traffic cause incidents that are notoriously hard to diagnose without a deep understanding of networking fundamentals. Service meshes are the modern answer to securing and observing service-to-service communication without modifying application code.
 
 Staff/Principal impact:
-- Network architecture decisions (VPC design, CNI choice) are permanent and expensive to undo
-- Service mesh adoption is a platform decision that affects every team's observability and security
-- Understanding TCP/IP enables diagnosing incidents that appear to be application bugs
+- Network architecture decisions (VPC design, subnet layout, CNI choice) are permanent and expensive to undo
+- Service mesh adoption is a platform decision that affects every team's observability and security posture
+- Understanding TCP/IP, DNS, and subnetting enables diagnosing incidents that appear to be application bugs
 
 ---
 
-## 📋 Prerequisites & Mental Models
+## Core Networking Concepts
 
-**The OSI model is a debugging framework** — when something is broken, layer by layer investigation tells you where:
-- L1 (Physical): is the cable connected?
-- L2 (Data Link): ARP working, MAC resolution?
-- L3 (Network): IP routing, subnets, firewall rules?
-- L4 (Transport): TCP connection established? Port open?
-- L7 (Application): HTTP status, DNS resolution, TLS handshake?
+### The OSI Model — Your Debugging Framework
 
-**TCP is not reliable, it's resilient** — TCP provides ordered, error-checked delivery via acknowledgment and retransmission. But TCP doesn't know why packets are lost (congestion, lossy link, firewall). High retransmit rates indicate a problem even if data eventually arrives.
+The Open Systems Interconnection (OSI) model is a seven-layer conceptual framework that standardizes communication between different computing systems. In DevOps, use it as a systematic debugging ladder.
 
-**DNS is the name service, not a directory** — every network interaction starts with DNS. DNS failures or latency cascade into application failures. Understand the resolution chain.
+| Layer | Name | Examples | What to check |
+|-------|------|----------|---------------|
+| L7 | Application | HTTP, DNS, SMTP, FTP | HTTP status codes, DNS resolution, TLS handshake |
+| L6 | Presentation | TLS/SSL, encoding | Certificate validity, cipher mismatch |
+| L5 | Session | NetBIOS, RPC | Session timeouts |
+| L4 | Transport | TCP, UDP | Port open, SYN/ACK, retransmits |
+| L3 | Network | IP, ICMP, OSPF | Routing table, subnet mask, firewall rules |
+| L2 | Data Link | Ethernet, ARP, MAC | ARP resolution, VLAN config |
+| L1 | Physical | Cables, Wi-Fi | Link status, hardware failure |
+
+OSI advantages for DevOps:
+- Divides network communication into 7 layers that are easier to understand and troubleshoot independently
+- Standardizes network communications — each layer has fixed functions and protocols
+- Diagnosing network problems is easier because you can isolate which layer is failing
+
+### Protocols: TCP, UDP, and IP
+
+**TCP (Transmission Control Protocol)**
+- Ensures reliable, ordered, and error-checked delivery of data
+- Uses a connection-oriented approach — establishes a connection before data transmission (three-way handshake: SYN, SYN-ACK, ACK)
+- Ideal for applications requiring accuracy: web browsing, file transfers, database queries
+- TCP does not guarantee speed — it retransmits lost packets, which causes latency
+
+**UDP (User Datagram Protocol)**
+- A connectionless protocol that prioritizes speed over reliability
+- Does not guarantee delivery or order — makes it useful for real-time applications: gaming, video streaming, VoIP
+- Lower overhead than TCP; no handshake
+
+**IP (Internet Protocol)**
+- Handles addressing and routing of packets across networks
+- Assigns unique IP addresses to devices
+- Uses routing tables to direct traffic efficiently
+- IP headers indicate destination IP address — NOT port numbers (ports live in L4 headers)
+
+### Ports in DevOps
+
+Ports are transport-layer (L4) communication endpoints — a 16-bit unsigned integer ranging from 0 to 65,535. Only TCP or UDP headers indicate which port a packet should go to. IP is unaware of ports.
+
+**Why ports matter for DevOps engineers:**
+- Security management: essential for firewall rules to allow or block network traffic
+- Service communication: web servers, databases, and applications use specific ports
+- Container networking: Docker containers communicate over assigned ports
+- Load balancing: services on different instances require properly configured ports
+- Troubleshooting: checking whether specific ports are open or blocked during debugging
+
+**Commonly used ports in DevOps:**
+
+| Port | Protocol | Service |
+|------|----------|---------|
+| 22 | TCP | SSH (Secure Shell) |
+| 80 | TCP | HTTP (Web Traffic) |
+| 443 | TCP | HTTPS (Secure Web Traffic) |
+| 3306 | TCP | MySQL Database |
+| 5432 | TCP | PostgreSQL Database |
+| 6379 | TCP | Redis Cache |
+| 27017 | TCP | MongoDB |
+| 9090 | TCP | Prometheus |
+| 9100 | TCP | Node Exporter |
+| 3000 | TCP | Grafana |
+| 8080 | TCP | cAdvisor / App servers |
+| 2379-2380 | TCP | etcd |
+| 6443 | TCP | Kubernetes API Server |
+| 10250 | TCP | Kubelet API |
+
+UDP commonly used ports:
+- Port 53: DNS (translates domain names to IPs)
+- Port 123: NTP (Network Time Protocol)
+- Port 161: SNMP (network device monitoring)
+- Port 500: IPsec (VPN encryption)
 
 ---
 
-## 🔷 Core Concepts
+## IP Addressing and Subnetting
 
-### TCP/IP Fundamentals
+### IPv4 vs IPv6
 
-**IP addressing:**
-- IPv4: 32-bit, dotted-decimal notation. Classes and CIDR replaced classful addressing.
-- CIDR notation: `192.168.1.0/24` — the `/24` means 24 bits are the network, 8 bits are hosts → 254 usable hosts
-- Private ranges (RFC 1918): 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16
+**IPv4:** A 32-bit address written as four decimal numbers separated by dots. Example: `192.168.1.1`. Each number can be 0–255. About 4.3 billion total addresses — now exhausted.
 
-**Subnetting in practice:**
-- `/16` = 65,534 hosts (large VPC block)
-- `/24` = 254 hosts (common subnet)
-- `/28` = 14 hosts (small subnet for load balancers)
-- `/32` = 1 host (single IP, used in security group rules)
+**IPv6:** A 128-bit address written in eight groups of hexadecimal numbers. Example: `2001:0db8:85a3:0000:0000:8a2e:0370:7334`. Provides a vastly larger address pool and includes built-in security features.
 
-**TCP three-way handshake:**
-```
-Client → SYN → Server
-Client ← SYN-ACK ← Server
-Client → ACK → Server
-[Connection established]
-```
+**Public vs Private IPs:**
+- Public IPs: visible on the internet, assigned by ISPs
+- Private IPs: used within local networks (`192.168.x.x`, `10.x.x.x`, `172.16.x.x`). Hidden from internet using NAT (Network Address Translation)
 
-**TCP connection states in production:**
-- `ESTABLISHED`: active connection
-- `TIME_WAIT`: connection closed, waiting 2×MSL (60s default) before reuse
-- `CLOSE_WAIT`: remote side closed, local side hasn't yet — usually indicates an application bug
-- `SYN_RECV`: SYN received, SYN-ACK sent, waiting for ACK — SYN flood indicator
+### Subnetting and CIDR
 
-**Key TCP tuning parameters:**
-```bash
-net.core.somaxconn = 65535          # listen backlog
-net.ipv4.tcp_max_syn_backlog = 65535  # SYN queue size
-net.ipv4.tcp_tw_reuse = 1           # reuse TIME_WAIT sockets
-net.ipv4.tcp_keepalive_time = 60    # send keepalive after 60s idle
-net.ipv4.tcp_keepalive_intvl = 10   # retry every 10s
-net.ipv4.tcp_keepalive_probes = 6   # kill after 6 failed probes
-```
+Subnetting is the process of dividing a large IP network into multiple smaller subnetworks. It improves network efficiency, security, and performance by reducing broadcast domains and optimizing IP address allocation.
 
-### DNS
+**Why subnet?**
+- Efficient use of IP addresses: avoids wasting IPs in large networks
+- Enhanced security: limits communication between devices by segmenting the network
+- Optimized performance: reduces broadcast traffic, improving speed and reliability
+- Simplified network management: enables logical separation for departments, VLANs, or cloud regions
 
-**Resolution chain:**
-1. Local cache (browser, OS)
-2. `/etc/hosts` (static overrides)
-3. OS resolver cache
-4. Recursive resolver (8.8.8.8, or VPC DNS at .2 address)
-5. Root nameservers → TLD nameservers → authoritative nameservers
+**CIDR Notation** represents the number of network bits, e.g., `/24` means 24 bits for network, 8 bits for hosts.
 
-**DNS record types:**
-- `A` — hostname → IPv4
-- `AAAA` — hostname → IPv6
-- `CNAME` — hostname → hostname (cannot be at zone apex)
-- `MX` — mail exchange
-- `TXT` — text (SPF, DKIM, domain verification)
-- `SRV` — service discovery (port + priority + weight)
-- `PTR` — reverse DNS (IP → hostname)
+| Subnet Mask | CIDR | Hosts per Subnet |
+|-------------|------|-----------------|
+| 255.255.255.0 | /24 | 254 |
+| 255.255.255.128 | /25 | 126 |
+| 255.255.255.192 | /26 | 62 |
+| 255.255.255.224 | /27 | 30 |
+| 255.255.255.240 | /28 | 14 |
+| 255.255.255.248 | /29 | 6 |
+| 255.255.255.252 | /30 | 2 |
 
-**TTL matters** — low TTL (60s) enables fast failover but increases DNS query load. High TTL (300s+) reduces load but slows failover. For critical records behind load balancers: 60s TTL.
+Formula: `2^(host bits) - 2` (subtracting network address and broadcast address)
 
-**Kubernetes DNS (CoreDNS):**
-Full FQDN: `service.namespace.svc.cluster.local`
-Short names resolve based on search domains. The `ndots:5` default causes 5 lookups before falling back to the absolute name (major latency source at scale). Set `ndots: 2` for most workloads.
+**Example 1: Dividing 192.168.1.0/24 into 4 subnets**
 
-**CoreDNS configuration:**
-```
-.:53 {
-    errors
-    health
-    ready
-    kubernetes cluster.local in-addr.arpa ip6.arpa {
-        pods insecure
-        fallthrough in-addr.arpa ip6.arpa
-    }
-    prometheus :9153
-    forward . /etc/resolv.conf {
-        max_concurrent 1000
-    }
-    cache 30
-    loop
-    reload
-    loadbalance
-}
-```
+Step 1 — Determine required subnet bits: need 4 subnets, `2² = 4`, so borrow 2 bits. New mask = `/26` (24 + 2).
+
+Step 2 — Subnet increment: `256 - 192 = 64`
+
+| Subnet | Network Address | Broadcast | Valid Host Range |
+|--------|----------------|-----------|-----------------|
+| 1 | 192.168.1.0 | 192.168.1.63 | 192.168.1.1 – 192.168.1.62 |
+| 2 | 192.168.1.64 | 192.168.1.127 | 192.168.1.65 – 192.168.1.126 |
+| 3 | 192.168.1.128 | 192.168.1.191 | 192.168.1.129 – 192.168.1.190 |
+| 4 | 192.168.1.192 | 192.168.1.255 | 192.168.1.193 – 192.168.1.254 |
+
+**Example 2: 6 subnets from 10.0.0.0/24**
+
+Step 1: `2³ = 8 >= 6`, borrow 3 bits. New mask = `/27`. Increment = `256 - 224 = 32`.
+
+| Subnet | Network | Broadcast | Valid Host Range |
+|--------|---------|-----------|-----------------|
+| 1 | 10.0.0.0 | 10.0.0.31 | 10.0.0.1 – 10.0.0.30 |
+| 2 | 10.0.0.32 | 10.0.0.63 | 10.0.0.33 – 10.0.0.62 |
+| 3 | 10.0.0.64 | 10.0.0.95 | 10.0.0.65 – 10.0.0.94 |
+| 4 | 10.0.0.96 | 10.0.0.127 | 10.0.0.97 – 10.0.0.126 |
+| 5 | 10.0.0.128 | 10.0.0.159 | 10.0.0.129 – 10.0.0.158 |
+| 6 | 10.0.0.160 | 10.0.0.191 | 10.0.0.161 – 10.0.0.190 |
+
+---
+
+## DNS — Domain Name System
+
+### How DNS Works
+
+DNS translates human-readable domain names (e.g., `example.com`) to IP addresses that machines use to route traffic. DNS runs on UDP/TCP port 53.
+
+**DNS resolution steps:**
+1. Client queries local resolver (or OS cache)
+2. Resolver queries root nameserver (`.`)
+3. Root refers to TLD nameserver (`.com`)
+4. TLD refers to authoritative nameserver
+5. Authoritative nameserver returns the answer record
+
+### DNS Record Types
+
+| Record | Purpose | Example |
+|--------|---------|---------|
+| A | Maps hostname to IPv4 | `api.example.com -> 1.2.3.4` |
+| AAAA | Maps hostname to IPv6 | `api.example.com -> 2001:db8::1` |
+| CNAME | Alias to another hostname | `www -> api.example.com` |
+| MX | Mail exchange server | `mail.example.com priority 10` |
+| TXT | Arbitrary text (SPF, DKIM, verification) | `v=spf1 include:...` |
+| NS | Authoritative nameserver for a zone | `ns1.example.com` |
+| PTR | Reverse DNS — IP to hostname | Used in email anti-spam |
+| SRV | Service discovery with port and weight | `_http._tcp.example.com` |
+
+### DNS Providers (DevOps context)
+
+- **AWS Route 53**: integrates with ELB, supports health-check-based failover, weighted routing, latency-based routing, and geolocation routing
+- **Cloudflare**: global CDN + DNS, DDoS protection, sub-millisecond TTL changes
+- **Google Cloud DNS**: managed authoritative DNS with 100% uptime SLA
+
+### DNS Load Balancing and Failover
+
+DNS load balancing distributes traffic by returning different IP addresses per query (round-robin). Route 53 weighted routing:
+- Weight 70 → primary region
+- Weight 30 → secondary region
+- Health check integration: automatic failover when endpoint unhealthy
+
+---
+
+## Network Infrastructure
 
 ### Load Balancing
 
-**L4 (Transport Layer):**
-- TCP/UDP load balancing based on IP + port
-- Does not inspect HTTP headers
-- Stateless → fastest, lowest overhead
-- NAT or DSR (Direct Server Return) mode
-- Tools: AWS NLB, HAProxy in TCP mode
+Load balancing distributes incoming traffic across multiple servers to ensure no single server is overwhelmed, improving availability and reliability.
 
-**L7 (Application Layer):**
-- HTTP/HTTPS aware — routes by host, path, headers, cookies
-- Can do SSL termination, HTTP/2 → HTTP/1.1 translation
-- Adds latency (~1ms) for HTTP inspection
-- Enables advanced routing: canary by header, blue-green by path
-- Tools: AWS ALB, nginx, HAProxy, Envoy, Traefik
+**L4 vs L7 Load Balancers:**
 
-**Load balancing algorithms:**
-- Round Robin: simple, equal distribution
-- Least Connections: sends to server with fewest active connections (better for long-lived connections)
-- IP Hash: consistent routing of same client to same server (session affinity)
-- Random with Two Choices (Power of Two): pick 2 servers randomly, send to the less loaded one — near-optimal with low overhead
-- Least Request: Envoy's default — tracks in-flight requests per upstream
+| Type | Operates at | Sees | Use case |
+|------|------------|------|---------|
+| L4 | Transport (TCP/UDP) | IP + port only | Fast routing, no HTTP awareness |
+| L7 | Application (HTTP) | URL, headers, cookies | Path-based routing, canary deploys |
 
-**Health checks:** L4 = TCP connect; L7 = HTTP GET /health, checks response code and optionally body. Always implement a meaningful health endpoint — not just "TCP port is open."
+**Load Balancing Algorithms:**
+- **Round Robin**: requests distributed sequentially across servers
+- **Least Connections**: new request sent to server with fewest active connections
+- **IP Hash**: client IP determines which server handles the request (session persistence)
+- **Weighted Round Robin**: servers assigned a weight; higher-weight servers get more traffic
 
-### Proxies
+**HAProxy configuration example:**
+```
+frontend http_front
+   bind *:80
+   default_backend http_back
 
-**Forward proxy** — sits between client and internet. Client knows about the proxy. Use for: content filtering, corporate outbound control, caching.
+backend http_back
+   balance roundrobin
+   server server1 192.168.1.10:80 check
+   server server2 192.168.1.11:80 check
+   server server3 192.168.1.12:80 check
+```
 
-**Reverse proxy** — sits in front of servers, client doesn't know about backend servers. Use for: load balancing, SSL termination, caching, auth, rate limiting. This is the pattern for nginx, Envoy, ALB.
+**AWS ALB (Application Load Balancer):** L7 load balancer supporting path-based routing, host-based routing, and weighted target groups for canary deployments.
 
-**Transparent proxy** — intercepts traffic without client configuration. Used by service meshes (Envoy iptables interception), corporate firewalls.
+### Reverse Proxy
 
-### Container Networking
+A reverse proxy sits in front of backend servers and forwards client requests. It hides backend topology from clients and enables features like SSL termination, caching, and rate limiting.
 
-**Docker networking:**
-- `bridge` (default): creates a Linux bridge, containers get private IPs, NAT to host network
-- `host`: container shares host network namespace (no isolation, max performance)
-- `overlay`: multi-host networking, used by Docker Swarm
-- `macvlan`: container gets MAC and IP on physical network (L2 attachment)
+**NGINX as a reverse proxy:**
+```nginx
+upstream backend {
+    server 192.168.1.10:8080;
+    server 192.168.1.11:8080;
+}
 
-**Kubernetes CNI (Container Network Interface):**
-CNI plugins provide Pod networking. All CNI plugins must satisfy:
-- Every Pod gets a unique IP
-- Pods on the same node can communicate without NAT
-- Pods on different nodes can communicate without NAT
-- Pods can communicate with services via ClusterIP
+server {
+    listen 80;
+    server_name example.com;
 
-**Common CNIs:**
-| CNI | Key Feature | Use Case |
-|-----|-------------|----------|
-| Flannel | Simple, VXLAN overlay | Basic clusters, learning |
-| Calico | NetworkPolicy enforcement, BGP routing | Production, security |
-| Cilium | eBPF-based, L7 policies, Hubble observability | Advanced networking + observability |
-| Weave | Simple mesh, encryption | Multi-cloud |
+    location / {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
 
-**Cilium with eBPF:** replaces iptables for routing and load balancing. eBPF programs run in kernel space, no network stack traversal. 3-5x less CPU for networking at high request rates. Native support for NetworkPolicies at L3/L4/L7.
+**NGINX SSL termination:**
+```nginx
+server {
+    listen 443 ssl;
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
 
-### Service Mesh
+    location / {
+        proxy_pass http://backend;
+    }
+}
+```
 
-A service mesh is an infrastructure layer that handles service-to-service communication — mTLS, load balancing, circuit breaking, retries, observability — without requiring application code changes.
-
-**Sidecar model (Istio classic, Linkerd):**
-- Envoy (Istio) or Linkerd-proxy injected into every Pod
-- All traffic goes through proxy: intercepted by iptables `REDIRECT` rules
-- Control plane pushes configuration to proxies (xDS protocol in Istio)
-- Overhead: ~50-100ms p99 added latency, ~50MB RAM per proxy
-
-**Ambient mesh (Istio 1.21+):**
-- No sidecar injection
-- ztunnel per node: handles mTLS and L4 policies for all pods on that node
-- Waypoint proxy per service: handles L7 policies (only for services that need it)
-- Overhead: ~5MB RAM per node (ztunnel), much less than per-pod sidecars
-
-**Linkerd:**
-- Simpler than Istio, lighter (Rust-based proxy)
-- Opinionated: no traffic management features beyond retries/timeouts
-- Excellent observability out of the box
-- Choose Linkerd for mTLS + observability without complexity; Istio for traffic management features
-
-**mTLS (mutual TLS):** both client and server present certificates, both verify each other. Provides:
-- Encryption in transit
-- Identity verification (this is the actual service, not an impostor)
-- Works transparently — Istio handles certificate rotation via its CA
-
-**Traffic management features (Istio VirtualService):**
+**Traefik as a reverse proxy** (Kubernetes-native, dynamic config via annotations):
 ```yaml
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-app
+  annotations:
+    kubernetes.io/ingress.class: traefik
 spec:
-  hosts: [myservice]
-  http:
-  - match:
-    - headers: {x-canary: {exact: "true"}}
-    route:
-    - destination: {host: myservice, subset: v2}
-  - route:
-    - destination: {host: myservice, subset: v1}
-      weight: 95
-    - destination: {host: myservice, subset: v2}
-      weight: 5
-    retries:
-      attempts: 3
-      retryOn: gateway-error,connect-failure,retriable-4xx
-    timeout: 10s
+  rules:
+    - host: myapp.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: my-service
+                port:
+                  number: 80
 ```
+
+### CDN (Content Delivery Network)
+
+A CDN distributes static content (images, JS, CSS) across geographically distributed edge nodes, reducing latency by serving content from the closest node to the user.
+
+**Benefits:**
+- Reduced latency: content served from edge, not origin
+- DDoS mitigation: traffic absorbed at edge before reaching origin
+- Reduced origin load: cache hits never reach the backend
+
+**Popular providers:** Cloudflare, AWS CloudFront, Akamai
+
+**Caching strategies:**
+- `Cache-Control: max-age=86400` — cache for 24 hours
+- `Cache-Control: no-store` — never cache (for auth endpoints)
+- Cache invalidation via CDN APIs on new deployments
 
 ---
 
-## 🛠️ Tools & Ecosystem
+## Cloud Networking
 
-```bash
-# Debugging
-tcpdump -i eth0 -n 'port 80'    # capture HTTP traffic
-tshark -r file.pcap             # analyze pcap file
-dig @8.8.8.8 hostname A         # DNS query to specific server
-nmap -p 1-1000 host             # port scan
-mtr hostname                    # traceroute + ping combined
-curl -v --http2 url             # test with verbose output + HTTP/2
-openssl s_client -connect host:443 -servername host  # TLS inspection
-ss -o state established '( sport = :443 )'           # connections on port 443
+### Virtual Private Cloud (VPC)
 
-# Kubernetes networking
-kubectl exec -it pod -- curl -v http://other-service  # test service connectivity
-kubectl exec -it pod -- nslookup kubernetes.default    # DNS test
-kubectl get networkpolicy -A                           # list all NetworkPolicies
-cilium connectivity test                               # Cilium network validation
-```
+A VPC is a logically isolated network in a cloud provider. Within a VPC you define subnets, route tables, internet gateways, and security groups.
+
+**VPC design principles:**
+- Use separate subnets for public (internet-facing), private (app tier), and isolated (database) layers
+- Never put databases in public subnets
+- Use CIDR blocks that leave room for growth: `/16` for VPC, `/24` for subnets
+- Route tables control which subnets can reach the internet (via Internet Gateway) or only internal resources (via NAT Gateway)
+
+**Security Groups vs Network ACLs:**
+- Security Groups: stateful, instance-level, allow-only rules
+- Network ACLs: stateless, subnet-level, allow and deny rules
 
 ---
 
-## 🏗️ Architecture Patterns
+## Container and Kubernetes Networking
 
-### VPC Design for Production
+### Docker Networking
 
-```
-VPC: 10.0.0.0/16 (65,534 IPs)
+Docker containers communicate over assigned ports. Modes:
+- **bridge** (default): containers on same host share a virtual bridge; external access via port mapping
+- **host**: container shares host network namespace — no isolation but no NAT overhead
+- **overlay**: multi-host networking used by Docker Swarm
+- **none**: no networking
 
-Public subnets (one per AZ):
-  10.0.0.0/24   us-east-1a  → Internet Gateway → internet
-  10.0.1.0/24   us-east-1b
-  10.0.2.0/24   us-east-1c
-  Hosts: Load balancers, NAT Gateways
+Port mapping example: `-p 8080:80` maps host port 8080 to container port 80.
 
-Private subnets (application layer):
-  10.0.10.0/24  us-east-1a  → NAT Gateway → internet
-  10.0.11.0/24  us-east-1b
-  10.0.12.0/24  us-east-1c
-  Hosts: EC2, EKS nodes, Lambda
+### Kubernetes Networking
 
-Database subnets (no internet access):
-  10.0.20.0/28  us-east-1a  → no internet route
-  10.0.21.0/28  us-east-1b
-  10.0.22.0/28  us-east-1c
-  Hosts: RDS, ElastiCache
-```
+Kubernetes networking follows these requirements:
+- All pods can communicate with all other pods without NAT
+- All nodes can communicate with all pods without NAT
+- The IP a pod sees itself as is the same IP others use to reach it
 
-**Rules:**
-- Database subnets have no route to internet (or NAT Gateway)
-- Application subnets reach internet via NAT Gateway for egress (software updates)
-- Public subnets only for resources that must have public IPs (ALBs, NAT Gateways)
+**CNI plugins** implement these requirements: Flannel (simple, VXLAN), Calico (L3 routing + network policy), Cilium (eBPF-based, L7 policy).
 
-### East-West Traffic Security
+**Services and DNS:**
+- ClusterIP: stable virtual IP inside cluster, kube-proxy routes traffic to pod IPs
+- NodePort: exposes service on each node's IP at a static port
+- LoadBalancer: provisions cloud load balancer
+- ExternalName: CNAME alias for external service
 
-In Kubernetes, all Pods can talk to all Pods by default. Lock it down:
+Kubernetes CoreDNS resolves service names: `my-service.my-namespace.svc.cluster.local`
 
+### Kubernetes Network Policies
+
+Network Policies restrict pod-to-pod traffic. Without a NetworkPolicy, all traffic is allowed. With at least one policy selecting a pod, only explicitly allowed traffic passes.
+
+**Default deny all ingress:**
 ```yaml
-# Default deny all in a namespace
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: default-deny
+  name: deny-all-ingress
   namespace: production
 spec:
   podSelector: {}
-  policyTypes: [Ingress, Egress]
----
-# Allow specific service access
+  policyTypes:
+    - Ingress
+```
+
+**Allow only from specific namespace:**
+```yaml
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-frontend-to-api
+  name: allow-from-monitoring
+  namespace: production
 spec:
   podSelector:
-    matchLabels: {app: api}
+    matchLabels:
+      app: backend
+  policyTypes:
+    - Ingress
   ingress:
-  - from:
-    - podSelector:
-        matchLabels: {app: frontend}
-    ports:
-    - protocol: TCP
-      port: 8080
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+```
+
+**Debugging NetworkPolicy issues:**
+```bash
+# List policies in namespace
+kubectl get networkpolicy -n <namespace>
+
+# Describe policy to see pod selector and rules
+kubectl describe networkpolicy <policy-name> -n <namespace>
+
+# Check if pod is affected by a policy
+kubectl get pod <pod-name> -o yaml | grep -i label -A 5
 ```
 
 ---
 
-## ⚙️ Production Operations
+## Service Mesh
 
-### Diagnosing Latency
+### What is a Service Mesh?
 
-Latency investigation ladder:
-1. Is it DNS? `dig +stats hostname` — check query time
-2. Is it TCP? `curl -w "%{time_connect}" url` — connection time
-3. Is it TLS? `curl -w "%{time_appconnect}" url` — TLS handshake time
-4. Is it TTFB? `curl -w "%{time_starttransfer}" url` — time to first byte
-5. Is it retransmit? `netstat -s | grep retransmit` — packet loss causing retransmit
+A service mesh is a dedicated infrastructure layer for managing service-to-service communication in a microservices architecture. It handles:
+- **Traffic management**: routing, load balancing, retries, circuit breaking
+- **Security**: mutual TLS (mTLS) between services, certificate management
+- **Observability**: distributed tracing, metrics, access logs — without application code changes
 
-### Connection Pool Management
+A service mesh typically uses sidecar proxies (one per pod) that intercept all inbound and outbound traffic.
 
-Database connections are expensive. At scale:
-- Pool connections per application instance (pgBouncer for Postgres, ProxySQL for MySQL)
-- RDS max_connections = RAM(MB)/12.5 approximately — plan for this
-- Monitor: active connections vs pool size vs wait queue
-- Connection leak pattern: `CLOSE_WAIT` accumulation on the DB side
+**Benefits:**
+- Transparent mTLS: encrypt all east-west traffic without changing application code
+- Fine-grained traffic control: canary deployments, A/B testing, traffic mirroring
+- Unified observability: consistent metrics and traces across all services
+- Resilience: automatic retries, timeouts, circuit breakers at the infrastructure level
+
+### Istio Architecture
+
+Istio is the most widely adopted service mesh. Its architecture has two planes:
+
+**Data Plane:** Envoy sidecar proxies injected into every pod. Envoy handles all inbound and outbound traffic, collecting telemetry.
+
+**Control Plane (Istiod):** Single binary that includes:
+- **Pilot**: manages service discovery and pushes routing configuration to Envoy sidecars
+- **Citadel**: certificate authority for mTLS — issues and rotates X.509 certificates
+- **Galley**: configuration validation and distribution
+
+**Istio installation (Helm):**
+```bash
+helm repo add istio https://istio-release.storage.googleapis.com/charts
+helm repo update
+
+# Install Istio base CRDs
+helm install istio-base istio/base -n istio-system --create-namespace
+
+# Install Istiod control plane
+helm install istiod istio/istiod -n istio-system --wait
+
+# Enable sidecar injection for a namespace
+kubectl label namespace production istio-injection=enabled
+```
+
+**Verify Istio is running:**
+```bash
+kubectl get pods -n istio-system
+kubectl get svc -n istio-system
+istioctl analyze
+```
+
+### Istio Traffic Management
+
+**VirtualService** — defines how traffic is routed to a service. Enables canary deployments, retries, and fault injection:
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: my-app
+spec:
+  hosts:
+    - my-app
+  http:
+    - match:
+        - headers:
+            x-user-group:
+              exact: beta
+      route:
+        - destination:
+            host: my-app
+            subset: v2
+    - route:
+        - destination:
+            host: my-app
+            subset: v1
+          weight: 90
+        - destination:
+            host: my-app
+            subset: v2
+          weight: 10
+```
+
+**DestinationRule** — defines subsets (versions) and load balancing policy:
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: my-app
+spec:
+  host: my-app
+  trafficPolicy:
+    loadBalancer:
+      simple: LEAST_CONN
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v2
+      labels:
+        version: v2
+```
+
+**Circuit Breaker via DestinationRule:**
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: my-app-cb
+spec:
+  host: my-app
+  trafficPolicy:
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 100
+```
+
+**Retry policy via VirtualService:**
+```yaml
+http:
+  - route:
+      - destination:
+          host: my-app
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+      retryOn: gateway-error,connect-failure,retriable-4xx
+```
+
+### Istio mTLS
+
+mTLS ensures that all service-to-service communication is encrypted and mutually authenticated. Both parties present certificates issued by Istiod's built-in CA.
+
+**Enable strict mTLS cluster-wide:**
+```yaml
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  mtls:
+    mode: STRICT
+```
+
+**Namespace-level permissive mode (during migration):**
+```yaml
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: legacy
+spec:
+  mtls:
+    mode: PERMISSIVE
+```
+
+**Authorization Policy — restrict which services can call each other:**
+```yaml
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-payments
+  namespace: production
+spec:
+  selector:
+    matchLabels:
+      app: payment-service
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/production/sa/checkout-service
+      to:
+        - operation:
+            methods: ["POST"]
+            paths: ["/v1/charge"]
+```
+
+### Istio Gateway (Ingress)
+
+```yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: my-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: my-tls-secret
+      hosts:
+        - "*.example.com"
+```
+
+### Linkerd
+
+Linkerd is a lightweight CNCF service mesh focused on simplicity. It uses Rust-based micro-proxies (linkerd2-proxy) that have a smaller resource footprint than Envoy. Key differences from Istio:
+
+- Simpler configuration — fewer CRDs, less complexity
+- Automatic mTLS without additional PeerAuthentication resources
+- Lower resource overhead (better for resource-constrained clusters)
+- Less feature-rich: no fault injection, limited traffic management compared to Istio
+
+**Linkerd install:**
+```bash
+curl -sL run.linkerd.io/install | sh
+linkerd check --pre
+linkerd install | kubectl apply -f -
+linkerd check
+```
+
+**Inject Linkerd proxy into a deployment:**
+```bash
+kubectl get deploy my-app -o yaml | linkerd inject - | kubectl apply -f -
+```
+
+### Service Mesh Best Practices
+
+- Start with observability enabled before enabling mTLS — understand existing traffic patterns first
+- Use PERMISSIVE mTLS mode during migration, then switch to STRICT
+- Define NetworkPolicies to allow sidecar proxy ports (15001, 15006, 15008 for Istio)
+- Monitor sidecar resource usage — Envoy adds CPU and memory overhead per pod
+- Use Kiali (Istio UI) to visualize service topology and traffic flow
+- Set appropriate retry budgets — unlimited retries can cause cascading failures
 
 ---
 
-## 📊 Observability & Debugging
+## Network Security
 
-### Istio/Linkerd Metrics (Golden Signals)
+### Encryption in Transit
 
-```promql
-# Request rate per service
-sum(rate(istio_requests_total[1m])) by (destination_service)
+- TLS 1.2 and TLS 1.3 are the widely used secure versions. TLS 1.0 and 1.1 are deprecated.
+- TLS provides: data encryption (prevents MITM), authentication (client communicates with intended server), data integrity (prevents tampering)
+- DevOps tooling: `openssl s_client -connect host:443` to inspect TLS handshake
 
-# Error rate
-sum(rate(istio_requests_total{response_code=~"5.."}[5m])) by (destination_service)
-/ sum(rate(istio_requests_total[5m])) by (destination_service)
+### VPN (Virtual Private Network)
 
-# p99 latency
-histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket[5m])) by (le, destination_service))
+VPNs create encrypted tunnels between networks. Common use cases:
+- Connecting on-prem data centers to cloud VPCs (Site-to-Site VPN)
+- Secure remote access for engineers (Client VPN)
+- IPsec (port 500 UDP) is the standard protocol for VPN encryption
 
-# Linkerd success rate
-sum(rate(response_total{classification="success"}[1m])) by (dst_service)
-/ sum(rate(response_total[1m])) by (dst_service)
+### Zero Trust Architecture
+
+Zero Trust replaces implicit network trust with continuous verification:
+- Never trust, always verify — authenticate and authorize every request regardless of network location
+- Micro-segmentation: use NetworkPolicies and mTLS to enforce east-west traffic controls
+- All traffic encrypted — no plaintext on internal networks
+- Least privilege access at every layer: IAM, RBAC, NetworkPolicy, mTLS AuthorizationPolicy
+
+---
+
+## Network Monitoring and Troubleshooting
+
+### Essential Networking Tools
+
+```bash
+# Check if a port is open
+nc -zv hostname 443
+telnet hostname 443
+
+# DNS resolution
+dig api.example.com
+nslookup api.example.com
+dig +trace api.example.com   # full DNS resolution chain
+
+# Trace packet path
+traceroute hostname
+mtr hostname                  # continuous traceroute
+
+# Check active connections and listening ports
+ss -tlnp
+netstat -tlnp
+
+# Packet capture
+tcpdump -i eth0 port 80 -w capture.pcap
+tcpdump -i any host 10.0.0.1 and port 8080
+
+# HTTP connectivity test
+curl -v https://api.example.com
+curl -o /dev/null -w "%{http_code} %{time_total}\n" https://example.com
+
+# TLS inspection
+openssl s_client -connect api.example.com:443
+
+# Check Kubernetes service DNS inside pod
+kubectl exec -it <pod> -- nslookup my-service.default.svc.cluster.local
+kubectl exec -it <pod> -- curl http://my-service:8080/health
+```
+
+### Kubernetes Networking Troubleshooting
+
+```bash
+# Check pod IP and node
+kubectl get pod <pod-name> -o wide
+
+# Check service endpoints (are pods registered?)
+kubectl get endpoints <service-name>
+
+# Describe service to see selector
+kubectl describe svc <service-name>
+
+# Check if DNS works from inside a pod
+kubectl run debug --image=busybox --rm -it -- nslookup kubernetes.default
+
+# Check Istio sidecar injection
+kubectl get pod <pod-name> -o jsonpath='{.spec.containers[*].name}'
+
+# Istio proxy status
+istioctl proxy-status
+istioctl proxy-config cluster <pod-name>.<namespace>
+
+# Check NetworkPolicy effect
+kubectl describe networkpolicy -n <namespace>
 ```
 
 ---
 
-## 🔐 Security Considerations
+## Network Automation and IaC
 
-**mTLS everywhere in production** — service mesh provides this transparently. Without mTLS, any process on the internal network can impersonate a service.
+### Infrastructure as Code for Networking
 
-**NetworkPolicy as east-west firewall** — default deny, explicit allow. Test policies: `kubectl exec` + `curl` between pods to verify.
+Network configurations managed as code enable reproducibility and auditability.
 
-**TLS certificate management** — cert-manager automates Let's Encrypt and internal CA certificate issuance and renewal. Never manually manage TLS certs in production.
+**Terraform VPC example:**
+```hcl
+resource "aws_vpc" "main" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  enable_dns_support   = true
 
-**DNS security:** DNSSEC prevents response spoofing. On AWS: Route 53 supports DNSSEC for public zones.
+  tags = {
+    Name = "production-vpc"
+  }
+}
+
+resource "aws_subnet" "private" {
+  count             = 3
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+
+  tags = {
+    Name = "private-${count.index}"
+  }
+}
+
+resource "aws_subnet" "public" {
+  count                   = 3
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index + 10)
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name = "public-${count.index}"
+  }
+}
+```
+
+### CI/CD for Network Configuration
+
+- Validate Terraform network configs with `terraform validate` and `terraform plan` before applying
+- Scan network IaC with `tfsec` for open security groups, unencrypted resources, overly permissive rules
+- Use GitOps workflows (Flux, ArgoCD) to manage Kubernetes NetworkPolicy manifests
+- Test connectivity in staging before production with automated curl/nc health checks
+
+---
+
+## Software-Defined Networking (SDN)
+
+SDN separates the control plane (deciding where traffic goes) from the data plane (forwarding packets), enabling programmatic network control.
+
+**In Kubernetes context:** kube-proxy, CNI plugins, and service meshes are all SDN implementations. They dynamically program iptables rules or eBPF maps based on cluster state rather than requiring manual switch/router configuration.
+
+**eBPF-based networking (Cilium):** Uses Linux kernel's eBPF to implement networking at the kernel level — bypasses iptables overhead, enables L7-aware NetworkPolicies (filter by HTTP path or method), and provides per-connection observability.
 
 ---
 
-## 🎓 Staff/Principal Engineer Perspective
+## Interview Preparation
 
-**Service mesh adoption is a platform decision** — don't let individual teams adopt different meshes. The platform team standardizes one mesh, provides the config, and ensures all services get onboarded. Half-adopted meshes miss the security and observability benefits.
+**Common interview questions:**
 
-**eBPF is the future of Kubernetes networking** — Cilium with eBPF provides better performance, richer observability (Hubble), and L7 network policies without sidecars. If starting a new cluster, default to Cilium.
+1. **Explain what happens when you type `curl https://api.example.com` in a pod running in Kubernetes.**
+   - DNS resolution via CoreDNS → Service IP returned → kube-proxy routes to pod IP → TCP connection (SYN/SYN-ACK/ACK) → TLS handshake → HTTP request/response. If Istio is installed, Envoy sidecar intercepts both sides.
 
-**Understand your blast radius for network changes** — changing a Security Group affects all instances that use it. Changing a VPC route table affects all subnets. NetworkPolicies are namespace-scoped. Test in staging with production-like traffic before applying.
+2. **A pod cannot reach another pod in the same namespace. How do you diagnose?**
+   - Check `kubectl get networkpolicy` for any deny policies
+   - Verify pod IPs with `kubectl get pod -o wide`
+   - Check service endpoints: `kubectl get endpoints`
+   - Run connectivity test: `kubectl exec pod-a -- nc -zv pod-b-ip 8080`
+   - Check if sidecar mTLS is blocking: `istioctl proxy-config listener pod-name`
 
----
+3. **What is the difference between a VirtualService and a DestinationRule in Istio?**
+   - VirtualService: defines routing rules (how traffic is routed — weights, header matching, retries)
+   - DestinationRule: defines destination configuration (subsets, load balancing algorithm, circuit breaker settings)
 
-## 💥 Failure Modes & Incident Patterns
+4. **How do you calculate the number of subnets from 10.0.0.0/8 each with /24 prefix?**
+   - Total host bits: 32 - 8 = 24. Subnet bits needed: 24 - 8 = 16. Number of /24 subnets: `2^16 = 65,536`.
 
-**DNS NXDOMAIN spike** — sudden increase in DNS failures. Cause: mis-configured service names, namespace changes, CoreDNS restart. Debugging: `kubectl logs -n kube-system -l k8s-app=kube-dns`.
+5. **What DNS record do you use for a CNAME chain, and what is the risk?**
+   - CNAME points to another hostname. Risk: CNAME at apex domain (`@`) is prohibited by RFC — use ALIAS or ANAME records instead. Long CNAME chains add DNS resolution latency.
 
-**Connection pool exhaustion** — all DB connections taken, new requests queue and timeout. Symptom: application timeouts despite DB being healthy. Fix: pgBouncer, reduce connection per app instance, scale horizontally.
-
-**Asymmetric routing** — packet goes one path, response comes back a different path through a stateful firewall that drops it. Symptom: one-way connectivity, SYN succeeds but no data flows. Fix: symmetric routing design.
-
-**mTLS certificate expiry** — service mesh certificates expire and services stop communicating. Symptom: sudden 503s on all inter-service calls. Prevention: monitor certificate expiry, cert-manager auto-renewal.
-
----
-
-## 💼 Interview Prep
-
-**"A service has intermittent timeouts — how do you debug?"**
-Layer-by-layer: DNS latency? TCP retransmits? TLS overhead? Application TTFB? Check `tcpdump` during incident, look at p99 not p50 (timeouts hide in tails), check service mesh metrics for the specific service pair.
-
-**"Explain how a Kubernetes service request gets routed"**
-DNS lookup (CoreDNS) → ClusterIP VIP → iptables DNAT rule (kube-proxy) or eBPF program (Cilium) → selected Pod IP via CNI routing.
-
----
-
-## 📚 Key Takeaways
-
-1. **DNS is always the first suspect** — measure DNS latency before assuming application is slow
-2. **TCP TIME_WAIT is normal** — it prevents data corruption; don't try to eliminate it, tune `tw_reuse`
-3. **NetworkPolicy default-deny is your east-west firewall** — the default allow-all is a lateral movement vulnerability
-4. **mTLS via service mesh** — encryption + identity verification without code changes
-5. **CNI choice determines what networking features are available** — Cilium opens capabilities that Flannel cannot
-6. **L4 vs L7 load balancing trade-offs** — L4 is faster, L7 is smarter; use both appropriately
-7. **Understand the search domain penalty** — ndots:5 is 5 DNS lookups for every hostname at scale
-8. **Connection pools are not optional at scale** — direct DB connections in each app instance do not scale
-9. **VPC CIDR blocks are permanent** — plan for 5 years of growth; exhaustion is painful to fix
-10. **Service mesh is a platform decision** — standardize one, onboard all services, partial adoption misses the value
-
-
-
----
+6. **Explain TCP three-way handshake and why it matters for DevOps.**
+   - SYN (client) → SYN-ACK (server) → ACK (client). Each step has a timeout. High `SYN_SENT` counts indicate the server is unreachable or its port is blocked. Incomplete handshakes waste connections and are a vector for SYN flood DDoS attacks.

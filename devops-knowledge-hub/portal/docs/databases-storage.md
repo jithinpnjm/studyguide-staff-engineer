@@ -4,36 +4,125 @@ sidebar_position: 10
 description: "Zero to hero study guide for Databases & Storage — concepts, tools, architecture, production operations, and interview prep."
 ---
 
-import AIChatWidget from '@site/src/components/AIChatWidget';
+## Why This Domain Matters
 
-## 🎯 Why This Domain Matters
-
-Every application is ultimately a system for transforming and persisting data. Database failures are among the most severe incidents — data loss or corruption can be irreversible, and slow queries cascade into full system outages. For a Staff/Principal SRE, this domain covers both theory (SQL, transactions, replication) and operational reality (backup/restore, schema migrations, connection pooling at scale).
+Every application is ultimately a system for transforming and persisting data. Database failures are among the most severe incidents — data loss or corruption can be irreversible, and slow queries cascade into full system outages.
 
 Business outcomes:
 - **Correctness** — ACID transactions prevent financial inconsistencies, duplicate orders, and inventory errors
-- **Performance** — poorly indexed queries cause full table scans on million-row tables; one bad query can take down an entire service
+- **Performance** — poorly indexed queries cause full table scans; one bad query can take down an entire service
 - **Reliability** — replication topology and backup strategy determine your RPO and RTO
 - **Scale** — connection pooling, read replicas, and caching are the primary levers for scaling beyond one database
 
 ---
 
-## 📋 Prerequisites & Mental Models
+## SQL Fundamentals (From Interview Q&A)
 
-**ACID vs BASE trade-off** — ACID (Atomicity, Consistency, Isolation, Durability) gives strong guarantees at the cost of scalability. BASE (Basically Available, Soft state, Eventually consistent) gives scalability at the cost of consistency. Transactional e-commerce needs ACID; social media feeds can use BASE.
+### Core SQL Concepts
 
-**CAP theorem** — a distributed system can guarantee at most 2 of: Consistency, Availability, Partition tolerance. Since network partitions are inevitable, the real choice is CP (consistent, may be unavailable during partition) vs AP (available, may return stale data).
+**Q: What is SQL?**
+SQL stands for Structured Query Language. It is a programming language used for managing and manipulating relational databases.
 
-**Read-heavy vs write-heavy** — most web applications are 80-95% reads. Read optimization (caching, read replicas, denormalization) differs fundamentally from write optimization (batching, partitioning, write-ahead log tuning).
+**Q: What is a database?**
+A database is an organized collection of data stored and accessed electronically. It provides a way to store, organize, and retrieve large amounts of data efficiently.
+
+**Q: What is a primary key?**
+A primary key is a column or combination of columns that uniquely identifies each row in a table. It enforces the entity integrity rule in a relational database.
+
+**Q: What is a foreign key?**
+A foreign key is a column or combination of columns that establishes a link between data in two tables. It ensures referential integrity by enforcing relationships between tables.
+
+**Q: What is the difference between a primary key and a unique key?**
+A primary key uniquely identifies a row and must have a unique value. A unique key ensures that a column or combination of columns has a unique value but does not necessarily identify the row.
+
+### Joins
+
+**Q: What is a join in SQL?**
+A join is an operation used to combine rows from two or more tables based on related columns. It allows you to retrieve data from multiple tables simultaneously.
+
+```sql
+-- INNER JOIN: returns rows where there is a match in both tables
+SELECT orders.id, users.name
+FROM orders
+INNER JOIN users ON orders.user_id = users.id;
+
+-- LEFT JOIN: returns all rows from the left table plus matching rows from the right
+SELECT users.name, orders.id
+FROM users
+LEFT JOIN orders ON users.id = orders.user_id;
+```
+
+### DELETE vs TRUNCATE
+
+**Q: What is the difference between DELETE and TRUNCATE?**
+- `DELETE` removes specific rows based on a condition. It can be rolled back and generates individual delete operations for each row.
+- `TRUNCATE` removes all rows from a table. It cannot be rolled back, and it is faster because it deallocates the data pages instead of logging individual row deletions.
+
+```sql
+DELETE FROM orders WHERE status = 'cancelled';   -- conditional, rollback-able
+TRUNCATE TABLE temp_staging;                     -- all rows, fast, no rollback
+```
+
+### UNION vs UNION ALL
+
+**Q: What is the difference between UNION and UNION ALL?**
+- `UNION` combines result sets of two or more SELECT statements and removes duplicate rows.
+- `UNION ALL` includes all rows, including duplicates.
+
+```sql
+SELECT name FROM customers_us
+UNION
+SELECT name FROM customers_eu;      -- deduplicates
+
+SELECT name FROM customers_us
+UNION ALL
+SELECT name FROM customers_eu;      -- keeps duplicates, faster
+```
+
+### WHERE vs HAVING
+
+**Q: What is the difference between HAVING and WHERE?**
+- `WHERE` filters rows based on a condition before grouping or aggregation. It operates on individual rows.
+- `HAVING` filters grouped rows based on a condition after the data is grouped using `GROUP BY`.
+
+```sql
+-- WHERE filters rows before grouping
+SELECT region, SUM(revenue)
+FROM orders
+WHERE status = 'completed'
+GROUP BY region;
+
+-- HAVING filters after grouping
+SELECT region, SUM(revenue) AS total
+FROM orders
+GROUP BY region
+HAVING SUM(revenue) > 100000;
+```
+
+### Transactions
+
+**Q: What is a transaction in SQL?**
+A transaction is a sequence of SQL statements that are executed as a single logical unit. Transactions ensure that either all the statements succeed or all are rolled back.
+
+### Normalization
+
+**Q: What is normalization?**
+Normalization is the process of organizing data in a database to minimize redundancy and dependency. It involves breaking down a table into smaller tables and establishing relationships between them.
+
+**Types of normalization:**
+- First Normal Form (1NF)
+- Second Normal Form (2NF)
+- Third Normal Form (3NF)
+- Boyce-Codd Normal Form (BCNF)
+- Fourth Normal Form (4NF)
+- Fifth Normal Form (5NF) / Project-Join Normal Form (PJNF)
 
 ---
 
-## 🔷 Core Concepts
-
-### SQL & Query Optimization
+## SQL Query Optimization
 
 ```sql
--- Window functions (staff-level must-know)
+-- Window functions (must-know for staff level)
 SELECT
   user_id,
   order_total,
@@ -74,22 +163,15 @@ EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
 SELECT * FROM orders WHERE user_id = 123 ORDER BY created_at DESC LIMIT 10;
 ```
 
-**Index types:**
-- **B-tree** (default): equality, range, ORDER BY — use for most cases
-- **Hash**: equality-only, slightly faster, can't do range queries
-- **GIN**: full-text search, JSONB contains, array overlap
-- **BRIN**: block range, for naturally time-ordered huge tables (log tables, events)
-- **Partial**: index only rows matching a WHERE clause — smaller, faster
-- **Covering**: INCLUDE non-key columns — satisfy queries from index alone
-
 **Common query performance mistakes:**
 - `LIKE '%prefix%'` — wildcard on both ends defeats indexes; use full-text search (GIN + tsvector)
 - `WHERE LOWER(email) = $1` — function on column defeats index; create functional index or store lowercased
 - `SELECT *` — pulls unnecessary columns, prevents index-only scans
-- `ORDER BY` on non-indexed column with large result set — full sort in memory
-- N+1 queries — fetching 100 users then making 100 separate queries for their orders; use JOIN
+- N+1 queries — fetching users then making separate queries per user for their orders; use JOIN
 
-### Transactions & Isolation Levels
+---
+
+## Transactions and Isolation Levels
 
 **ACID:**
 - **Atomicity** — all operations in a transaction commit together or all roll back
@@ -125,22 +207,18 @@ WHERE id = 99 AND version = 5;
 -- If 0 rows updated: someone else modified it; retry
 ```
 
-### Replication
+---
+
+## Replication
 
 **Synchronous replication:** primary waits for replica to confirm write before returning to client.
 - Guarantee: zero data loss on primary failure
-- Cost: write latency increases by one network RTT to replica
-- Use for: financial data, audit logs, anything where data loss is unacceptable
+- Cost: write latency increases by one network RTT
+- Use for: financial data, audit logs
 
 **Asynchronous replication:** primary returns immediately; replica catches up in background.
-- Replication lag: replica may be seconds or minutes behind
 - Risk: failover during lag = data loss proportional to lag × write rate
 - Use for: read replicas for scaling reads, analytics, reporting
-
-**Read replicas:** offload read traffic from primary.
-- Always eventually consistent (by replication lag)
-- Never use for: reads that must see their own writes, critical inventory checks, anything requiring strong consistency
-- Good for: reports, dashboards, search, recommendations
 
 **PostgreSQL replication setup:**
 ```
@@ -151,12 +229,15 @@ max_wal_senders = 5
 # pg_hba.conf on primary
 host replication replicator 10.0.0.0/8 md5
 
-# On replica: pg_basebackup -h primary -U replicator -D /var/lib/postgresql/data -P -Xs
+# On replica:
+pg_basebackup -h primary -U replicator -D /var/lib/postgresql/data -P -Xs
 ```
 
-### Connection Pooling
+---
 
-At scale, each app instance holding DB connections is unsustainable. PostgreSQL max_connections ≈ RAM(MB)/12.5 — defaults to 100. 100 app instances × 10 connections each = 1000 connections, exhausting the pool.
+## Connection Pooling
+
+At scale, each app instance holding DB connections is unsustainable. PostgreSQL `max_connections` ≈ RAM(MB)/12.5 — defaults to 100. 100 app instances × 10 connections each = 1000 connections, exhausting the pool.
 
 **PgBouncer (PostgreSQL):**
 ```ini
@@ -171,27 +252,47 @@ min_pool_size = 5              # keep warm connections ready
 server_idle_timeout = 600
 ```
 
-Transaction mode is the sweet spot: connection only held during a transaction, returned to pool immediately after COMMIT/ROLLBACK. Connection count to DB stays tiny regardless of app instance count.
+Transaction mode is the sweet spot: connection only held during a transaction, returned to pool immediately after COMMIT/ROLLBACK.
 
-### Kafka — Event Streaming Platform
+---
 
-Apache Kafka is a distributed, partitioned, replicated log. Key difference from message queues: messages are retained (configurable time/size) and can be re-read from any offset.
+## Apache Kafka — Event Streaming
 
-**Core concepts:**
-- **Topic**: named log of records, divided into partitions
-- **Partition**: ordered, immutable sequence of records. Only unit of parallelism. Messages within a partition are totally ordered; no ordering across partitions.
-- **Offset**: sequential message position within a partition. Consumer tracks its own offset (stored in `__consumer_offsets` topic).
-- **Consumer group**: multiple consumers sharing topic consumption. Each partition assigned to exactly one consumer in a group. Scale: add partitions + consumers (up to partition count).
-- **Retention**: messages kept by time (7 days default) or size. Old messages deleted via log compaction or rolling deletion.
+Apache Kafka is a distributed, partitioned, replicated log designed for real-time data pipelines and event streaming. Key difference from message queues: messages are retained (configurable time/size) and can be re-read from any offset.
 
-**Producer keys and ordering:**
-```python
-# Same key → same partition → ordered per key
-producer.send('orders', key=b'user-123', value=order_data)
-# All events for user-123 go to the same partition, in order
-```
+### Core Concepts
 
-**Consumer patterns:**
+- **Topic** — named log of records, divided into partitions. Topics and data streams are the central concept in Kafka.
+- **Partition** — ordered, immutable sequence of records. Only unit of parallelism. Messages within a partition are totally ordered; no ordering across partitions.
+- **Offset** — sequential message position within a partition. Consumer tracks its own offset (stored in `__consumer_offsets` topic).
+- **Consumer group** — multiple consumers sharing topic consumption. Each partition assigned to exactly one consumer in a group.
+- **Replication** — Kafka replicates partitions across brokers (the power of copying and reproducing). One broker acts as the "leader" for each partition — all reads and writes go through the leader.
+- **Retention** — messages kept by time (7 days default) or size.
+
+### Leaders and Elections
+
+Each partition has one leader and zero or more followers. All reads and writes happen through the leader. If a leader fails, Kafka elects a new leader from the in-sync replicas (ISR).
+
+**What is ISR?** The ISR (In-Sync Replicas) is the set of replicas that are fully caught up with the leader. Only replicas in the ISR are eligible to become leaders. Minimum in-sync replicas (`min.insync.replicas`) controls how many replicas must acknowledge a write.
+
+### Producer Performance: Ack Value
+
+The `acks` setting controls producer durability:
+
+- `acks=0` — fire and forget, no acknowledgement. Highest throughput, data loss possible.
+- `acks=1` — leader acknowledges. Data loss if leader fails before replicas replicate.
+- `acks=all` (or `acks=-1`) — all in-sync replicas must acknowledge. Safest, lower throughput.
+
+### Batch Messages and Compression
+
+For high throughput, batch messages and compress large records:
+
+- `linger.ms` — how long the producer waits to batch messages
+- `batch.size` — maximum batch size in bytes
+- Compression: `snappy`, `gzip`, `lz4`, `zstd` — reduce network usage for large records
+
+### Consumer Patterns
+
 ```python
 from kafka import KafkaConsumer
 import json
@@ -214,20 +315,76 @@ for message in consumer:
         send_to_dlq(message)
 ```
 
-**Delivery semantics:**
-- At-most-once: fire and forget, no retry. Messages may be lost.
-- At-least-once: retry until ack. Messages may be processed multiple times — consumers must be idempotent.
-- Exactly-once: Kafka transactions (producers) + idempotent consumers. Highest overhead.
+### Consumers and Consumer Groups
 
-**Common Kafka patterns:**
-- **Event sourcing**: store all events as the system of record; derive state by replaying
-- **CQRS**: write model (commands) → Kafka → read model (projections) rebuilt from events
-- **CDC (Change Data Capture)**: Debezium reads PostgreSQL WAL → publishes row changes to Kafka → downstream services react
-- **Dead Letter Queue (DLQ)**: failed messages routed to separate topic for analysis and retry
+Consumers and consumer groups allow parallelism. The balance between cores and consumers matters: having more consumers than partitions is wasteful — excess consumers sit idle. The rule: one consumer maximum per partition in a consumer group.
+
+### Delivery Semantics
+
+- **At-most-once** — fire and forget, no retry. Messages may be lost.
+- **At-least-once** — retry until ack. Messages may be processed multiple times — consumers must be idempotent.
+- **Exactly-once** — Kafka transactions (producers) + idempotent consumers. Highest overhead.
+
+### Kafka Use Cases
+
+**Website activity tracking** — track page views, searches, and user events in real time as a high-throughput event stream.
+
+**Message service** — decouple producers and consumers; producers send messages to topics, consumers read at their own pace.
+
+**Real-time event stream processing** — process events as they arrive, compute aggregations, trigger alerts.
+
+**Log aggregation** — collect logs from multiple services and aggregate them into a central topic for analysis.
+
+**Data ingestion** — ingest data into data warehouses, search indexes, or caching systems.
+
+**Commit log service** — use Kafka as a distributed commit log; replay events to reconstruct state.
+
+**Event sourcing** — store all events as the system of record; derive state by replaying.
+
+### Partition Performance
+
+More partitions = higher throughput, but there are trade-offs:
+- Too many partitions can cause leader election overhead and increase end-to-end latency.
+- Do not set up too many partitions — Kafka's recommendation is to keep partitions per broker under a few thousand.
+- Do not hardcode partition numbers in application code — let Kafka handle assignment.
+
+**Default retention period:** 7 days (168 hours). Record order within a partition is guaranteed; record order across partitions is not.
+
+**Number of Zookeepers:** For a production cluster, use an odd number (3 or 5) for quorum-based leader election.
+
+### Getting Started with Kafka
+
+Hosted options like CloudKarafka provide:
+
+- **Secure connection via certificates** — mTLS authentication between clients and brokers
+- **Secure connection via SASL/SCRAM** — username/password-based authentication
+- **Secure connection via VPC** — network-level isolation for private clusters
+
+Create a topic, then publish and subscribe:
+
+```bash
+# Create a topic
+kafka-topics.sh --create --topic order-events --partitions 6 --replication-factor 3 --bootstrap-server kafka:9092
+
+# Publish messages
+kafka-console-producer.sh --topic order-events --bootstrap-server kafka:9092
+
+# Subscribe and consume
+kafka-console-consumer.sh --topic order-events --from-beginning --bootstrap-server kafka:9092
+```
 
 ---
 
-## 🛠️ Tools & Ecosystem
+## Common Kafka Patterns
+
+- **CQRS** — separate read and write responsibilities; write model (commands) → Kafka → read model (projections) rebuilt from events
+- **CDC (Change Data Capture)** — Debezium reads PostgreSQL WAL → publishes row changes to Kafka → downstream services react
+- **Dead Letter Queue (DLQ)** — failed messages routed to separate topic for analysis and retry
+- **Log aggregation** — services write to Kafka; a single consumer aggregates logs to storage
+
+---
+
+## Tools and Ecosystem
 
 | Tool | Purpose |
 |------|---------|
@@ -243,12 +400,13 @@ for message in consumer:
 | Velero | Kubernetes backup including PVCs |
 | Flyway / Liquibase | Database migration version control |
 | CloudNativePG | Kubernetes operator for PostgreSQL |
+| CloudKarafka | Hosted managed Apache Kafka |
 
 ---
 
-## 🏗️ Architecture Patterns
+## Architecture Patterns
 
-### Read Scaling with Replicas + Redis Cache
+### Read Scaling with Replicas and Redis Cache
 
 ```
 Write → Primary PostgreSQL (Multi-AZ)
@@ -258,29 +416,28 @@ Read (write-your-own-reads) → Primary
 ```
 
 Cache invalidation strategies:
-- **TTL (time-to-live)**: accept staleness window, simplest operationally
-- **Cache-aside (lazy loading)**: populate on cache miss
-- **Write-through**: update cache on every write — fresh but higher write cost
-- **Event-driven invalidation**: Kafka event on DB change → consumer invalidates cache key
+- **TTL (time-to-live)** — accept staleness window, simplest operationally
+- **Cache-aside (lazy loading)** — populate on cache miss
+- **Write-through** — update cache on every write — fresh but higher write cost
+- **Event-driven invalidation** — Kafka event on DB change → consumer invalidates cache key
 
 ### Expand-Contract Schema Migrations
 
 Safe schema changes in production without downtime:
 
-```
-Step 1: Expand — add new column (nullable, backwards-compatible)
-  ALTER TABLE orders ADD COLUMN new_status VARCHAR(50);
+```sql
+-- Step 1: Expand — add new column (nullable, backwards-compatible)
+ALTER TABLE orders ADD COLUMN new_status VARCHAR(50);
 
-Step 2: Deploy new code — writes to both old AND new columns
-  -- application writes both columns simultaneously
+-- Step 2: Deploy new code — writes to both old AND new columns simultaneously
 
-Step 3: Backfill — populate new column for existing rows
-  UPDATE orders SET new_status = old_status WHERE new_status IS NULL;
+-- Step 3: Backfill — populate new column for existing rows
+UPDATE orders SET new_status = old_status WHERE new_status IS NULL;
 
-Step 4: Switch reads — deploy code that reads from new column only
+-- Step 4: Switch reads — deploy code that reads from new column only
 
-Step 5: Contract — remove old column (after old code is gone from all instances)
-  ALTER TABLE orders DROP COLUMN old_status;
+-- Step 5: Contract — remove old column (after old code is gone)
+ALTER TABLE orders DROP COLUMN old_status;
 ```
 
 NEVER: add NOT NULL without a default or backfill. Never rename columns (add new, migrate, drop old). Never add a foreign key without first ensuring data consistency.
@@ -311,17 +468,17 @@ spec:
         image: postgres:16
         resources:
           requests: {cpu: "2", memory: "8Gi"}
-          limits: {memory: "8Gi"}  # no CPU limit — prefer throttle over OOMKill
+          limits: {memory: "8Gi"}
         env:
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
 ```
 
-Use operators for production databases on K8s: **CloudNativePG**, **Zalando Postgres Operator**, **CrunchyData PGO**. Operators handle: failover, backup scheduling, connection pooling, monitoring.
+Use operators for production databases on K8s: **CloudNativePG**, **Zalando Postgres Operator**, **CrunchyData PGO**.
 
 ---
 
-## ⚙️ Production Operations
+## Production Operations
 
 ### Backup Strategy
 
@@ -332,7 +489,9 @@ pgbackrest --stanza=prod --type=diff backup      # daily differential
 pgbackrest --stanza=prod --type=incr backup      # hourly incremental (WAL archiving)
 
 # Point-in-time recovery
-pgbackrest --stanza=prod   --target="2024-01-15 14:30:00"   --target-action=promote restore
+pgbackrest --stanza=prod \
+  --target="2024-01-15 14:30:00" \
+  --target-action=promote restore
 
 # Verify backup integrity (DO THIS MONTHLY)
 pgbackrest --stanza=prod check
@@ -340,9 +499,9 @@ pgbackrest --stanza=prod check
 
 **Recovery objectives:**
 - **RPO** (Recovery Point Objective): max acceptable data loss. WAL archiving every 5 min → RPO ≤ 5 min.
-- **RTO** (Recovery Time Objective): max acceptable downtime. Automated failover → RTO <60s. Full restore from backup → RTO hours.
+- **RTO** (Recovery Time Objective): max acceptable downtime. Automated failover → RTO < 60s.
 
-**Test your backups monthly** — backup that has never been restored is theoretical, not actual.
+Test your backups monthly — backup that has never been restored is theoretical, not actual.
 
 ### Query Performance Investigation
 
@@ -372,11 +531,11 @@ ORDER BY n_dead_tup DESC;
 
 **MVCC and VACUUM:** PostgreSQL never overwrites rows — it marks old versions as dead. VACUUM reclaims dead row space. Long-running transactions block VACUUM from cleaning up → table bloat → write slowdowns.
 
-Fix: `SET idle_in_transaction_session_timeout = '30s'` in postgresql.conf. This kills sessions sitting in a transaction doing nothing — the primary bloat source.
+Fix: `SET idle_in_transaction_session_timeout = '30s'` in postgresql.conf.
 
 ---
 
-## 📊 Key Metrics
+## Key Metrics
 
 ```promql
 # PostgreSQL (via postgres_exporter)
@@ -388,7 +547,6 @@ pg_database_size_bytes                                 # database growth
 # Redis
 redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)  # hit rate
 redis_memory_used_bytes / redis_memory_max_bytes       # memory pressure
-redis_connected_clients                                # connection count
 
 # Kafka
 kafka_consumer_group_lag                               # consumer falling behind = scale needed
@@ -404,7 +562,7 @@ kafka_log_log_end_offset - kafka_log_log_start_offset # partition size (retentio
 
 ---
 
-## 🔐 Security
+## Security
 
 ```sql
 -- Per-service minimal privileges
@@ -421,47 +579,61 @@ CREATE POLICY orders_isolation ON orders
 ```
 
 **Database security baseline:**
-- Encrypt at rest (RDS: enabled by default; self-hosted: filesystem encryption + pgcrypto for sensitive columns)
-- TLS for all connections (`ssl=on` in postgresql.conf, verify certificates in client connection string)
+- Encrypt at rest (RDS: enabled by default; self-hosted: filesystem encryption)
+- TLS for all connections (`ssl=on` in postgresql.conf)
 - Private subnet — no public IP or public endpoint for database
-- Audit logging via `pgaudit` extension — logs all DDL and DML for compliance
+- Audit logging via `pgaudit` extension
 - Rotate credentials regularly; use Vault dynamic secrets for zero-standing-credentials
 
 ---
 
-## 💥 Failure Modes
+## Failure Modes
 
 **Connection pool exhaustion:** all PgBouncer server connections taken, clients queue and time out.
 Check: `SELECT count(*), state FROM pg_stat_activity GROUP BY state`. `idle in transaction` is the culprit — set `idle_in_transaction_session_timeout`.
 
-**Replication lag spike:** write-heavy workload outpaces replica's ability to apply changes. If primary fails during lag, data loss = lag × write rate.
-Prevention: synchronous replication for critical data, monitor `pg_replication_lag_bytes` continuously.
+**Replication lag spike:** write-heavy workload outpaces replica's ability to apply changes. Data loss = lag × write rate if primary fails.
+Prevention: synchronous replication for critical data, monitor `pg_replication_lag_bytes`.
 
-**Long-running transaction blocks VACUUM:** table bloat accumulates, writes slow, eventually table reaches maximum tuple count.
+**Long-running transaction blocks VACUUM:** table bloat accumulates, writes slow.
 Fix: `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle in transaction' AND query_start < NOW() - INTERVAL '5 minutes'`.
 
-**Kafka consumer lag accumulates:** consumers can't keep up with producers. Partitions fill up to retention limit, old messages deleted before processing.
+**Kafka consumer lag accumulates:** consumers can't keep up with producers. Old messages deleted before processing.
 Fix: add consumers (up to partition count), optimize consumer processing (batch, async), add partitions and scale consumers together.
 
-**DynamoDB hot partition:** all requests hitting one partition key. Single-digit microsecond latency degrades to seconds for that key.
-Fix: distribute writes — add random suffix to hot keys (write sharding), use DAX caching for reads.
+**Partition distribution imbalance (Kafka brokers):** uneven load across brokers. Kafka MGMT tools show partition distribution warnings. Rebalance partitions manually using `kafka-reassign-partitions.sh`.
 
 ---
 
-## 💼 Interview Prep
+## Interview Prep
+
+**"What is SQL?"**
+SQL stands for Structured Query Language, used for managing and manipulating relational databases. It supports querying, inserting, updating, and deleting data, as well as defining schema and controlling access.
+
+**"What is the difference between DELETE and TRUNCATE?"**
+DELETE removes specific rows based on a condition and can be rolled back. TRUNCATE removes all rows, cannot be rolled back, and is faster because it deallocates data pages rather than logging individual deletions.
+
+**"What is normalization?"**
+Organizing data to minimize redundancy and dependency by breaking tables into smaller related tables. Forms include 1NF, 2NF, 3NF, BCNF, 4NF, and 5NF.
 
 **"How does MVCC work in PostgreSQL?"**
-Each row has `xmin` (transaction that created it) and `xmax` (transaction that deleted/updated it). A query sees rows where `xmin` committed before the query's snapshot and `xmax` either hasn't committed or committed after the snapshot. Dead rows (old versions) accumulate until VACUUM reclaims them. This allows readers to never block writers and vice versa.
-
-**"Design a schema for a multi-tenant SaaS with 10,000 tenants"**
-Options: (1) shared schema with tenant_id + row-level security — simplest, one migration, harder isolation; (2) schema per tenant — good isolation, PostgreSQL supports thousands of schemas; (3) database per tenant — maximum isolation, complex connection pooling. For 10,000 tenants: shared schema + RLS + connection pooler. For regulated workloads: schema per tenant.
+Each row has `xmin` (transaction that created it) and `xmax` (transaction that deleted/updated it). A query sees rows where `xmin` committed before the query's snapshot and `xmax` either hasn't committed or committed after the snapshot. Dead rows accumulate until VACUUM reclaims them. This allows readers to never block writers.
 
 **"How do you migrate a live production database table with 500M rows?"**
-Expand-contract: add new column nullable, deploy dual-write code, background backfill in batches (UPDATE ... WHERE id BETWEEN x AND y, with sleep between batches to avoid lock contention), switch reads, drop old column. Never a single `ALTER TABLE` on the full table — it locks.
+Expand-contract: add new column nullable, deploy dual-write code, background backfill in batches (`UPDATE ... WHERE id BETWEEN x AND y` with sleep between batches), switch reads, drop old column.
+
+**"What is Apache Kafka and what is it used for?"**
+Kafka is a distributed, partitioned, replicated log for high-throughput event streaming. Key use cases: website activity tracking, log aggregation, data ingestion, real-time stream processing, event sourcing, and CDC (change data capture via Debezium).
+
+**"What is the ISR in Kafka?"**
+The In-Sync Replicas set — replicas that are fully caught up with the leader. Only ISR members are eligible for leader election. `min.insync.replicas` controls how many must acknowledge a write when `acks=all`.
+
+**"Design a schema for a multi-tenant SaaS with 10,000 tenants"**
+Options: (1) shared schema with tenant_id + row-level security — simplest, one migration; (2) schema per tenant — good isolation; (3) database per tenant — maximum isolation, complex connection pooling. For 10,000 tenants: shared schema + RLS + connection pooler.
 
 ---
 
-## 📚 Key Takeaways
+## Key Takeaways
 
 1. **Connection pooling is mandatory at scale** — direct connections per app instance do not scale beyond ~50 instances
 2. **EXPLAIN ANALYZE before tuning** — understand the query plan before adding indexes
@@ -469,16 +641,11 @@ Expand-contract: add new column nullable, deploy dual-write code, background bac
 4. **Test backup restore monthly** — backup never restored is hypothetical, not operational
 5. **Replication lag × write rate = potential data loss** — monitor continuously, alert on 30s+
 6. **`idle in transaction` blocks VACUUM** — set session timeout, kill long-idle transactions
-7. **Index selectively** — every index adds write overhead; add only what queries actually need
-8. **Redis cache invalidation: TTL wins for simplicity** — event-driven for freshness-critical data
-9. **Kafka: one consumer max per partition** — scale partitions and consumers together
-10. **Private subnet, no public endpoint** — databases should never be directly internet-accessible
-11. **Per-service database users with minimum grants** — not shared admin credentials
-12. **MVCC means reads never block writes** — PostgreSQL's key scalability feature, enabled by VACUUM
-13. **DynamoDB: model access patterns first, schema second** — opposite of relational design
-14. **Synchronous replication for financial data** — async = potential data loss on failover
-15. **Operators for databases on Kubernetes** — CloudNativePG encodes DBA expertise into automation
-
-
+7. **Kafka: one consumer max per partition** — scale partitions and consumers together
+8. **Kafka acks=all + min.insync.replicas** — for durability critical data
+9. **Private subnet, no public endpoint** — databases should never be directly internet-accessible
+10. **Per-service database users with minimum grants** — not shared admin credentials
+11. **MVCC means reads never block writes** — PostgreSQL's key scalability feature, enabled by VACUUM
+12. **Synchronous replication for financial data** — async = potential data loss on failover
 
 ---

@@ -4,17 +4,15 @@ sidebar_position: 3
 description: "Zero to hero study guide for Observability — concepts, tools, architecture, production operations, and interview prep."
 ---
 
-import AIChatWidget from '@site/src/components/AIChatWidget';
+## Why This Domain Matters
 
-## 🎯 Why This Domain Matters
+Observability is the practice of understanding system internals from external outputs. The shift from monitoring (checking if things are up) to observability (understanding WHY things are behaving the way they are) enables engineers to debug distributed systems without guessing.
 
-Observability is the practice of understanding system internals from external outputs. The shift from monitoring (checking if things are up) to observability (understanding WHY things are behaving the way they are) is what enables engineers to debug distributed systems without guessing.
-
-For Staff/Principal engineers: you design the observability platform that all teams build on. Getting this right means incidents are resolved in minutes not hours, capacity planning is data-driven, and SLO conversations with business are grounded in reality.
+For Staff/Principal engineers: you design the observability platform that all teams build on. Getting this right means incidents are resolved in minutes, capacity planning is data-driven, and SLO conversations with the business are grounded in reality.
 
 ---
 
-## 📋 Prerequisites & Mental Models
+## Core Mental Models
 
 **The three pillars — Metrics, Logs, Traces:**
 - **Metrics:** numeric measurements over time. Efficient, alertable, aggregatable. Tell you WHAT is happening.
@@ -23,354 +21,892 @@ For Staff/Principal engineers: you design the observability platform that all te
 
 No single pillar is sufficient. A trace with no metrics misses the 1% of slow requests that manifest as a p99 alert. Metrics without logs tell you something is wrong but not why. Logs without traces can't show distributed causality.
 
-**SLO-based alerting vs symptom-based:** alert on what users experience (error rate, latency), not on what the system does internally (CPU, memory). Alert fatigue comes from internal metrics that spike without user impact.
+**Proactive detection** — identify issues before they cause failures, not after users report them.
 
 **Cardinality is the enemy of scale** — high-cardinality labels (user_id, request_id) on metrics explode storage and query time. Keep label cardinality bounded. Use traces for high-cardinality data.
 
 ---
 
-## 🔷 Core Concepts
+## Prometheus
 
-### Prometheus
+### What is Prometheus?
 
-Time-series metrics database. Pull-based: Prometheus scrapes `/metrics` endpoints from targets.
+Prometheus is an open-source systems monitoring and alerting toolkit originally built at SoundCloud. Since its inception in 2012, it has been widely adopted across the industry. It joined the Cloud Native Computing Foundation in 2016 as the second hosted project after Kubernetes.
 
-**Data model:**
+**Core characteristics:**
+- Collects and stores metrics as time series data — each metric stored with a timestamp and optional key-value labels
+- Pull model over HTTP — Prometheus scrapes metrics from target endpoints at configured intervals
+- Multi-dimensional data model: metrics identified by metric name and key/value label pairs
+- No reliance on distributed storage — single server nodes are autonomous
+- PromQL: a flexible query language to leverage the multi-dimensional data model
+- Supports service discovery and static configuration for target discovery
+
+**What are metrics?**
+
+Metrics are numerical measurements recorded over time. What to measure depends on the application:
+- A web server measures requests per second and latency
+- A database measures queries per second and cache hit rate
+- A node measures CPU usage, memory, and disk I/O
+
+### Prometheus Architecture
+
+Prometheus scrapes metrics from instrumented jobs, either directly or via a Pushgateway for short-lived jobs. It stores all scraped samples locally and runs rules over this data to:
+- Aggregate and record new time series from existing data (recording rules)
+- Generate alerts when thresholds are breached (alerting rules)
+
+Grafana or other API consumers visualize the collected data by querying Prometheus via PromQL.
+
+### Installing Prometheus on AWS EC2 (Ubuntu)
+
+**Prerequisites:**
+- AWS EC2 instance running Ubuntu
+- SSH access to the instance
+- Security Group inbound rules: TCP 9090 (Prometheus), TCP 9100 (Node Exporter), TCP 3000 (Grafana)
+
+**Step 1: Create a dedicated Prometheus user**
+```bash
+sudo useradd \
+  --system \
+  --no-create-home \
+  --shell /bin/false prometheus
+
+sudo mkdir /etc/prometheus
+sudo mkdir /var/lib/prometheus
 ```
-http_requests_total{method="GET", status="200", service="api"} 1234 1672531200000
-│                  │                                           │     └ timestamp (ms)
-└ metric name      └ labels (key=value pairs)                  └ value
+
+**Step 2: Download and extract Prometheus**
+```bash
+wget https://github.com/prometheus/prometheus/releases/download/v2.45.0/prometheus-2.45.0.linux-amd64.tar.gz
+
+tar -xvf prometheus-2.45.0.linux-amd64.tar.gz
 ```
 
-**Metric types:**
-- **Counter:** monotonically increasing (request count, errors). Never decreases (except on restart). Use `rate()` to get per-second rate.
-- **Gauge:** current value, can go up or down (memory usage, active connections, temperature).
-- **Histogram:** samples observations into configurable buckets (request duration, response size). Calculates `_count`, `_sum`, and `_bucket`. Use for latency percentiles.
-- **Summary:** similar to histogram but calculates quantiles client-side (not aggregatable across instances — use histograms instead).
+**Step 3: Install binaries and config**
+```bash
+cd prometheus-2.45.0.linux-amd64
 
-**Key PromQL functions:**
+# Move binaries to PATH
+sudo mv prometheus promtool /usr/local/bin/
+
+# Move console libraries
+sudo mv consoles/ console_libraries/ /etc/prometheus/
+
+# Move default config
+sudo mv prometheus.yml /etc/prometheus/prometheus.yml
+```
+
+**Step 4: Set ownership**
+```bash
+sudo chown -R prometheus:prometheus /etc/prometheus/ /var/lib/prometheus/
+```
+
+**Step 5: Verify installation**
+```bash
+prometheus --version
+```
+
+**Step 6: Create systemd service**
+```bash
+sudo vim /etc/systemd/system/prometheus.service
+```
+
+```ini
+[Unit]
+Description=Prometheus
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
+
+[Service]
+User=prometheus
+Group=prometheus
+Type=simple
+Restart=on-failure
+RestartSec=5s
+ExecStart=/usr/local/bin/prometheus \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --storage.tsdb.path=/var/lib/prometheus/ \
+  --web.console.templates=/etc/prometheus/consoles \
+  --web.console.libraries=/etc/prometheus/console_libraries \
+  --web.listen-address=0.0.0.0:9090
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable prometheus
+sudo systemctl start prometheus
+sudo systemctl status prometheus
+```
+
+Prometheus is now accessible at `http://<EC2-public-ip>:9090`
+
+### Prometheus Configuration — prometheus.yml
+
+The core configuration file defines scrape jobs (which targets to scrape and how often):
+
+```yaml
+global:
+  scrape_interval: 15s       # How often to scrape targets
+  evaluation_interval: 15s  # How often to evaluate rules
+
+rule_files:
+  - "alert_rules.yml"
+  - "recording_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  # Prometheus scrapes itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter — host-level metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+
+  # cAdvisor — Docker container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['localhost:8080']
+
+  # Kubernetes pod discovery
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+      - role: pod
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+```
+
+---
+
+## Node Exporter
+
+Node Exporter exposes host-level metrics (CPU, memory, disk, network) for Prometheus to scrape.
+
+**Install Node Exporter:**
+```bash
+wget https://github.com/prometheus/node_exporter/releases/download/v1.6.0/node_exporter-1.6.0.linux-amd64.tar.gz
+tar xvf node_exporter-1.6.0.linux-amd64.tar.gz
+sudo cp node_exporter-1.6.0.linux-amd64/node_exporter /usr/local/bin/
+
+# Create systemd service
+sudo vim /etc/systemd/system/node_exporter.service
+```
+
+```ini
+[Unit]
+Description=Node Exporter
+After=network.target
+
+[Service]
+User=prometheus
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable node_exporter
+sudo systemctl start node_exporter
+```
+
+Node Exporter metrics are available at `http://localhost:9100/metrics`
+
+---
+
+## cAdvisor — Container Monitoring
+
+cAdvisor (Container Advisor) collects resource usage and performance statistics for running Docker containers. It exposes metrics that Prometheus can scrape.
+
+**Install cAdvisor with Docker:**
+```bash
+# Install Docker
+sudo apt update && sudo apt install -y docker.io
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Create sample containers to monitor
+sudo docker run -d --name container1 nginx
+sudo docker run -d --name container2 httpd
+sudo docker ps
+
+# Run cAdvisor
+sudo docker run -d \
+  --name=cadvisor \
+  --volume=/:/rootfs:ro \
+  --volume=/var/run:/var/run:rw \
+  --volume=/sys:/sys:ro \
+  --volume=/var/lib/docker/:/var/lib/docker:ro \
+  --publish=8080:8080 \
+  gcr.io/cadvisor/cadvisor
+```
+
+cAdvisor metrics are available at `http://localhost:8080/metrics`
+
+**Key cAdvisor metrics:**
+- `container_cpu_usage_seconds_total` — CPU time consumed by container
+- `container_memory_usage_bytes` — current memory usage
+- `container_network_receive_bytes_total` — bytes received over network
+- `container_fs_usage_bytes` — bytes used on container filesystem
+
+---
+
+## PromQL — Prometheus Query Language
+
+PromQL is the query language used to select and aggregate time series data in Prometheus. Grafana dashboards and alert rules both use PromQL.
+
+### Metric Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| Counter | Monotonically increasing value | `http_requests_total` |
+| Gauge | Value that can go up or down | `memory_usage_bytes` |
+| Histogram | Distribution of observations in buckets | `http_request_duration_seconds` |
+| Summary | Similar to histogram with pre-calculated quantiles | `rpc_duration_seconds` |
+
+### Basic PromQL Queries
+
 ```promql
-# Rate of increase (use for counters)
+# Current CPU usage rate (per second, over 5 minutes)
+rate(node_cpu_seconds_total{mode="idle"}[5m])
+
+# Available memory in MB
+node_memory_MemAvailable_bytes / 1024 / 1024
+
+# HTTP request rate per second
 rate(http_requests_total[5m])
 
-# Ratio of errors to total
-rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m])
+# HTTP error rate (5xx errors)
+rate(http_requests_total{status=~"5.."}[5m])
 
-# p99 latency from histogram
+# 95th percentile request latency
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+
+# Pod CPU usage across all containers
+rate(container_cpu_usage_seconds_total{container!=""}[5m])
+
+# Pod memory usage
+container_memory_usage_bytes{container!=""}
+
+# Disk usage percentage
+(node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100
+
+# Number of running pods per namespace
+count by (namespace) (kube_pod_info)
+
+# Pods not in Running state
+kube_pod_status_phase{phase!="Running"}
+```
+
+### Aggregation Operators
+
+```promql
+# Sum CPU usage across all nodes
+sum(rate(node_cpu_seconds_total[5m]))
+
+# Average memory usage by job
+avg by (job) (node_memory_MemAvailable_bytes)
+
+# Max request latency across all instances
+max by (service) (http_request_duration_seconds)
+
+# Count of HTTP requests per status code
+sum by (status) (rate(http_requests_total[5m]))
+```
+
+---
+
+## Alertmanager
+
+Alertmanager handles alerts sent by Prometheus. It deduplicates, groups, and routes alerts to the correct receiver (PagerDuty, Slack, email, etc.).
+
+**Alertmanager configuration:**
+```yaml
+global:
+  resolve_timeout: 5m
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10m
+  repeat_interval: 12h
+  receiver: 'default'
+  routes:
+    - match:
+        severity: critical
+      receiver: pagerduty
+    - match:
+        severity: warning
+      receiver: slack
+
+receivers:
+  - name: 'default'
+    slack_configs:
+      - channel: '#alerts'
+        title: '{{ .CommonAnnotations.summary }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\n{{ end }}'
+
+  - name: 'pagerduty'
+    pagerduty_configs:
+      - service_key: YOUR_PAGERDUTY_KEY
+
+  - name: 'slack'
+    slack_configs:
+      - channel: '#alerts-warning'
+        text: '{{ .CommonAnnotations.description }}'
+
+inhibit_rules:
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ['alertname', 'cluster']
+```
+
+### Alert Rules
+
+Alert rules are defined in YAML and reference PromQL expressions:
+
+```yaml
+# alert_rules.yml
+groups:
+  - name: infrastructure
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 80% for 5 minutes. Current: {{ $value }}%"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage above 85%. Current: {{ $value }}%"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space low on {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} is {{ $value }}% full"
+
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash looping"
+          description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has restarted {{ $value }} times in 5 minutes"
+```
+
+---
+
+## Grafana
+
+### Installing Grafana
+
+**On Ubuntu:**
+```bash
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
+wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+sudo apt-get update
+sudo apt-get install grafana
+
+sudo systemctl start grafana-server
+sudo systemctl enable grafana-server
+```
+
+Grafana is accessible at `http://<server-ip>:3000` (default login: `admin` / `admin`)
+
+**On Docker:**
+```bash
+docker run -d \
+  --name=grafana \
+  -p 3000:3000 \
+  -v grafana-storage:/var/lib/grafana \
+  grafana/grafana-oss
+```
+
+### Adding Prometheus as a Data Source
+
+1. Open Grafana at `http://localhost:3000`
+2. Go to Configuration → Data Sources → Add data source
+3. Select Prometheus
+4. Set URL: `http://localhost:9090`
+5. Click Save & Test
+
+**Via Grafana API:**
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Prometheus","type":"prometheus","url":"http://localhost:9090","access":"proxy"}' \
+  http://admin:admin@localhost:3000/api/datasources
+```
+
+### Building Dashboards
+
+Grafana dashboards consist of panels, each containing a PromQL query and a visualization type (graph, gauge, table, stat).
+
+**Key dashboard features:**
+- **Variables/Templates:** make dashboards reusable across environments by parameterizing labels like `instance`, `namespace`, `job`
+- **Annotations:** mark events (deployments, incidents) on time series graphs to correlate with metric changes
+- **Alerting:** Grafana can send alerts directly (in addition to or instead of Alertmanager)
+
+**Common dashboard panels:**
+```promql
+# Request rate panel
+sum(rate(http_requests_total[5m])) by (service)
+
+# Error rate (%) panel
+sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
+
+# p99 latency panel
 histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
 
-# Memory usage percentage
-container_memory_working_set_bytes / container_spec_memory_limit_bytes
+# Node CPU usage panel
+100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
 
-# Aggregation
-sum(rate(http_requests_total[5m])) by (service)
-sum without (pod, instance) (rate(http_requests_total[5m]))
-
-# Alerting: sustained high error rate
-(sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) > 0.01
+# Kubernetes pod count panel
+count by (namespace) (kube_pod_status_phase{phase="Running"})
 ```
 
-**Prometheus architecture:**
-- Prometheus server: scrapes targets, stores TSDB, evaluates recording rules and alerts
-- Alertmanager: receives alerts, deduplicates, routes to receivers (PagerDuty, Slack)
-- Pushgateway: for short-lived jobs (batch, CI) that can't be scraped (avoid over-using)
-- Exporters: adapt non-Prometheus metrics (node_exporter, postgres_exporter, blackbox_exporter)
-
-**Long-term storage:** Prometheus local storage is not designed for multi-year retention. Use Thanos or Cortex (now Mimir) for global view and long-term storage. Thanos adds: multi-Prometheus deduplication, object storage backend (S3/GCS), unlimited retention.
-
-### Grafana
-
-Visualization layer for metrics, logs, and traces. Connects to Prometheus, Loki, Tempo, Elasticsearch, and 50+ other data sources.
-
-**Effective dashboard design:**
-1. Single business metric at top (SLO compliance, error rate)
-2. RED (Rate, Errors, Duration) per service
-3. Resource utilization (CPU, memory, disk, network)
-4. Links to runbooks and related dashboards
-
-**Grafana variables** — parameterize dashboards with dropdowns:
-```
-Variable: namespace
-Type: Query
-Query: label_values(kube_pod_info, namespace)
-```
-
-**Alerting in Grafana 9+** — use Grafana unified alerting with alert rules, contact points (PagerDuty, Slack), and notification policies. Replaces Prometheus Alertmanager for teams using Grafana Cloud.
-
-### Loki — Log Aggregation
-
-Loki is "Prometheus for logs." Indexes only metadata (labels), not the full log content. Much cheaper than Elasticsearch at scale.
-
-**Architecture:**
-- **Promtail** (or Fluent Bit, Fluentd): agent on each node, tails log files and /var/log, ships to Loki
-- **Loki:** receives log streams, stores in chunks (compressed), indexes labels
-- **Grafana:** queries Loki via LogQL
-
-**LogQL:**
-```logql
-# Filter logs
-{app="api", namespace="production"} |= "ERROR"
-
-# Filter with regex
-{app="api"} |~ "timeout|connection refused"
-
-# Parse JSON logs and filter
-{app="api"} | json | level="error" | duration > 500ms
-
-# Log rate (for alerting on error spike)
-sum(rate({app="api"} |= "ERROR" [5m])) by (pod)
-```
-
-**Label design for Loki:** only use labels for values with bounded cardinality (namespace, app, pod_name, environment). Do NOT use user_id, request_id as labels — use them as parsed fields in LogQL.
-
-### Distributed Tracing — Tempo & Jaeger
-
-**Why tracing:** in a distributed system, a single user request touches 10+ services. Logs from each service are siloed. Tracing connects them into a unified view showing: which service was slow, which DB query was the bottleneck, where errors originated.
-
-**OpenTelemetry (OTel):** the standard for instrumentation. Language SDKs for Go, Python, Java, Node, etc. Emits traces, metrics, and logs in a vendor-neutral format. Collector receives OTel data and forwards to Tempo/Jaeger/etc.
-
-**Key concepts:**
-- **Trace:** the complete journey of a request across services
-- **Span:** one unit of work (one service call, one DB query). Contains: operation name, timestamps, tags, logs, status.
-- **Trace context propagation:** HTTP headers (W3C Trace-Context: `traceparent`) carry the trace ID across service boundaries
-
-**Grafana Tempo:** backend for traces, integrates with Grafana. Stores traces in object storage (S3). No index — searches by trace ID (fast) or service graph (via Prometheus metrics).
-
-**Sampling strategies:**
-- Head-based sampling: decision at request start (100% or N% of requests)
-- Tail-based sampling: decision at request end, after seeing if request was slow/errored (better, more complex)
-- Adaptive sampling: auto-adjust sample rate to stay within budget
-
-### SLOs & Error Budgets
-
-**SLI (Service Level Indicator):** the metric we measure. e.g., `ratio of successful requests`
-
-**SLO (Service Level Objective):** the target we set. e.g., `99.9% of requests succeed over 30 days`
-
-**Error Budget:** how much unreliability the SLO allows. 99.9% SLO = 0.1% error budget = 43.2 minutes/month.
-
-**Error budget policy:** when budget is depleted, halt new feature work and focus on reliability. This converts an abstract goal ("be reliable") into a concrete negotiation between product (features) and SRE (reliability).
-
-**Multi-window, multi-burn-rate alerting (Google SRE book):**
-```yaml
-# Alert when burning budget 14x faster than sustainable over 1h (page immediately)
-- alert: HighErrorBudgetBurnRate
-  expr: |
-    (
-      sum(rate(http_requests_total{code=~"5.."}[1h])) / sum(rate(http_requests_total[1h]))
-    ) > (14 * (1 - 0.999))
-  for: 2m
-  annotations:
-    summary: "14x burn rate — 1h window"
-
-# Alert when burning 3x faster over 6h (ticket/warning)
-- alert: MediumErrorBudgetBurnRate
-  expr: |
-    (sum(rate(http_requests_total{code=~"5.."}[6h])) / sum(rate(http_requests_total[6h])))
-    > (3 * (1 - 0.999))
-```
+**Importing pre-built dashboards:** Grafana.com hosts hundreds of community dashboards. Import by ID:
+- Node Exporter Full: dashboard ID `1860`
+- Kubernetes cluster monitoring: dashboard ID `315`
+- Docker / cAdvisor: dashboard ID `14282`
 
 ---
 
-## 🛠️ Tools & Ecosystem
+## Kubernetes Monitoring with Prometheus
 
-| Tool | Purpose |
-|------|---------|
-| Prometheus | Metrics collection and alerting |
-| Grafana | Visualization and dashboarding |
-| Loki | Log aggregation (Prometheus for logs) |
-| Tempo | Distributed tracing backend |
-| Jaeger | Distributed tracing (self-hosted) |
-| OpenTelemetry | Instrumentation standard (traces + metrics + logs) |
-| Thanos / Mimir | Long-term Prometheus storage + global query |
-| Alertmanager | Alert routing and deduplication |
-| VictoriaMetrics | High-performance Prometheus-compatible alternative |
-| Datadog | Full SaaS observability (metrics + logs + APM) |
-| New Relic | SaaS observability platform |
-| Elastic (ELK) | Log search and analytics (high cost at scale) |
-| PagerDuty / Opsgenie | On-call alerting and incident management |
-| Blackbox Exporter | External probing (HTTP, TCP, DNS, ICMP) |
+### Deploying Prometheus in Kubernetes (kube-prometheus-stack)
 
----
+The `kube-prometheus-stack` Helm chart deploys Prometheus, Alertmanager, Grafana, and all required exporters:
 
-## 🏗️ Architecture Patterns
-
-### Prometheus Operator (kube-prometheus-stack)
-
-Deploy the full monitoring stack with one Helm chart:
 ```bash
-helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack   --set prometheus.prometheusSpec.retention=30d   --set prometheus.prometheusSpec.retentionSize=50GB   --set grafana.adminPassword=changeme
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+kubectl create namespace monitoring
+
+helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  --set grafana.adminPassword=your-secure-password \
+  --set prometheus.prometheusSpec.retention=15d \
+  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=50Gi
 ```
 
-Includes: Prometheus, Grafana, Alertmanager, node-exporter, kube-state-metrics, and default dashboards/alerts for Kubernetes.
+**Access services:**
+```bash
+# Port-forward Prometheus
+kubectl port-forward svc/kube-prometheus-stack-prometheus 9090:9090 -n monitoring
 
-**ServiceMonitor** — tells Prometheus what to scrape:
+# Port-forward Grafana
+kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring
+
+# Port-forward Alertmanager
+kubectl port-forward svc/kube-prometheus-stack-alertmanager 9093:9093 -n monitoring
+```
+
+### kube-state-metrics and cAdvisor
+
+**kube-state-metrics:** Generates metrics about Kubernetes object states (pod phase, deployment replicas, node conditions). These are the `kube_*` metrics.
+
+**cAdvisor:** Built into the Kubelet, exposes per-container resource usage metrics (`container_*` metrics).
+
+**Key Kubernetes metrics to monitor:**
+```promql
+# Deployment replica status
+kube_deployment_status_replicas_available / kube_deployment_spec_replicas
+
+# Pod OOM kills
+kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}
+
+# CPU throttling
+rate(container_cpu_throttled_seconds_total[5m]) / rate(container_cpu_usage_seconds_total[5m])
+
+# Persistent volume usage
+kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes * 100
+
+# API server request latency
+histogram_quantile(0.99, rate(apiserver_request_duration_seconds_bucket[5m]))
+```
+
+### ServiceMonitor — Scraping Application Metrics
+
+The `ServiceMonitor` CRD (from kube-prometheus-stack) tells Prometheus which Kubernetes services to scrape:
+
 ```yaml
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: myapp
+  name: my-app-monitor
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
 spec:
   selector:
-    matchLabels: {app: myapp}
+    matchLabels:
+      app: my-app
+  namespaceSelector:
+    matchNames:
+      - production
   endpoints:
-  - port: metrics
-    interval: 30s
-    path: /metrics
+    - port: metrics
+      interval: 30s
+      path: /metrics
 ```
 
-### Centralized Logging Architecture
-
+The target application service must expose a `/metrics` endpoint and have port `metrics` defined:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app
+  labels:
+    app: my-app
+spec:
+  selector:
+    app: my-app
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: 8080
 ```
-Kubernetes Pods
-  → Fluent Bit (DaemonSet, per node)
-    → Loki (or S3 for long-term)
-      → Grafana (query via LogQL)
-      → Alertmanager (log-based alerts)
-```
-
-**Fluent Bit config (Kubernetes):**
-```ini
-[SERVICE]
-    Flush 5
-    Log_Level info
-
-[INPUT]
-    Name              tail
-    Path              /var/log/containers/*.log
-    Parser            cri
-    Tag               kube.*
-    Mem_Buf_Limit     5MB
-
-[FILTER]
-    Name   kubernetes
-    Match  kube.*
-    Merge_Log On
-    K8S-Logging.Parser On
-
-[OUTPUT]
-    Name   loki
-    Match  kube.*
-    host   loki.monitoring.svc.cluster.local
-    port   3100
-    labels job=fluentbit,namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name']
-```
-
-### Grafana Stack (LGTM)
-
-Logs (Loki) + Metrics (Grafana Mimir) + Traces (Tempo) + Dashboards (Grafana). Run the full stack on-premises or use Grafana Cloud (hosted SaaS).
 
 ---
 
-## ⚙️ Production Operations
+## Loki — Log Aggregation
 
-### Alert Design
+Loki is a log aggregation system designed to work alongside Prometheus. It is horizontally scalable, highly available, and uses the same label-based indexing approach as Prometheus.
 
-**Good alert:** actionable, relevant to users, has a clear runbook, fires rarely but importantly.
+**Key difference from Elasticsearch:** Loki only indexes log labels (metadata) — not the log content itself. This makes it far more cost-efficient. Log content is searched with regex at query time.
 
-**Bad alert:** fires on a metric the on-call cannot act on, no runbook, fires multiple times per week.
+### Loki + Promtail Setup
 
-Alert fatigue is the #1 cause of missed critical alerts. If your on-call gets >10 alerts per shift, audit and tune.
+Promtail is the log collection agent that ships logs to Loki.
 
-**Alert hierarchy:**
-1. **Page (immediate):** SLO breach, P1 customer impact, data loss risk
-2. **Ticket (business hours):** approaching error budget, resource near limit, performance degradation
-3. **Info (log only):** anomaly detected, worth investigating during next working day
+**Docker Compose stack (Loki + Promtail + Grafana):**
+```yaml
+version: "3"
+services:
+  loki:
+    image: grafana/loki:2.9.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki-config.yml:/etc/loki/config.yml
+    command: -config.file=/etc/loki/config.yml
 
-### On-Call Tooling
+  promtail:
+    image: grafana/promtail:2.9.0
+    volumes:
+      - /var/log:/var/log:ro
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
 
-Recording rules for expensive queries:
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+```
+
+**Promtail configuration:**
+```yaml
+server:
+  http_listen_port: 9080
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: varlogs
+          __path__: /var/log/*.log
+
+  - job_name: docker
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          __path__: /var/lib/docker/containers/*/*log
+    pipeline_stages:
+      - json:
+          expressions:
+            output: log
+            stream: stream
+      - labels:
+          stream:
+```
+
+**Querying logs in Grafana with LogQL:**
+```logql
+# All logs from a job
+{job="varlogs"}
+
+# Filter for ERROR logs
+{job="docker"} |= "ERROR"
+
+# Parse structured logs
+{app="my-app"} | json | level="error"
+
+# Log rate over time
+rate({job="docker"} |= "error" [5m])
+
+# Count errors by app
+sum by (app) (count_over_time({job="docker"} |= "error" [5m]))
+```
+
+---
+
+## Exporters and Instrumentation
+
+Prometheus uses a pull model — applications must expose metrics at a `/metrics` HTTP endpoint, or you use an exporter that translates existing data into the Prometheus format.
+
+**Popular exporters:**
+
+| Exporter | Metrics collected | Port |
+|----------|-----------------|------|
+| Node Exporter | CPU, memory, disk, network on Linux hosts | 9100 |
+| cAdvisor | Docker container resource usage | 8080 |
+| Blackbox Exporter | HTTP, TCP, DNS, ICMP probe results | 9115 |
+| MySQL Exporter | MySQL database metrics | 9104 |
+| PostgreSQL Exporter | PostgreSQL database metrics | 9187 |
+| Redis Exporter | Redis metrics | 9121 |
+| JMX Exporter | JVM metrics (Java apps) | 5556 |
+| Elasticsearch Exporter | Elasticsearch cluster metrics | 9114 |
+
+**Blackbox Exporter — probing HTTP endpoints:**
+```yaml
+# blackbox.yml
+modules:
+  http_2xx:
+    prober: http
+    timeout: 5s
+    http:
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200]
+      method: GET
+      tls_config:
+        insecure_skip_verify: false
+```
+
+```yaml
+# prometheus.yml scrape config for blackbox
+- job_name: 'blackbox'
+  metrics_path: /probe
+  params:
+    module: [http_2xx]
+  static_configs:
+    - targets:
+        - https://api.example.com/health
+        - https://api.example.com/ready
+  relabel_configs:
+    - source_labels: [__address__]
+      target_label: __param_target
+    - source_labels: [__param_target]
+      target_label: instance
+    - target_label: __address__
+      replacement: blackbox-exporter:9115
+```
+
+---
+
+## Monitoring AWS with CloudWatch and Prometheus
+
+**CloudWatch integration with Prometheus:** The `yet-another-cloudwatch-exporter` (YACE) pulls AWS CloudWatch metrics into Prometheus format, allowing unified dashboards in Grafana.
+
+**Deploy YACE:**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yace
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: yace
+  template:
+    metadata:
+      labels:
+        app: yace
+    spec:
+      containers:
+        - name: yace
+          image: ghcr.io/nerdswords/yet-another-cloudwatch-exporter:v0.55.0
+          args:
+            - -config.file=/config/config.yml
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          configMap:
+            name: yace-config
+```
+
+---
+
+## Scaling and Performance
+
+**High cardinality:** Having many unique label value combinations (e.g., per-user metrics) causes metric explosion. Avoid labels with unbounded values. Use traces or logs for per-request data.
+
+**Recording rules:** Pre-compute expensive PromQL queries and store as new metrics. Reduces dashboard load time:
 ```yaml
 groups:
-- name: recording_rules
-  interval: 30s
-  rules:
-  - record: job:http_requests_total:rate5m
-    expr: sum(rate(http_requests_total[5m])) by (job)
-  - record: job:http_errors_total:rate5m
-    expr: sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)
+  - name: recording_rules
+    rules:
+      - record: job:http_requests_total:rate5m
+        expr: sum by (job) (rate(http_requests_total[5m]))
+
+      - record: job:http_errors:rate5m
+        expr: sum by (job) (rate(http_requests_total{status=~"5.."}[5m]))
 ```
 
-Pre-compute expensive queries → dashboards and alerts load faster.
+**Remote storage:** For long-term retention, ship metrics to Thanos, Cortex, or Victoria Metrics. This enables:
+- Retention beyond local disk capacity
+- Global query view across multiple Prometheus servers
+- High availability with deduplication
 
----
-
-## 📊 Key Metrics Per Layer
-
+**Federation:** Prometheus can scrape another Prometheus instance, enabling hierarchical setups:
+```yaml
+scrape_configs:
+  - job_name: 'federate'
+    honor_labels: true
+    metrics_path: '/federate'
+    params:
+      'match[]':
+        - '{job="prometheus"}'
+        - '{__name__=~"job:.*"}'
+    static_configs:
+      - targets:
+          - 'source-prometheus:9090'
 ```
-Application layer:
-  RED: request Rate, Error rate, Duration (latency percentiles)
-  Business KPIs: orders/min, signups, revenue events
 
-Infrastructure layer:
-  USE: resource Utilization, Saturation (queue depth), Errors
-  Kubernetes: pod restarts, pending pods, PVC capacity
+---
 
-Platform layer:
-  Control plane: API server latency, etcd latency
-  Networking: DNS latency, packet drops, connection errors
-  Storage: IOPS, throughput, latency, capacity
+## Security for Monitoring Stack
+
+- Run Prometheus with a dedicated system user (not root)
+- Enable Grafana authentication — disable anonymous access in production
+- Use TLS for Prometheus, Alertmanager, and Grafana endpoints
+- Restrict Prometheus scrape access to internal network only
+- Rotate Grafana API keys and Alertmanager receiver credentials regularly
+- Apply Kubernetes RBAC to limit who can access `kubectl port-forward` to monitoring pods
+
+**Grafana authentication hardening:**
+```ini
+# grafana.ini
+[auth.anonymous]
+enabled = false
+
+[auth]
+disable_login_form = false
+
+[security]
+admin_password = use-a-strong-password-from-vault
+secret_key = use-a-randomly-generated-key
+cookie_secure = true
 ```
 
 ---
 
-## 🔐 Security Considerations
+## Interview Preparation
 
-**Access control:** Grafana with SSO (Okta/Google). Role-based access — engineers see their services, on-call sees all, admins can configure.
+**Common observability interview questions:**
 
-**Data privacy:** logs may contain PII. Redact sensitive fields at the shipper (Fluent Bit transform). Don't log request bodies by default. Retention policies to comply with GDPR.
+1. **Explain the difference between a Counter and a Gauge in Prometheus.**
+   - Counter: monotonically increasing — only goes up (or resets to 0 on restart). Use `rate()` to get per-second rate. Example: `http_requests_total`.
+   - Gauge: can go up or down. Represents a current value. Example: `memory_usage_bytes`, `active_connections`. Do not use `rate()` on gauges.
 
-**Alert routing security:** PagerDuty integrations need secure webhooks. Rotate integration keys when team members leave.
+2. **How do you calculate the error rate of an HTTP service in PromQL?**
+   ```promql
+   sum(rate(http_requests_total{status=~"5.."}[5m])) /
+   sum(rate(http_requests_total[5m])) * 100
+   ```
 
----
+3. **What is the pull model in Prometheus and what are its implications?**
+   - Prometheus initiates the scrape — it reaches out to each target's `/metrics` endpoint
+   - Implication: Prometheus must have network access to all targets
+   - Short-lived jobs (cron, batch) can't be scraped reliably — use Pushgateway
+   - Service discovery (Kubernetes, Consul) keeps the target list dynamic without manual config changes
 
-## 🎓 Staff/Principal Engineer Perspective
+4. **Why is high cardinality a problem in Prometheus?**
+   - Each unique combination of label values is a separate time series stored in memory and on disk
+   - A metric with labels `{user_id, request_id}` can produce millions of unique series
+   - This exhausts memory (Prometheus is an in-memory database), slows queries, and increases storage cost
+   - Solution: keep labels bounded — use trace IDs and user IDs in distributed tracing systems (Jaeger, Tempo), not in metrics
 
-**Observability as a platform service** — the platform team provides the stack (Prometheus, Grafana, Loki, Tempo), the operational model (how to deploy ServiceMonitors, how to write dashboards as code), and the SLO framework. Teams plug into it.
+5. **What is the difference between Loki and Elasticsearch for log management?**
+   - Loki only indexes labels (metadata), not log content — dramatically lower storage and indexing cost
+   - Elasticsearch indexes all log content — enables full-text search but is expensive at scale
+   - Loki uses LogQL for log queries; Elasticsearch uses Lucene query syntax (via Kibana)
+   - Loki integrates natively with Prometheus label model — same labels for logs and metrics enables correlation
 
-**Dashboards as code** — Grafana dashboards in JSON committed to Git. Use `grafonnet` (Jsonnet library) or Terraform's Grafana provider. Never create dashboards via UI that aren't backed by code.
+6. **How do you monitor a Kubernetes cluster with Prometheus?**
+   - Deploy `kube-prometheus-stack` via Helm — includes Prometheus, Alertmanager, Grafana, kube-state-metrics, Node Exporter
+   - `kube-state-metrics` exposes object state metrics (`kube_pod_status_phase`, `kube_deployment_status_replicas_available`)
+   - cAdvisor (built into Kubelet) exposes container resource usage
+   - Use `ServiceMonitor` CRDs to configure scraping of application metrics
+   - Import Grafana dashboards 315 (cluster overview) and 1860 (node exporter)
 
-**Cost of observability:** Prometheus storage and Loki ingestion are not free. High-cardinality metrics and noisy log sources can make the observability stack more expensive than the application. Audit every service's metrics cardinality. Use recording rules to pre-aggregate.
+7. **Walk me through setting up an alert for pod OOM kills.**
+   ```yaml
+   - alert: PodOOMKilled
+     expr: kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+     for: 0m
+     labels:
+       severity: critical
+     annotations:
+       summary: "Pod {{ $labels.pod }} OOM killed"
+       description: "Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} was OOM killed."
+   ```
+   Route to PagerDuty via Alertmanager for immediate response. Investigate with `kubectl top pod` and set proper resource limits.
 
-**The three questions any alert must answer:** What is broken? Why is it broken? What do I do? If your alert can't answer all three (with runbook links), it's incomplete.
-
----
-
-## 💥 Failure Modes & Incident Patterns
-
-**Prometheus scrape target disappearing** — service disappeared, label changed, port changed. Prometheus shows target as `DOWN`. Check `up` metric: `up{job="myapp"} == 0`.
-
-**Alert storm during incident** — 50 alerts fire at once. Alertmanager inhibition rules suppress child alerts when parent fires. Group related alerts to send one notification.
-
-**Loki ingestion backlog** — log volume spikes (error storm), Loki can't keep up. Agents buffer on disk. Tune: Loki ingestion rate limits, Fluent Bit backpressure, scale Loki distributor.
-
-**Trace loss at high rate** — sampling too aggressive during incident. Tail-based sampling helps (sample 100% of errored requests). Use adaptive sampling.
-
----
-
-## 💼 Interview Prep
-
-**"How do you design alerting for a new service?"**
-Define SLIs (what matters to users), set SLO targets, instrument for RED metrics, write multi-window burn-rate alerts, create runbooks, test with synthetic traffic, review with on-call team.
-
-**"What's the difference between monitoring and observability?"**
-Monitoring: checking known-unknowns (is the service up? Is CPU high?). Observability: understanding unknown-unknowns via high-cardinality exploration of metrics, logs, and traces. You can be monitored without being observable.
-
----
-
-## 📚 Key Takeaways
-
-1. **Alert on user impact** — SLO-based alerting (error rate, latency) not internal metrics (CPU, memory)
-2. **Cardinality is the enemy of scale** — bounded label cardinality in Prometheus; high-cardinality in traces
-3. **The three pillars are complementary** — metrics for WHAT, logs for sequence, traces for WHERE in distributed systems
-4. **Recording rules are mandatory at scale** — pre-aggregate expensive queries for dashboard and alert performance
-5. **Dashboards as code** — Grafana JSON in Git, no manual-only dashboards in production
-6. **Error budgets convert reliability into product negotiation** — concrete, automated, blameless
-7. **Tail-based sampling catches what head-based misses** — sample 100% of slow/errored requests
-8. **Alert fatigue kills on-call culture** — >10 alerts per shift = something needs tuning, not acknowledging
-9. **Loki is Prometheus for logs** — same query pattern, much cheaper than Elasticsearch at scale
-10. **Runbooks must answer: what, why, and what to do** — incomplete runbooks waste incident response time
-
-
-
----
+8. **What is a recording rule and when should you use one?**
+   - A recording rule pre-computes a PromQL expression and stores the result as a new metric
+   - Use when: dashboard panels use expensive aggregation queries that slow load time, or when the same complex query is used in multiple alert rules
+   - Example: pre-compute `job:http_requests_total:rate5m` so dashboards query the pre-computed metric instead of re-computing across thousands of series
