@@ -90,7 +90,7 @@ Expected result: Bob appears only in the LEFT JOIN result.
 
 ## Lab 3: Read A Query Plan
 
-**Goal:** Use `EXPLAIN ANALYZE` to understand query execution.
+**Goal:** Use `EXPLAIN ANALYZE` to understand query execution and observe index impact.
 
 Create sample data:
 
@@ -120,6 +120,8 @@ ORDER BY created_at DESC
 LIMIT 20;
 ```
 
+Note: execution time, node type (Seq Scan), buffer reads.
+
 Add index:
 
 ```sql
@@ -137,7 +139,7 @@ ORDER BY created_at DESC
 LIMIT 20;
 ```
 
-Observe execution time, scan type, and buffers.
+Observe execution time, scan type (Index Scan), and buffers. The difference between a sequential scan and an index scan on 100,000 rows demonstrates the O(n) vs O(log n) behavior.
 
 ---
 
@@ -179,7 +181,7 @@ Review questions:
 
 ## Lab 5: Find Active Sessions
 
-**Goal:** Inspect database activity.
+**Goal:** Inspect database activity during incidents.
 
 ```sql
 SELECT
@@ -194,12 +196,25 @@ WHERE state <> 'idle'
 ORDER BY query_age DESC;
 ```
 
-Use this during incidents to identify:
+Find long-running queries:
 
-- Long-running queries
-- Waiting sessions
-- Open transactions
-- Query patterns that changed recently
+```sql
+SELECT pid, now() - query_start AS age, state, left(query, 100) AS query_snippet
+FROM pg_stat_activity
+WHERE state = 'active'
+ORDER BY age DESC;
+```
+
+Find waiting sessions:
+
+```sql
+SELECT pid, wait_event_type, wait_event, now() - query_start AS age, query
+FROM pg_stat_activity
+WHERE wait_event_type = 'Lock'
+ORDER BY age DESC;
+```
+
+Use this during incidents to identify long-running queries, waiting sessions, open transactions, and query patterns that changed recently.
 
 Operational rule: understand a session before terminating it.
 
@@ -297,6 +312,25 @@ min.insync.replicas: 2
 producer acks: all
 ```
 
+Create the topic:
+
+```bash
+kafka-topics.sh --bootstrap-server kafka:9092 \
+  --create \
+  --topic order-status-changed \
+  --partitions 12 \
+  --replication-factor 3 \
+  --config retention.ms=604800000 \
+  --config min.insync.replicas=2
+```
+
+Check the topic:
+
+```bash
+kafka-topics.sh --bootstrap-server kafka:9092 \
+  --describe --topic order-status-changed
+```
+
 Review questions:
 
 - Why key by order ID?
@@ -306,7 +340,167 @@ Review questions:
 
 ---
 
-## Lab 9: Cache Failure Design Drill
+## Lab 9: Kafka Consumer Group Lag
+
+**Goal:** Observe and interpret consumer lag.
+
+Check consumer group state:
+
+```bash
+kafka-consumer-groups.sh \
+  --bootstrap-server kafka:9092 \
+  --describe \
+  --group order-processor
+```
+
+Expected output format:
+
+```text
+TOPIC                  PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
+order-status-changed   0          1000010         1000050         40
+order-status-changed   1          999800          1000000         200
+order-status-changed   2          1000200         1000200         0
+
+Total lag: 240 unprocessed messages
+```
+
+List all consumer groups:
+
+```bash
+kafka-consumer-groups.sh \
+  --bootstrap-server kafka:9092 \
+  --list
+```
+
+Reset consumer offset to earliest (for replay):
+
+```bash
+kafka-consumer-groups.sh \
+  --bootstrap-server kafka:9092 \
+  --group order-processor \
+  --topic order-status-changed \
+  --reset-offsets \
+  --to-earliest \
+  --execute
+```
+
+Review questions:
+
+- Which partition has the most lag?
+- What does zero lag on partition 2 tell you?
+- When should you reset offsets vs scale out consumers?
+
+---
+
+## Lab 10: PostgreSQL Autovacuum And Dead Tuples
+
+**Goal:** Observe MVCC dead tuple accumulation and autovacuum behavior.
+
+Create a table and generate dead tuples:
+
+```sql
+CREATE TABLE test_vacuum (
+    id BIGSERIAL PRIMARY KEY,
+    val INT NOT NULL
+);
+
+-- Insert 100,000 rows
+INSERT INTO test_vacuum(val)
+SELECT i FROM generate_series(1, 100000) i;
+
+-- Update all rows (creates 100,000 dead tuples)
+UPDATE test_vacuum SET val = val + 1;
+
+-- Check dead tuples
+SELECT
+    relname,
+    n_live_tup,
+    n_dead_tup,
+    last_vacuum,
+    last_autovacuum
+FROM pg_stat_user_tables
+WHERE relname = 'test_vacuum';
+```
+
+Run manual vacuum and check again:
+
+```sql
+VACUUM test_vacuum;
+
+SELECT
+    relname,
+    n_live_tup,
+    n_dead_tup,
+    last_vacuum
+FROM pg_stat_user_tables
+WHERE relname = 'test_vacuum';
+```
+
+Check table size before and after:
+
+```sql
+SELECT pg_size_pretty(pg_total_relation_size('test_vacuum'));
+```
+
+Tune autovacuum for the table:
+
+```sql
+ALTER TABLE test_vacuum SET (
+    autovacuum_vacuum_scale_factor = 0.01,
+    autovacuum_vacuum_threshold = 100
+);
+```
+
+Review questions:
+
+- Why did dead tuple count jump after the UPDATE?
+- How does autovacuum threshold control trigger frequency?
+- What happens if you never vacuum a heavily updated table?
+
+---
+
+## Lab 11: Replication Lag Monitoring
+
+**Goal:** Query replication state on primary and standby.
+
+On the primary:
+
+```sql
+-- Full replication state
+SELECT
+    application_name,
+    state,
+    write_lag,
+    flush_lag,
+    replay_lag,
+    sync_state,
+    sent_lsn,
+    write_lsn,
+    flush_lsn,
+    replay_lsn
+FROM pg_stat_replication;
+```
+
+On the standby:
+
+```sql
+-- Simple lag measurement
+SELECT
+    NOW() - pg_last_xact_replay_timestamp() AS replication_lag;
+
+-- Check if replica is in recovery
+SELECT pg_is_in_recovery();
+```
+
+Review questions:
+
+- Which of write_lag, flush_lag, replay_lag is visible to a user reading from the standby?
+- What causes replay_lag to grow even when write_lag is low?
+- When should you alert on replication lag?
+
+---
+
+## Lab 12: Cache Failure Design Drill
 
 **Goal:** Avoid database collapse when cache is unavailable.
 
@@ -332,7 +526,7 @@ Review question: can the database survive full cache miss traffic?
 
 ---
 
-## Lab 10: Database Incident Note
+## Lab 13: Database Incident Note
 
 **Goal:** Practice SRE-quality incident writing.
 
@@ -350,6 +544,8 @@ Database signals:
 - Replication lag:
 - Slow queries:
 - Storage:
+- Dead tuples / vacuum state:
+- Kafka consumer lag (if applicable):
 Mitigation:
 Recovery evidence:
 Remaining risk:
