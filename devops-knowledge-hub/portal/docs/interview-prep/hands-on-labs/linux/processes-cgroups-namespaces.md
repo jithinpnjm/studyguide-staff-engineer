@@ -1,6 +1,6 @@
 ---
 title: "Linux Lab 3: Processes, cgroups, and Namespaces"
-sidebar_position: 99
+sidebar_position: 3
 ---
 
 # Linux Lab 3: Processes, cgroups, and Namespaces

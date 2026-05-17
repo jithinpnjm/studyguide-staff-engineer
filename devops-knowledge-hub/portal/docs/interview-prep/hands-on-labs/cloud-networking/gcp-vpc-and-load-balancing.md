@@ -1,6 +1,6 @@
 ---
 title: "Cloud Networking Drill 2: GCP VPC And Load Balancing Design"
-sidebar_position: 99
+sidebar_position: 2
 ---
 
 # Cloud Networking Drill 2: GCP VPC And Load Balancing Design

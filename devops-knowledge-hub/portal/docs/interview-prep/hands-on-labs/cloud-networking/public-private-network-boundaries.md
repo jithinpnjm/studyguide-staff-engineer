@@ -1,6 +1,6 @@
 ---
 title: "Cloud Networking Drill 1: Public, Private, And Internal Boundaries"
-sidebar_position: 99
+sidebar_position: 1
 ---
 
 # Cloud Networking Drill 1: Public, Private, And Internal Boundaries

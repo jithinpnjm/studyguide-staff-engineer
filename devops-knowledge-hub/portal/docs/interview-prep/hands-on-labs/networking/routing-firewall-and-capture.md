@@ -1,6 +1,6 @@
 ---
 title: "Networking Lab 3: Routing, Filtering, And Packet Capture"
-sidebar_position: 99
+sidebar_position: 3
 ---
 
 # Networking Lab 3: Routing, Filtering, And Packet Capture

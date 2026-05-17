@@ -1,6 +1,6 @@
 ---
 title: "Linux Admin Drill 1: Service and systemd Triage"
-sidebar_position: 99
+sidebar_position: 1
 ---
 
 # Linux Admin Drill 1: Service and systemd Triage

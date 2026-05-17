@@ -1,6 +1,6 @@
 ---
 title: "Linux Lab 2: Filesystem, Disk, and IO Pressure"
-sidebar_position: 99
+sidebar_position: 2
 ---
 
 # Linux Lab 2: Filesystem, Disk, and IO Pressure

@@ -1,6 +1,6 @@
 ---
 title: "Kubernetes Lab 3: Node Pressure And Scheduling Reasoning"
-sidebar_position: 99
+sidebar_position: 3
 ---
 
 # Kubernetes Lab 3: Node Pressure And Scheduling Reasoning

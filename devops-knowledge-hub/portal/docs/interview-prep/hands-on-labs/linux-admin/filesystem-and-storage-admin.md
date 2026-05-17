@@ -1,6 +1,6 @@
 ---
 title: "Linux Admin Drill 2: Filesystem and Storage Administration"
-sidebar_position: 99
+sidebar_position: 2
 ---
 
 # Linux Admin Drill 2: Filesystem and Storage Administration

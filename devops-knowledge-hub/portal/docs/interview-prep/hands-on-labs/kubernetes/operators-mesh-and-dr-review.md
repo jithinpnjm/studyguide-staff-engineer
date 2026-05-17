@@ -1,6 +1,6 @@
 ---
 title: "Kubernetes Lab 5: Operators, Mesh, Policy, And Disaster Recovery Review"
-sidebar_position: 99
+sidebar_position: 5
 ---
 
 # Kubernetes Lab 5: Operators, Mesh, Policy, And Disaster Recovery Review

@@ -1,6 +1,6 @@
 ---
 title: "Cloud Design Lab 2: Private Internal Platform"
-sidebar_position: 99
+sidebar_position: 2
 ---
 
 # Cloud Design Lab 2: Private Internal Platform

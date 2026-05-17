@@ -1,6 +1,6 @@
 ---
 title: "Linux Admin Drill 4: Command Mastery Checklist"
-sidebar_position: 99
+sidebar_position: 4
 ---
 
 # Linux Admin Drill 4: Command Mastery Checklist

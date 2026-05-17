@@ -1,6 +1,6 @@
 ---
 title: "Bash Lab 1: Health Check Script"
-sidebar_position: 99
+sidebar_position: 1
 ---
 
 # Bash Lab 1: Health Check Script

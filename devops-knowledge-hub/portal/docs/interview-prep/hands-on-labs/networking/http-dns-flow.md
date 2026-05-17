@@ -1,6 +1,6 @@
 ---
 title: "Networking Lab 1: HTTP, HTTPS, DNS, And Request Flow"
-sidebar_position: 99
+sidebar_position: 1
 ---
 
 # Networking Lab 1: HTTP, HTTPS, DNS, And Request Flow

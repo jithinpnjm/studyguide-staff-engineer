@@ -1,6 +1,6 @@
 ---
 title: "Cloud Design Lab 1: GCP Public Platform"
-sidebar_position: 99
+sidebar_position: 1
 ---
 
 # Cloud Design Lab 1: GCP Public Platform

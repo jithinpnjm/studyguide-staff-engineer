@@ -1,6 +1,6 @@
 ---
 title: "Kubernetes Lab 2: Readiness, Startup, And Rollout Safety"
-sidebar_position: 99
+sidebar_position: 2
 ---
 
 # Kubernetes Lab 2: Readiness, Startup, And Rollout Safety

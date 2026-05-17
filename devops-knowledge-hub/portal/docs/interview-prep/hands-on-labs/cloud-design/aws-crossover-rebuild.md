@@ -1,6 +1,6 @@
 ---
 title: "Cloud Design Lab 3: AWS Crossover Rebuild"
-sidebar_position: 99
+sidebar_position: 3
 ---
 
 # Cloud Design Lab 3: AWS Crossover Rebuild

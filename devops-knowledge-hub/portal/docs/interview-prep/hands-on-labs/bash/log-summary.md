@@ -1,6 +1,6 @@
 ---
 title: "Bash Lab 2: Access Log Summary"
-sidebar_position: 99
+sidebar_position: 2
 ---
 
 # Bash Lab 2: Access Log Summary

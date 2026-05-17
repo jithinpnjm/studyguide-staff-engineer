@@ -1,6 +1,6 @@
 ---
 title: "Bash Lab 3: Retry Wrapper With Guardrails"
-sidebar_position: 99
+sidebar_position: 3
 ---
 
 # Bash Lab 3: Retry Wrapper With Guardrails

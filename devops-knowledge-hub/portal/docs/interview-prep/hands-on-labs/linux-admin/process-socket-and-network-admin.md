@@ -1,6 +1,6 @@
 ---
 title: "Linux Admin Drill 3: Processes, Sockets, and Basic Network Administration"
-sidebar_position: 99
+sidebar_position: 3
 ---
 
 # Linux Admin Drill 3: Processes, Sockets, and Basic Network Administration

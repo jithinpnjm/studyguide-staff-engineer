@@ -1,6 +1,6 @@
 ---
 title: "Networking Lab 2: SSH Latency Drill"
-sidebar_position: 99
+sidebar_position: 2
 ---
 
 # Networking Lab 2: SSH Latency Drill

@@ -1,6 +1,6 @@
 ---
 title: "Python Lab 1: HTTP Probe Utility"
-sidebar_position: 99
+sidebar_position: 1
 ---
 
 # Python Lab 1: HTTP Probe Utility

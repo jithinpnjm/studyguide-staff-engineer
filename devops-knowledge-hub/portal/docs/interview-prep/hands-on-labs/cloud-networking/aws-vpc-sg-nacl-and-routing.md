@@ -1,6 +1,6 @@
 ---
 title: "Cloud Networking Drill 3: AWS VPC, Security Groups, NACLs, And Routing"
-sidebar_position: 99
+sidebar_position: 3
 ---
 
 # Cloud Networking Drill 3: AWS VPC, Security Groups, NACLs, And Routing

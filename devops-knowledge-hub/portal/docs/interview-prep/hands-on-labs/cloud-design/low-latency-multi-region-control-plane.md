@@ -1,6 +1,6 @@
 ---
 title: "Cloud Design Lab 4: Low-Latency Multi-Region Control Plane"
-sidebar_position: 99
+sidebar_position: 4
 ---
 
 # Cloud Design Lab 4: Low-Latency Multi-Region Control Plane

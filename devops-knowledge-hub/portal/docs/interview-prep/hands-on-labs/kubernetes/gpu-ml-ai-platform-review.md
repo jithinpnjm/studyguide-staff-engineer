@@ -1,6 +1,6 @@
 ---
 title: "Kubernetes Lab 4: GPU And AI Platform Architecture Review"
-sidebar_position: 99
+sidebar_position: 4
 ---
 
 # Kubernetes Lab 4: GPU And AI Platform Architecture Review

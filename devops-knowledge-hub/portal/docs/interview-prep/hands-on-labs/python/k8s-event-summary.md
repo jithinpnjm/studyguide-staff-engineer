@@ -1,6 +1,6 @@
 ---
 title: "Python Lab 3: Kubernetes Warning Event Summary"
-sidebar_position: 99
+sidebar_position: 3
 ---
 
 # Python Lab 3: Kubernetes Warning Event Summary

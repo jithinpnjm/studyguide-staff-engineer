@@ -1,6 +1,6 @@
 ---
 title: "Kubernetes Lab 1: Pod Is Running But Service Does Not Work"
-sidebar_position: 99
+sidebar_position: 1
 ---
 
 # Kubernetes Lab 1: Pod Is Running But Service Does Not Work

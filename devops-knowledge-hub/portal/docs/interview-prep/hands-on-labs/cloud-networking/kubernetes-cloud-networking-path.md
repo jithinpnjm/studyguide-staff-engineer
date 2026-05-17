@@ -1,6 +1,6 @@
 ---
 title: "Cloud Networking Drill 4: Kubernetes And Cloud Networking Path"
-sidebar_position: 99
+sidebar_position: 4
 ---
 
 # Cloud Networking Drill 4: Kubernetes And Cloud Networking Path

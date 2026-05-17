@@ -1,6 +1,6 @@
 ---
 title: "Python Lab 2: JSON Log Analyzer"
-sidebar_position: 99
+sidebar_position: 2
 ---
 
 # Python Lab 2: JSON Log Analyzer
