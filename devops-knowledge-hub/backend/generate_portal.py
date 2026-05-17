@@ -99,21 +99,13 @@ def _domain_page(domain: str, cfg: dict, docs: list[dict], guide: dict | None) -
     else:
         body = PLACEHOLDER.format(doc_count=doc_count, label=label)
 
-    source_table = _source_docs_table(docs)
-
     return f"""---
 title: "{emoji} {label}"
 sidebar_position: {cfg['position']}
 description: "Zero to hero study guide for {label} — concepts, tools, architecture, production operations, and interview prep."
 ---
 
-import AIChatWidget from '@site/src/components/AIChatWidget';
-
 {body}
-
-{source_table}
-
-<AIChatWidget domain="{domain}" title="Ask AI about {label}" />
 """
 
 
