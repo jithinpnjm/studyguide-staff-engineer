@@ -496,17 +496,3 @@ ArgoCD has a richer UI and is easier to onboard; Flux is more GitOps-pure and co
 
 
 ---
-
-## 📁 Source Documents
-
-> 4 documents ingested in this domain. These are the references the study guide was synthesised from.
-
-| Title | Type | Level |
-|-------|------|-------|
-| [[Kubernetes] 1742196202713](http://localhost:8765/api/documents/722d913d-639b-4e45-bd6d-e5f4c6f5361e/view) | PDF | intermediate |
-| [[API] 1742028132688](http://localhost:8765/api/documents/d1050d21-56e7-42bb-bd22-e776e6f044ce/view) | PDF | intermediate |
-| [[API] 1742962502873](http://localhost:8765/api/documents/5b800db6-b865-4f36-8b0c-f08af53776f4/view) | JPEG | intermediate |
-| [[API] 1743785587532](http://localhost:8765/api/documents/9c7cdfd3-17ab-47f1-a524-164b7cb50885/view) | GIF | intermediate |
-
-
-<AIChatWidget domain="platform-engineering" title="Ask AI about Platform Engineering" />
