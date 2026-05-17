@@ -316,3 +316,358 @@ Rollback is not only a Kubernetes or ArgoCD operation. Data compatibility determ
 ## Staff-Level Summary
 
 A strong delivery platform is not measured only by successful builds. It is measured by safe change flow, artifact trust, fast detection, controlled rollout, and reliable rollback. Most delivery incidents are not tool failures; they are missing contracts between source, CI, artifact, GitOps state, runtime, and observability.
+
+---
+
+## Example 11: End-to-End Journey — Java App From Commit to Production
+
+This traces a complete change across all five platform layers for a typical Java web service.
+
+### The Five-Layer Platform Stack
+
+```text
+Layer 5: Observability     — Prometheus, Grafana, AlertManager, Loki
+Layer 4: App Delivery      — ArgoCD, Helm, Kustomize, Argo Rollouts
+Layer 3: Build/Supply Chain — GitHub Actions, Trivy, Cosign, Syft (SBOM)
+Layer 2: Compute           — EKS, Docker, containerd
+Layer 1: Infrastructure    — Terraform, AWS, VPC, IAM, ECR
+```
+
+### The Full Journey
+
+```text
+1. Developer commits to feature branch, opens PR.
+2. GitHub Actions CI triggers (test → lint → static analysis).
+3. PR approved and merged to main.
+4. GitHub Actions CI builds Docker image: myapp:abc123def.
+5. Trivy scans image — blocks on CRITICAL CVEs.
+6. Cosign signs image using OIDC keyless signing.
+7. Syft generates SBOM and attaches it to the image.
+8. Image pushed to ECR: 123456789.dkr.ecr.us-east-1.amazonaws.com/myapp:abc123def.
+9. CI updates k8s-manifests repo:
+   apps/myapp/overlays/staging/kustomization.yaml → newTag: abc123def.
+10. ArgoCD detects manifest change in staging overlay.
+11. ArgoCD syncs: creates new ReplicaSet in myapp-staging namespace.
+12. Readiness probe passes; old ReplicaSet scaled down.
+13. Smoke test job runs: curl https://staging.myapp.example.com/health → 200.
+14. Platform team promotes image to production:
+    ./scripts/promote.sh staging production abc123def.
+15. CI updates apps/myapp/overlays/production/kustomization.yaml.
+16. ArgoCD triggers Argo Rollouts canary: 5% traffic to new version.
+17. AnalysisTemplate queries Prometheus — error rate < 1%.
+18. Steps: 5% → 25% → 50% → 100%.
+19. Prometheus fires no alerts during rollout window.
+20. ArgoCD shows Synced + Healthy. Production complete.
+```
+
+### Rollback Path
+
+If an alert fires during canary:
+
+```bash
+# Option 1: Argo Rollouts automatic abort (triggered by failed AnalysisTemplate)
+# Option 2: Manual abort
+kubectl argo rollouts abort myapp -n production
+
+# Revert GitOps manifest (durable state)
+cd k8s-manifests
+git revert HEAD
+git push
+# ArgoCD syncs back to previous image
+
+# Verify recovery
+kubectl argo rollouts get rollout myapp -n production
+kubectl rollout status deployment/myapp -n production
+```
+
+---
+
+## Example 12: Capstone Pattern — Delivery Platform for 100 Services
+
+What a production delivery system looks like at scale.
+
+### Repository Structure
+
+```text
+Organization repositories:
+  ├── shared-workflows/         # Reusable GitHub Actions workflows
+  ├── pipeline-templates/       # Jenkins shared library
+  ├── k8s-manifests/            # GitOps monorepo (all service overlays)
+  │   ├── apps/                 # ArgoCD Application CRDs (app-of-apps)
+  │   ├── services/
+  │   │   ├── payment/
+  │   │   │   ├── base/
+  │   │   │   └── overlays/{dev,staging,production}/
+  │   │   ├── auth/
+  │   │   └── order/
+  │   └── clusters/
+  │       ├── us-east-1/
+  │       └── eu-west-1/
+  ├── platform-policies/        # OPA/Kyverno policies
+  └── runbooks/                 # Incident response documentation
+```
+
+### Shared Workflow Library
+
+Every service calls the shared workflow. The platform team owns the template:
+
+```yaml
+# shared-workflows/.github/workflows/service-ci.yml (reusable)
+on:
+  workflow_call:
+    inputs:
+      service-name: { required: true, type: string }
+      java-version: { required: false, type: string, default: '17' }
+      min-coverage: { required: false, type: number, default: 70 }
+    secrets:
+      ecr-role-arn: { required: true }
+      sonar-token: { required: false }
+```
+
+Each service's CI calls it:
+
+```yaml
+# payment-service/.github/workflows/ci.yml
+jobs:
+  ci:
+    uses: org/shared-workflows/.github/workflows/service-ci.yml@v2
+    with:
+      service-name: payment
+      java-version: '21'
+      min-coverage: 85
+    secrets:
+      ecr-role-arn: ${{ secrets.ECR_ROLE_ARN }}
+      sonar-token: ${{ secrets.SONAR_TOKEN }}
+```
+
+### Platform Guardrails Applied at Namespace Creation
+
+A platform operator or GitOps bootstrap applies these to every new team namespace:
+
+```yaml
+# platform-templates/namespace-defaults.yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+spec:
+  limits:
+    - default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      type: Container
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-quota
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: "40Gi"
+    limits.cpu: "40"
+    limits.memory: "80Gi"
+    pods: "100"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+```
+
+### Multi-Cluster GitOps with ApplicationSet
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: payment-service
+  namespace: argocd
+spec:
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - cluster: us-east-1
+                  url: https://k8s-us-east-1.internal.example.com
+                - cluster: eu-west-1
+                  url: https://k8s-eu-west-1.internal.example.com
+          - list:
+              elements:
+                - env: production
+  template:
+    metadata:
+      name: payment-{{cluster}}-{{env}}
+    spec:
+      project: payment-team
+      source:
+        repoURL: https://github.com/org/k8s-manifests
+        path: services/payment/overlays/{{env}}
+        targetRevision: HEAD
+      destination:
+        server: '{{url}}'
+        namespace: payment-{{env}}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+```
+
+---
+
+## Example 13: Design a Delivery Platform for a Fintech with 50 Teams
+
+**Interviewer prompt:** "Design the CI/CD and delivery platform for a fintech company with 50 product teams, PCI-DSS compliance, and an existing mix of Java and Node services."
+
+### Constraints First
+
+- 50 teams means blast radius from a shared platform change is enormous. Version and canary platform changes.
+- PCI-DSS: immutable audit logs, network segmentation, no developer access to production data or production cluster, mandatory code review, artifact signing, access logging.
+- Existing services: migration cannot be big-bang. Golden path must be better than current ad-hoc pipelines to attract adoption.
+
+### Architecture
+
+```text
+Source:         GitHub Enterprise (on-prem or cloud) with branch protection required on main
+CI:             GitHub Actions with OIDC to AWS — no static keys in any repo
+Artifact:       ECR with image scanning enabled; digest-only promotion in production
+Supply chain:   Cosign keyless signing on every production artifact; Trivy blocks CRITICAL CVEs
+GitOps:         ArgoCD with project-level RBAC per team; app-of-apps bootstrap per cluster
+Secrets:        HashiCorp Vault with Kubernetes auth backend; dynamic database credentials
+Policy:         Kyverno validating webhook: require image signature, require scan attestation, deny root containers
+Audit:          All ArgoCD syncs logged; Vault audit log to SIEM; GitHub Audit Log to SIEM
+Progressive delivery: Argo Rollouts canary with Prometheus gates for all payment-path services
+Observability:  Prometheus + Grafana SLO dashboards; PagerDuty for page-worthy alerts
+```
+
+### Team Isolation Model
+
+- Each team gets a dedicated namespace with LimitRange + ResourceQuota + default-deny NetworkPolicy applied at creation.
+- ArgoCD AppProject per team: can only sync to their namespace from their GitOps path.
+- Vault policy per team: can only read secrets under `secret/data/<team>/`.
+- No team can read another team's secrets or deploy to another team's namespace.
+
+### Promotion Governance
+
+- CI builds image → pushes to ECR with SHA tag → creates PR to k8s-manifests with staging overlay change.
+- PR auto-approved by platform bot after scan attestation and signature verification pass.
+- Production promotion: separate PR with required approval from team lead + platform security reviewer.
+- Automated checks on the production PR: no new CRITICAL CVEs, coverage regression < 5%, change failure rate for this service in last 30 days < 15%.
+
+---
+
+## Example 14: CI Security Incident — Credential Leaked in Build Log
+
+### Scenario
+
+An engineer added a debug `echo` statement during development that printed a database password. The Jenkinsfile was merged, the build ran, and the credential appeared in the Jenkins build console log.
+
+### Response
+
+```bash
+# Step 1: Rotate the credential immediately (do not wait to confirm scope)
+# Rotate the database password in AWS Secrets Manager / Vault
+aws secretsmanager rotate-secret --secret-id production/myapp/database
+
+# Step 2: Revoke all active sessions using the old credential
+# (database-specific, e.g., PostgreSQL)
+# SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+# WHERE usename = 'myapp' AND backend_start < 'rotation_time';
+
+# Step 3: Archive and restrict access to the affected build logs
+# Jenkins: mask the log, revoke access for non-admins
+# GitHub Actions: delete the run or use secret masking
+
+# Step 4: Audit which jobs ran in the exposure window
+# Check Jenkins build history for myapp between commit time and rotation time
+```
+
+### Prevention
+
+```groovy
+// BAD: this prints the secret
+echo "Connecting to DB: ${DB_PASSWORD}"
+
+// GOOD: use withCredentials and set +x
+withCredentials([string(credentialsId: 'db-password', variable: 'DB_PASS')]) {
+  sh """
+    set +x
+    export DATABASE_URL="postgresql://myapp:${DB_PASS}@db.internal/production"
+    set -x
+    ./run-app.sh
+  """
+}
+```
+
+Platform controls to prevent:
+- Enable Jenkins mask-passwords plugin to scrub known secrets from logs.
+- Configure log retention and access control on CI build artifacts.
+- Use Vault dynamic secrets — each build gets a time-limited credential that expires automatically.
+- Run automated secret detection in CI (`detect-secrets` or `trufflesecurity/trufflehog`) as a pre-commit and PR check.
+
+---
+
+## Example 15: Works in Staging, Fails in Production — The Classic Gap
+
+### Scenario
+
+A service passes all staging tests, ArgoCD syncs cleanly, but pods enter CrashLoopBackOff in production within 2 minutes of deployment.
+
+### Investigation Path
+
+```bash
+# 1. Check pod state and exit code
+kubectl get pods -n production -l app=myapp
+kubectl describe pod <failing-pod> -n production
+# Look at: Last State > Exit Code, Reason (OOMKilled, Error, etc.)
+
+# 2. Check logs from before crash
+kubectl logs <pod> -n production --previous
+# Common findings: missing env var, connection refused, permission denied
+
+# 3. Compare environment configuration
+kubectl get configmap myapp-config -n production -o yaml
+kubectl get configmap myapp-config -n staging -o yaml
+diff <(kubectl get cm myapp-config -n production -o jsonpath='{.data}') \
+     <(kubectl get cm myapp-config -n staging -o jsonpath='{.data}')
+
+# 4. Compare secrets (key names only, not values)
+kubectl get secret myapp-secrets -n production -o jsonpath='{.data}' | jq 'keys'
+kubectl get secret myapp-secrets -n staging -o jsonpath='{.data}' | jq 'keys'
+
+# 5. Check resource limits — staging may have higher limits
+kubectl get deploy myapp -n production -o jsonpath='{.spec.template.spec.containers[0].resources}'
+kubectl get deploy myapp -n staging -o jsonpath='{.spec.template.spec.containers[0].resources}'
+
+# 6. Check NetworkPolicy differences
+kubectl get networkpolicies -n production
+kubectl get networkpolicies -n staging
+
+# 7. Connectivity from pod
+kubectl exec -it deploy/myapp -n production -- \
+  wget -qO- http://dependency-service.other-ns.svc.cluster.local/health
+```
+
+### Root Causes in Priority Order
+
+1. Missing Secret key in production namespace (different name or not created).
+2. NetworkPolicy in production blocking a dependency that staging allows.
+3. Lower memory limits in production causing OOMKilled.
+4. IRSA role missing a permission needed in production.
+5. Different TLS configuration (production requires mTLS, staging does not).
+6. Race condition only visible at production replica count (3 replicas, shared resource).
+
+### Systemic Prevention
+
+- Use Kustomize overlays with explicit config diff reviews between staging and production in PRs.
+- Automated parity check: compare config/secret key names between environments as a CI step before production promotion.
+- Run load tests against staging at production replica counts before promoting.
