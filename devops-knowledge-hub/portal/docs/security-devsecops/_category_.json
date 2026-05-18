@@ -1,0 +1,8 @@
+{
+  "label": "Security & DevSecOps",
+  "position": 13,
+  "link": {
+    "type": "generated-index",
+    "description": "Security practices, DevSecOps pipelines, and threat mitigation for platform engineers."
+  }
+}
