@@ -1,0 +1,10 @@
+{
+  "label": "🎯 Interview Prep",
+  "position": 16,
+  "collapsible": true,
+  "collapsed": false,
+  "link": {
+    "type": "generated-index",
+    "description": "Mock interviews, behavioral guides, and company-specific preparation materials."
+  }
+}

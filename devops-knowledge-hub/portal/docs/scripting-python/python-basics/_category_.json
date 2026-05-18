@@ -1,0 +1,10 @@
+{
+  "label": "📗 Python Basics",
+  "position": 10,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "description": "Python fundamentals from syntax through OOP, pandas, and standard libraries."
+  }
+}

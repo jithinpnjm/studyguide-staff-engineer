@@ -1,0 +1,10 @@
+{
+  "label": "🔶 AWS TopicWise",
+  "position": 10,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "description": "AWS topic-by-topic deep dive guide for SRE and Platform Engineers. Covers all major services with production reasoning and interview framing."
+  }
+}

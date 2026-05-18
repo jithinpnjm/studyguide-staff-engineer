@@ -1,0 +1,10 @@
+{
+  "label": "📘 Python Advanced",
+  "position": 11,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "description": "Advanced Python: concurrency, async, FastAPI, SQLAlchemy, testing, and production patterns."
+  }
+}
