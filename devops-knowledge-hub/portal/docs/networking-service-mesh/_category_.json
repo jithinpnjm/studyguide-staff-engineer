@@ -1,0 +1,8 @@
+{
+  "label": "Networking & Service Mesh",
+  "position": 10,
+  "link": {
+    "type": "generated-index",
+    "description": "Networking fundamentals, cloud networking, and service mesh for SRE."
+  }
+}
