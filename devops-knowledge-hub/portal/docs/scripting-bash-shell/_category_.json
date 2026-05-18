@@ -1,0 +1,8 @@
+{
+  "label": "Scripting: Bash & Shell",
+  "position": 14,
+  "link": {
+    "type": "generated-index",
+    "description": "Bash scripting and shell automation for SRE and DevOps workflows."
+  }
+}
