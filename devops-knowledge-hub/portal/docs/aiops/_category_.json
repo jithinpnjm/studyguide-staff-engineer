@@ -1,0 +1,8 @@
+{
+  "label": "AIOps",
+  "position": 17,
+  "link": {
+    "type": "generated-index",
+    "description": "AI-powered operations: intelligent alert routing, LLM enrichment, and automated incident response."
+  }
+}

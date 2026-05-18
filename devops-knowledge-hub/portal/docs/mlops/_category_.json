@@ -1,0 +1,8 @@
+{
+  "label": "MLOps",
+  "position": 16,
+  "link": {
+    "type": "generated-index",
+    "description": "Machine learning operations: model training, tracking, deployment, and production ML systems."
+  }
+}

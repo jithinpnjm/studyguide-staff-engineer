@@ -640,6 +640,270 @@ If a service restarts repeatedly, check `StartLimitBurst` and `StartLimitInterva
 
 ---
 
+---
+
+## Linux Kernel Scheduler — Deep Reference
+
+The Linux scheduler (CFS — Completely Fair Scheduler) allocates CPU time fairly across runnable tasks. Understanding it helps diagnose throttling, starvation, and latency issues.
+
+### CFS Concepts
+
+| Concept | Meaning |
+|---------|---------|
+| `vruntime` | Virtual runtime — how much CPU the task has consumed. CFS picks the task with the smallest `vruntime`. |
+| Nice value | Priority bias (-20 to +19). Lower nice = more CPU. `nice -n -5 cmd` gives higher priority. |
+| CPU shares | cgroup `cpu.shares` controls relative weight between cgroups. |
+| CPU quota | cgroup `cpu.cfs_quota_us / cpu.cfs_period_us` = hard limit. Throttled when quota exhausted. |
+
+```bash
+# Real-time priority / nice of a process
+ps -o pid,ni,pri,cmd -p PID
+
+# Set nice value for running process
+renice -n 10 -p PID
+
+# Check scheduling policy
+chrt -p PID       # SCHED_OTHER, SCHED_FIFO, SCHED_RR
+
+# Set real-time scheduling (FIFO, priority 50)
+chrt -f -p 50 PID
+```
+
+### Scheduler Latency Tuning
+
+```bash
+# Key sysctl for scheduler latency
+sysctl kernel.sched_latency_ns          # default 18ms — scheduler period
+sysctl kernel.sched_min_granularity_ns  # minimum time slice per task
+sysctl kernel.sched_migration_cost_ns   # cost to move task between CPUs
+```
+
+Low-latency services may benefit from pinning to specific CPUs:
+
+```bash
+# Pin a process to CPUs 0 and 1
+taskset -cp 0,1 PID
+
+# Pin a new command to CPU 2
+taskset -c 2 command
+
+# Check current CPU affinity
+taskset -cp PID
+```
+
+---
+
+## Filesystem Internals — ext4, XFS, btrfs
+
+### Inode and Dentry Structures
+
+**Inode:** Every file has an inode containing metadata (size, owner, permissions, timestamps, pointers to data blocks). The filename is stored in a directory entry, not in the inode.
+
+```bash
+stat file.txt                   # shows inode number, blocks, timestamps
+ls -li                          # list with inode numbers
+df -i                           # inode usage per filesystem
+```
+
+Key inode timestamps:
+- `atime`: last access (usually disabled with `noatime` for performance)
+- `mtime`: last content modification
+- `ctime`: last metadata change (permissions, links)
+
+**Dentry (directory entry):** Maps filename to inode. Cached in the dentry cache (`dcache`) in RAM. When the kernel looks up `/var/log/app.log` it traverses the dentry tree: `/` → `var` → `log` → `app.log`.
+
+```bash
+# Dentry cache and inode cache stats
+cat /proc/sys/vm/vfs_cache_pressure    # controls dcache reclaim aggressiveness
+slabtop                                # kernel slab allocator (includes dcache, inodes)
+```
+
+### ext4 Internals
+
+ext4 is the most common Linux filesystem. Key features:
+
+| Feature | Description |
+|---------|-------------|
+| Journaling | Writes metadata to journal before applying; prevents corruption on crash |
+| Extents | Contiguous disk ranges instead of block lists; efficient for large files |
+| Delayed allocation | Buffers writes before allocating blocks; reduces fragmentation |
+| Online resize | Can grow while mounted |
+| Inode table | Fixed at creation time; `mkfs.ext4 -i bytes-per-inode` controls density |
+
+```bash
+# View ext4 filesystem details
+tune2fs -l /dev/sdb1                # superblock info including inode count
+dumpe2fs /dev/sdb1 | head -50       # detailed block group info
+
+# Check and repair (offline)
+fsck.ext4 -f /dev/sdb1
+
+# Adjust bytes-per-inode ratio when creating (more inodes = more small files)
+mkfs.ext4 -i 8192 /dev/sdb1        # 1 inode per 8K = more inodes than default 16K
+```
+
+Common ext4 error in `dmesg`:
+```text
+EXT4-fs error (device sdb1): ext4_validate_block_bitmap:376: comm kworker...
+```
+This indicates filesystem corruption — run `fsck` offline.
+
+### XFS Internals
+
+XFS is preferred for large files, high throughput, and large filesystems. Default on RHEL.
+
+| Feature | Description |
+|---------|-------------|
+| Allocation groups | Filesystem divided into independent groups; parallel I/O |
+| Delayed logging | Transactions grouped in a circular log buffer |
+| Extent-based | Like ext4 extents |
+| Online defrag | `xfs_fsr` while mounted |
+| No online shrink | XFS filesystems cannot be shrunk |
+
+```bash
+xfs_info /mountpoint               # filesystem geometry
+xfs_repair /dev/sdb1               # repair (offline)
+xfs_growfs /mountpoint             # expand (online)
+xfs_db -r /dev/sdb1               # XFS debugger (read-only)
+```
+
+XFS journal errors in `dmesg`:
+```text
+XFS: xfs_log_force: error -5 returned.
+```
+Indicates I/O error flushing the log. Check disk health.
+
+### btrfs Internals
+
+btrfs (B-Tree filesystem) adds copy-on-write, snapshots, and checksumming.
+
+| Feature | Description |
+|---------|-------------|
+| Copy-on-write (CoW) | Modifications write new copy, old version preserved |
+| Snapshots | Near-instant, space-efficient (shared CoW blocks) |
+| Data checksums | Detects silent data corruption (bit rot) |
+| Compression | zlib, lzo, zstd per file or directory |
+| Subvolumes | Independently mountable sections |
+| RAID | Built-in software RAID (RAID 0, 1, 10, 5, 6) |
+
+```bash
+btrfs filesystem show                    # list btrfs filesystems
+btrfs filesystem usage /mountpoint       # space usage by type
+btrfs subvolume list /mountpoint         # list subvolumes
+btrfs subvolume snapshot /data /data_snap  # create snapshot
+
+# Check and repair
+btrfs check /dev/sdb1                    # offline check
+btrfs scrub start /mountpoint            # online checksum verification
+btrfs scrub status /mountpoint
+```
+
+### Filesystem Comparison
+
+| Aspect | ext4 | XFS | btrfs |
+|--------|------|-----|-------|
+| Max file size | 16 TiB | 8 EiB | 16 EiB |
+| Max filesystem | 1 EiB | 8 EiB | 16 EiB |
+| Online resize | Grow only | Grow only | Grow only |
+| Snapshots | No (LVM needed) | No | Yes (native) |
+| Checksums | No | Metadata only | Data + metadata |
+| Default distro | Ubuntu/Debian | RHEL/CentOS | openSUSE |
+| Small files | Good | Moderate | Good |
+| Large files | Good | Excellent | Good |
+
+---
+
+## eBPF and bpftrace — Production Observability
+
+eBPF (extended Berkeley Packet Filter) lets you run safe programs in kernel context for tracing, profiling, and networking — without kernel modules or restarts.
+
+### What eBPF Can Observe
+
+- Any kernel function (syscalls, scheduler, memory allocator, network stack)
+- Any userspace function in a running process (uprobes)
+- Hardware performance counters
+- Network packets at any layer
+
+```bash
+# Check if eBPF is available
+uname -r                       # need 4.1+ for basic eBPF, 5.x for full featureset
+ls /sys/kernel/btf/            # BTF (debug info) required for bpftrace CO-RE
+
+# Install bpftrace
+apt install bpftrace            # Ubuntu
+yum install bpftrace            # RHEL/CentOS
+```
+
+### bpftrace One-Liners
+
+```bash
+# Trace all open() syscalls system-wide
+bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }'
+
+# Count syscalls by process
+bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
+
+# Trace slow disk I/O (>10ms)
+bpftrace -e 'tracepoint:block:block_rq_complete /args->rwbs == "R" && args->nr_sector > 0/ {
+    @usecs = hist(args->nr_sector * 512); }'
+
+# Count TCP connections by destination port
+bpftrace -e 'kprobe:tcp_connect { @[((struct sock *)arg0)->__sk_common.skc_dport] = count(); }'
+
+# Trace file opens for a specific process
+bpftrace -e 'tracepoint:syscalls:sys_enter_openat /pid == 1234/ { printf("%s\n", str(args->filename)); }'
+
+# Stack trace for malloc calls over 1MB
+bpftrace -e 'uprobe:/lib/x86_64-linux-gnu/libc.so.6:malloc /arg0 > 1048576/ { @[ustack] = count(); }'
+```
+
+### bcc Tools (eBPF-based)
+
+```bash
+# Install bcc tools
+apt install bpfcc-tools
+
+execsnoop              # trace new process executions
+opensnoop              # trace file opens
+filelife               # file create/delete events with duration
+tcpconnect             # trace outgoing TCP connections
+tcpaccept              # trace accepted TCP connections
+tcpretrans             # trace TCP retransmissions
+biolatency             # block I/O latency histogram
+biosnoop               # block I/O per-request tracing
+cachestat              # page cache hit ratio
+cachetop               # per-process page cache stats
+runqlat                # CPU run queue latency histogram
+cpudist                # on-CPU time distribution
+memleak -p PID         # memory leak detection for a process
+```
+
+### Flamegraphs with perf + eBPF
+
+```bash
+# Profile CPU for 30s (all processes)
+perf record -g -F 99 -a sleep 30
+perf script > out.perf
+./FlameGraph/stackcollapse-perf.pl out.perf | ./FlameGraph/flamegraph.pl > cpu.svg
+
+# Profile a specific PID
+perf record -g -F 99 -p PID sleep 30
+
+# Off-CPU flamegraph (time spent NOT running = blocked)
+# Requires off-cpu tracer (bcc offcputime tool)
+offcputime -f -p PID 30 > out.folded
+./FlameGraph/flamegraph.pl out.folded > offcpu.svg
+```
+
+Flamegraph reading:
+- X-axis: alphabetical, not time
+- Y-axis: call stack depth
+- Width of bar: how often that function appeared in samples
+- Flat tops: on-CPU hot spots
+- Tall stacks with narrow bars: deep call paths with little self-time
+
+---
+
 ## Expert Takeaways
 
 1. High load is not always CPU saturation. D-state and I/O wait are common causes.
@@ -655,3 +919,7 @@ If a service restarts repeatedly, check `StartLimitBurst` and `StartLimitInterva
 11. `strace` explains what a process is waiting on; use `-c` for frequency analysis.
 12. Kernel logs often contain the first real clue.
 13. Flamegraphs are the fastest way to identify hot functions in live production.
+14. CFS throttles containers on CPU quota boundaries even when host CPU is idle.
+15. ext4/XFS/btrfs have different tradeoffs: ext4 for general use, XFS for large files, btrfs for snapshots and checksums.
+16. eBPF lets you trace any kernel or userspace function in production with minimal overhead.
+17. bpftrace one-liners can answer "what is the kernel doing?" without kernel modules or restarts.

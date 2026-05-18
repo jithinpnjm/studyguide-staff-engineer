@@ -34,7 +34,7 @@ Kubernetes (K8s) is an open-source container orchestration platform that automat
 
 - **Kubelet** — Agent on each node; ensures containers run as specified in Pod specs
 - **Kube-Proxy** — Maintains network rules on each node for service routing
-- **Container Runtime** — Runs containers (Docker, containerd, CRI-O)
+- **Container Runtime** — Runs containers (containerd, CRI-O, or Docker)
 
 ---
 
@@ -105,7 +105,7 @@ Provides a stable network endpoint to expose Pods. Types:
 | Type | Access | Use Case |
 |---|---|---|
 | ClusterIP | Internal only | Microservice communication |
-| NodePort | External via node port | Dev/debug access |
+| NodePort | External via node port (30000-32767) | Dev/debug access |
 | LoadBalancer | External via cloud LB | Public-facing production apps |
 | ExternalName | Maps to external DNS | Proxy to external services |
 
@@ -129,6 +129,8 @@ kubectl expose deployment my-app --type=LoadBalancer --port=80
 kubectl get svc
 kubectl describe svc my-service
 ```
+
+**Important:** `port` is what callers use; `targetPort` is where the container actually listens. Wrong `targetPort` creates silent traffic failures.
 
 ### ConfigMap
 
@@ -253,6 +255,12 @@ Ingress commonly handles:
 
 You need an Ingress Controller running (NGINX, Traefik, AWS ALB controller, GCP GCE controller, etc.) for an `Ingress` object to do anything. The object on its own is just configuration.
 
+### Ingress Rule Types
+
+- **Path-based routing** — `example.com/api` goes to the API service, `example.com/static` goes to the static file service
+- **Host-based routing** — `api.example.com` goes to one service, `app.example.com` goes to another
+- **SSL termination** — Ingress manages TLS certs and forwards plain HTTP to backend services
+
 ---
 
 ## Deployment Hierarchy
@@ -363,6 +371,18 @@ Reliability depends on every stage, not only `docker run` / `kubectl apply`. Com
 
 A container's writable layer is **ephemeral**. Never treat it as durable production storage — use volumes.
 
+### Container Lifecycle States
+
+A container moves through distinct states:
+
+| State | Meaning |
+|---|---|
+| Created | Container created but not yet started |
+| Running | Container is actively executing processes |
+| Paused | Container processes are suspended (SIGSTOP) |
+| Stopped | Container processes terminated |
+| Deleted | Container removed from the system |
+
 ---
 
 ## Namespaces
@@ -375,6 +395,8 @@ kubectl create namespace staging
 kubectl get pods -n staging
 kubectl config set-context --current --namespace=staging
 ```
+
+**Why not use `default`?** The default namespace gets crowded. In a shared cluster, every team's resources mix together — making RBAC, quotas, and network policy all harder to manage. Always use named namespaces in production.
 
 ---
 
@@ -389,6 +411,8 @@ Docker is a platform for building, shipping, and running applications in **conta
 - Docker container = the running dish (instance)
 - Docker = the kitchen (runtime)
 
+A container is not a VM. It is a Linux process isolated with namespaces and limited with cgroups. Containers share the host kernel.
+
 ### Docker vs Virtual Machines
 
 | Feature | Docker | Virtual Machine |
@@ -396,7 +420,7 @@ Docker is a platform for building, shipping, and running applications in **conta
 | OS | Shares host kernel | Full guest OS per VM |
 | Startup time | Seconds | Minutes |
 | Size | MBs | GBs |
-| Isolation | Process-level | Hardware-level |
+| Isolation | Process-level (namespaces + cgroups) | Hardware-level (hypervisor) |
 | Performance | Near-native | Overhead from hypervisor |
 
 ### Docker Architecture
@@ -428,6 +452,9 @@ docker run -d nginx                      # Run in detached mode
 docker run -it ubuntu bash               # Run interactively
 docker run -p 8080:80 nginx              # Map host port to container port
 docker run --name my-nginx -d nginx      # Named container
+docker run -e APP_ENV=production myapp   # Pass environment variable
+docker run --cpus=2 -m 512m nginx        # CPU/memory limits
+docker run --restart=always nginx        # Auto-restart on failure
 docker ps                                # List running containers
 docker ps -a                             # List all containers
 docker stop my-nginx                     # Stop container
@@ -436,7 +463,10 @@ docker restart my-nginx                  # Restart container
 docker rm my-nginx                       # Remove container
 docker exec -it my-nginx bash            # Shell into running container
 docker logs my-nginx                     # View container logs
+docker logs -f my-nginx                  # Follow logs
 docker inspect my-nginx                  # Detailed container info
+docker stats                             # Live CPU/memory per container
+docker cp my-nginx:/path/file ./         # Copy file out of container
 ```
 
 ### Dockerfile Instructions
@@ -449,11 +479,12 @@ docker inspect my-nginx                  # Detailed container info
 | `ADD` | Like COPY; also extracts archives and supports URLs |
 | `RUN` | Execute commands at build time |
 | `CMD` | Default command at runtime (can be overridden) |
-| `ENTRYPOINT` | Fixed executable at runtime (cannot be overridden) |
+| `ENTRYPOINT` | Fixed executable at runtime (cannot be overridden easily) |
 | `EXPOSE` | Document which port the container listens on |
-| `ENV` | Set environment variables |
+| `ENV` | Set environment variables (persist at runtime) |
 | `ARG` | Build-time variables (not available at runtime) |
 | `LABEL` | Add metadata to image |
+| `HEALTHCHECK` | Define a command to check container health |
 
 ```dockerfile
 FROM node:18-alpine
@@ -464,6 +495,10 @@ COPY . .
 EXPOSE 3000
 CMD ["node", "server.js"]
 ```
+
+**CMD vs ENTRYPOINT:**
+- `CMD` can be overridden when running the container (`docker run myapp custom-command`)
+- `ENTRYPOINT` always executes; `CMD` becomes default arguments to it
 
 ### Docker Networking
 
@@ -477,10 +512,11 @@ docker network rm my-network                         # Remove network
 ```
 
 **Network types:**
-- **Bridge** — Default; containers communicate on the same host
-- **Host** — Container shares host network directly
-- **Overlay** — Multi-host communication (Docker Swarm)
-- **None** — No networking
+- **Bridge** — Default; containers on same host communicate via a virtual bridge
+- **Host** — Container shares host network stack directly (no port mapping needed)
+- **Overlay** — Multi-host communication (Docker Swarm / Kubernetes)
+- **Macvlan** — Container gets a MAC address and appears as a physical device on the network
+- **None** — No networking (fully isolated container)
 
 ### Docker Volumes
 
@@ -489,13 +525,18 @@ docker volume create my-volume           # Create volume
 docker volume ls                         # List volumes
 docker volume inspect my-volume          # Inspect volume
 docker volume rm my-volume               # Remove volume
-docker run -v my-volume:/data nginx      # Mount volume
+docker run -v my-volume:/data nginx      # Mount named volume
 docker run -v /host/path:/container/path nginx  # Bind mount
 ```
 
 **Volumes vs Bind Mounts:**
-- **Volumes** — Managed by Docker, stored in `/var/lib/docker/volumes`
-- **Bind Mounts** — Maps a specific host path directly into the container
+
+| Feature | Named Volume | Bind Mount |
+|---|---|---|
+| Managed by | Docker (`/var/lib/docker/volumes`) | Host filesystem path |
+| Portability | High — works on any Docker host | Low — depends on host path existing |
+| Use case | Databases, persistent app state | Config injection, code sharing in dev |
+| Backup | Via `docker run --volumes-from` | Copy the host directory |
 
 ---
 

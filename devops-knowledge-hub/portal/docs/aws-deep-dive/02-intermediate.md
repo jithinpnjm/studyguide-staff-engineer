@@ -3,368 +3,443 @@ title: "Intermediate"
 sidebar_position: 2
 ---
 
-# AWS Intermediate — Production Building Blocks
+# AWS Deep Dive — Intermediate: Production Building Blocks
 
-This file covers the core production services every SRE must understand deeply: load balancing, autoscaling, managed databases, container orchestration, messaging, DNS, and observability. These are the services you interact with during incidents and design reviews.
-
----
-
-## Auto Scaling Groups
-
-An Auto Scaling group manages a fleet of EC2 instances. It maintains desired capacity, replaces unhealthy instances, and scales dynamically using policies.
-
-| Term | Meaning |
-|---|---|
-| Launch template | How to create instances (AMI, type, SGs, role, user data) |
-| Desired capacity | Current intended number of instances |
-| Minimum capacity | Lower bound — never go below this |
-| Maximum capacity | Upper bound — never exceed this |
-| Health check | How ASG decides whether to replace an instance |
-| Scaling policy | When to add or remove instances |
-| Cooldown/warmup | Avoid overreacting during scaling events |
-
-### Scaling Policies
-
-- **Target tracking**: maintain a metric at a target value (e.g., CPU at 60%)
-- **Step scaling**: add/remove capacity in steps based on alarm thresholds
-- **Scheduled scaling**: scale at known times (e.g., morning traffic ramp)
-- **Predictive scaling**: ML-based prediction of future load
-
-Good scaling metrics:
-- ALB request count per target (for web services)
-- CPU for CPU-bound services
-- Queue depth per worker (for worker pools)
-- Custom business throughput metrics
-
-Poor scaling metrics:
-- Total request count without dividing by current capacity
-- CPU for an I/O-bound service
-- Memory if not published as a custom metric
-
-SRE failure mode: ASG launches new instances, but they never become healthy because user data fails, AMI is broken, subnets have no available IPs, or the target group health check path is wrong. The result is a replacement loop that collapses capacity.
-
-### Instance Refresh and Rolling Updates
-
-Instance refresh replaces instances in the ASG using a controlled rollout. Use it to deploy new AMIs without downtime. Configure minimum healthy percentage and warmup to control rollout pace.
+This level covers the services and patterns that define production AWS architectures. Every topic is explained through operational consequence — not just what the service is, but why it exists and what breaks without it.
 
 ---
 
-## Elastic Load Balancing
+## EC2 Advanced
 
-| Load Balancer | Layer | Use Case |
+### Placement Groups
+
+Placement groups exist because physical placement affects latency and failure domains.
+
+| Type | Purpose | Use Case |
 |---|---|---|
-| ALB | Layer 7 HTTP/HTTPS | path routing, host routing, web apps, APIs |
-| NLB | Layer 4 TCP/UDP/TLS | very high performance, static IP, non-HTTP |
-| Gateway Load Balancer | Layer 3/4 | firewalls and inspection appliances |
+| Cluster | Pack instances close on same hardware | HPC, low-latency distributed systems, ML training |
+| Spread | Separate each instance to distinct hardware | Critical workloads needing hardware failure isolation (max 7 per AZ) |
+| Partition | Logical partitions on separate hardware sets | Kafka, Cassandra, HDFS — large distributed systems |
+
+**Cluster placement** improves throughput but increases correlated failure risk. **Spread placement** reduces correlated failure but limits group size. **Partition placement** balances both for distributed systems that need to avoid correlated failure within a rack.
+
+### EC2 Purchasing Options
+
+| Option | Description | Use Case | Risk |
+|---|---|---|---|
+| On-Demand | Pay by the second, no commitment | Unpredictable or short-lived | Highest cost |
+| Reserved Instances (RI) | 1 or 3 year commitment, specific instance type | Steady known usage | Commitment; unused RI wastes money |
+| Savings Plans | Flexible compute spend commitment ($/hr) | Mixed instance types, Fargate, Lambda | Commitment |
+| Spot | Spare capacity up to 90% cheaper | Fault-tolerant batch, CI, stateless workers | 2-minute interruption notice |
+| Dedicated Hosts | Physical server exclusive use | License compliance, regulatory | High cost |
+| Dedicated Instances | EC2 on hardware dedicated to your account | Compliance, not full host control | Higher cost |
+| Capacity Reservations | Reserved capacity in specific AZ | Guaranteed availability for launches | Pay even when unused |
+
+**Senior framing:** Split into baseline (On-Demand or committed) and elastic layers (Spot for interruptible). For disaster scenarios or launch windows, Capacity Reservations guarantee availability.
+
+**Spot interruption handling:** Spot instances receive a 2-minute notice via instance metadata and EventBridge. Design Spot workloads to checkpoint work, use mixed instance types with Spot Fleet, and never run singleton Spot instances for stateful services.
+
+### Hibernation
+
+EC2 Hibernate preserves instance RAM to encrypted EBS and resumes later. Useful for long warmup workloads, not a general HA mechanism. For resilience, design stateless replacement or application-level checkpointing.
+
+### ENI — Elastic Network Interface
+
+An ENI is the network identity of a workload. Security groups attach to ENIs, not instances. Every resource that uses VPC networking creates ENIs in your subnets: EC2 instances, Lambda in VPC, RDS endpoints, ECS tasks in `awsvpc` mode, EKS pod IPs via VPC CNI.
+
+**Elastic IP:** static public IPv4 address assignable to an ENI. A design smell when used to preserve pet server identity — prefer load balancers and DNS. Charges when not associated with a running instance.
+
+---
+
+## EBS Volume Types
+
+EBS is persistent block storage. Volumes are AZ-scoped — a volume in `us-east-1a` cannot attach to an instance in `us-east-1b`. Snapshots are the backup primitive and can be copied across Regions.
+
+| Type | Category | Best For | Max IOPS | Max Throughput |
+|---|---|---|---|---|
+| gp3 | General purpose SSD | Most workloads, boot volumes | 16,000 | 1,000 MiB/s |
+| gp2 | General purpose SSD | Legacy; IOPS tied to size (3/GB) | 16,000 | 250 MiB/s |
+| io1 | Provisioned IOPS SSD | I/O-intensive databases | 64,000 | 1,000 MiB/s |
+| io2 Block Express | Provisioned IOPS SSD | SAP HANA, large critical databases | 256,000 | 4,000 MiB/s |
+| st1 | Throughput HDD | Big data, log processing, sequential reads | 500 | 500 MiB/s |
+| sc1 | Cold HDD | Infrequent access, lowest cost | 250 | 250 MiB/s |
+
+**SRE habit:** Use `gp3` by default — it decouples IOPS and throughput from volume size, so you don't over-provision storage for performance. `gp2` ties IOPS to size (3 IOPS/GB).
+
+### EFS vs EBS vs Instance Store
+
+| Storage | Type | Scope | Durability | Use Case |
+|---|---|---|---|---|
+| EBS | Block | Single AZ, single instance | Persistent | OS, databases, single-instance data |
+| EFS | NFS | Multi-AZ, multi-instance | Persistent | Shared app files, CMS uploads, ECS/EKS shared volumes |
+| Instance store | Block | Zonal, single instance | Ephemeral (lost on stop/terminate) | Caches, temp artifacts, replicated data |
+
+EFS performance modes: General Purpose (latency-sensitive) vs Max I/O (highly parallel). EFS throughput modes: Bursting (scales with storage) vs Provisioned (fixed throughput). EFS mounts require port 2049 (NFS) in security groups.
+
+---
+
+## High Availability: Elastic Load Balancing
+
+### Load Balancer Types
+
+| Load Balancer | Layer | Key Features | Best For |
+|---|---|---|---|
+| ALB | Layer 7 HTTP/HTTPS | Path/host/header routing, target groups, Lambda targets, sticky sessions | Web apps, microservices, APIs |
+| NLB | Layer 4 TCP/UDP/TLS | Static IPs, Elastic IPs, ultra-low latency, millions req/sec | High-performance TCP, static IP requirements |
+| CLB | Layer 4/7 | Legacy — avoid for new designs | EC2-Classic workloads |
+| GWLB | Layer 3/4 | Routes to virtual appliances | Firewalls, IDS/IPS, inline inspection |
 
 ### ALB Deep Dive
 
-ALB is the right choice for HTTP/HTTPS APIs. It understands:
-- **Listener rules**: route by host, path, headers, query strings, source IP
-- **Target groups**: groups of EC2, ECS, EKS, Lambda, or IP targets
-- **Health checks**: periodic HTTP/HTTPS checks to determine target readiness
-- **Sticky sessions**: send a client to the same target (avoid for stateless apps)
-- **WAF integration**: attach Web ACL at the ALB level
+Core ALB objects:
+- **Listener:** port + protocol ALB listens on (e.g., 443 HTTPS)
+- **Listener rule:** conditions (host header, path, headers) + actions (forward, redirect, fixed response)
+- **Target group:** collection of targets (EC2, ECS tasks, Lambda, IPs) with its own health check
+- **Health check:** periodic probe to path/port; unhealthy targets are removed from rotation
 
-Health check design matters:
-- `/healthz` should check whether the instance can serve traffic
-- `/readyz` should fail if required dependencies are unavailable
+**Health check design:**
+- `/healthz` should test whether the instance can serve traffic
 - Do not make health checks so deep that one dependency blip removes every target
-- Watch for the ALB fail-open behavior: when all targets are unhealthy, ALB returns 503
+- ALB **fails open** when all targets are unhealthy — bad health design creates confusing fail-all behavior
 
-ALB vs NLB decision:
-- HTTP/HTTPS API — use ALB
-- Need static IPs — use NLB (or put NLB in front of ALB)
-- WebSockets — ALB supports them
-- High-performance TCP gaming, custom protocols — use NLB
-- Need to preserve client source IP to the target — NLB passes it through; ALB requires X-Forwarded-For
+**Cross-zone load balancing:**
+- ALB: enabled by default, no additional charge
+- NLB: disabled by default; enabling it incurs cross-AZ data transfer charges
 
-### Target Group Health Reasons
+### Sticky Sessions
 
-When debugging unhealthy targets, read the health check reason codes:
-- `Target.ResponseCodeMismatch` — app returned wrong HTTP status
-- `Target.Timeout` — health check timed out
-- `Target.FailedHealthChecks` — repeated failures
-- `Elb.InternalError` — ELB cannot reach the target at all (check SGs and routes)
+Sticky sessions keep a user on the same target via a cookie. Helps legacy stateful apps but reduces resilience. Better pattern: stateless app + sessions in ElastiCache or DynamoDB.
 
 ---
 
-## RDS Multi-AZ and Read Replicas
+## Auto Scaling Groups (ASG)
 
-### Multi-AZ DB Instance
+An ASG maintains a fleet of EC2 instances — replaces unhealthy instances automatically and scales capacity based on policies.
 
-A Multi-AZ deployment has a synchronous standby replica in a second AZ. On failure:
-1. AWS detects primary failure
-2. DNS CNAME (`mydb.abcdef.us-east-1.rds.amazonaws.com`) is updated to point to the standby
-3. Standby becomes primary
-4. Total failover time: typically 1–2 minutes
+### Key ASG Terms
 
-Critical SRE point: applications must honor DNS TTL and reconnect after failover. A connection pool that does not reconnect will keep returning errors even after the database is healthy again.
+| Term | Meaning |
+|---|---|
+| Launch template | How to create instances (AMI, instance type, SG, IAM profile, user data) |
+| Desired capacity | Current intended instance count |
+| Min/Max | Hard scaling bounds |
+| Health check | ALB health check or EC2 status check drives replacement |
+| Cooldown | Prevents overreacting: wait before additional scaling |
+| Instance warmup | Time for new instance to stabilize before contributing to metrics |
+| Lifecycle hooks | Pause instance during launch or termination for custom actions |
+| Warm pools | Pre-initialized instances ready to join quickly |
 
-What Multi-AZ provides:
-- Automatic failover for AZ, instance, or storage failure
-- No manual intervention required
-- Standby does NOT serve read traffic
+### Scaling Policies
 
-What Multi-AZ does NOT provide:
-- Read scaling (use read replicas for that)
-- Zero-downtime failover (1–2 minute window)
-- Protection from data corruption (synchronous replication copies corruption too)
+| Policy Type | Mechanism | Use Case |
+|---|---|---|
+| Target tracking | Maintain a metric at a target value | Recommended — ALB requests per target |
+| Step scaling | Scale different amounts at different alarm thresholds | Better proportionality than simple |
+| Simple scaling | Add/remove N instances when alarm fires | Basic; can over/under-react |
+| Scheduled | Scale at specific times | Predictable load patterns |
+| Predictive | ML-based proactive scaling | Variable but predictable patterns |
+
+**Good scaling metrics:** ALB request count per target (web apps), queue depth per worker (async), CPU for truly CPU-bound services.
+
+**Poor metrics:** total request count without dividing by capacity, memory if not published, CPU for I/O-bound services.
+
+### ASG Failure Mode: Replacement Loop
+
+```text
+Deploy new AMI -> ASG launches instances -> user data fails silently
+               -> target group never becomes healthy
+               -> ASG terminates and relaunches (infinite loop)
+               -> capacity collapses under load
+```
+
+Debug: check user data logs, cloud-init logs, systemd service status, listening ports, SGs, and target health reason codes.
+
+---
+
+## RDS — Relational Database Service
+
+### What AWS Manages vs What You Own
+
+**AWS manages:** provisioning, patching, automated backups, Multi-AZ failover automation, storage scaling, monitoring integration.
+
+**You own:** schema design, indexes, query performance, connection pooling, application retry behavior, migration safety, recovery testing.
+
+### RDS Multi-AZ
+
+Multi-AZ is **high availability**, not read scaling.
+
+- **Multi-AZ DB instance:** synchronous standby in another AZ. Standby does NOT serve reads. Failover typically 60-120 seconds; DNS endpoint flips.
+- **Multi-AZ DB cluster:** writer + two readable standbys in separate AZs. Faster failover.
+
+Critical failure mode after failover:
+```text
+Primary DB issue -> RDS failover -> DNS endpoint flips to standby
+                -> App connection pool keeps stale connections
+                -> Errors continue after DB is healthy
+                -> Requires app-side connection refresh and retry logic
+```
 
 ### Read Replicas
 
-Read replicas scale reads and can support reporting workloads. Key properties:
-- Asynchronous replication — replicas can lag
-- Can be in the same Region, different Region, or promoted to standalone
-- Cross-Region replicas useful for disaster recovery and read locality
-- Aurora replicas offer faster failover and lower lag
+- Asynchronous replication from primary; can lag (monitor `ReplicaLag`)
+- Use for read-heavy workloads, reporting, cross-Region reads
+- Can be promoted to standalone DB (not zero data loss)
+- Supports MySQL, PostgreSQL, MariaDB, Oracle, SQL Server, Aurora
 
-Use read replicas when:
-- Reads dominate writes
-- Reporting queries should not hurt the primary
-- Cross-Region read locality is needed
+**Rule:** Multi-AZ for availability; read replicas for read scaling. Do not confuse them.
 
-Do not use read replicas as your only DR story — lag means potential data loss.
+### Aurora
+
+AWS cloud-native relational database compatible with MySQL or PostgreSQL.
+
+| Feature | Aurora | Standard RDS |
+|---|---|---|
+| Storage | Distributed 3 AZs, 6 copies | Single-AZ EBS |
+| Failover | ~30 seconds | 60-120 seconds |
+| Read scaling | Up to 15 Aurora Replicas | Up to 5 Read Replicas |
+| Serverless | Aurora Serverless v2 (fine-grained compute scaling) | Not available |
+| Storage growth | Auto-grows in 10 GB increments | Manual |
+
+Aurora Serverless v2 scales compute in fine-grained increments — useful for variable or unpredictable workloads without paying for full provisioned capacity.
 
 ### RDS Proxy
 
-RDS Proxy pools and reuses database connections. Critical for:
-- Lambda functions that create burst connections on every invocation
-- EKS pods that scale rapidly
-- Any workload that can exhaust DB `max_connections`
+RDS Proxy pools and multiplexes database connections. Critical for Lambda (each invocation would otherwise open a new connection) and bursty app tiers that would exhaust DB connection limits. Also enables smoother failover without application-level connection errors.
 
-RDS Proxy maintains a persistent pool to the database and multiplexes application connections. It also supports IAM authentication, which eliminates static DB passwords.
+### Backups
+
+- **Automated backups:** daily snapshot + transaction logs, retained 1-35 days; enables PITR
+- **Manual snapshots:** retained until deleted; good for pre-migration snapshots
+- **Point-in-Time Recovery (PITR):** restore to any second within retention window
+
+**Operational truth:** a backup that has never been restored is only a hope. Test restores regularly.
 
 ---
 
-## ElastiCache — Redis and Memcached
-
-ElastiCache provides managed Redis or Memcached-compatible caching.
-
-Use it for:
-- Database query cache
-- Session store
-- Rate limiting counters
-- Distributed locks (with care — use RedLock pattern)
-- Leaderboards and sorted sets
-
-### Cache Patterns
-
-- **Lazy loading**: app reads cache → on miss, reads DB → writes cache → serves
-- **Write-through**: app writes cache and DB together on every write
-- **TTL-based**: stale data expires automatically
-
-SRE warning: a cache outage should not become a total outage. Design apps to fall back to the database when Redis is unavailable, or explicitly accept the cache-as-hard-dependency trade-off with documented RTO/RPO.
-
-### Redis vs Memcached
+## ElastiCache — Redis vs Memcached
 
 | Feature | Redis | Memcached |
 |---|---|---|
-| Data structures | Strings, hashes, lists, sets, sorted sets | Strings only |
-| Persistence | Optional AOF/RDB | None |
-| Clustering | Redis Cluster | Multi-threaded, simple sharding |
-| Pub/Sub | Yes | No |
+| Data structures | Strings, lists, sets, sorted sets, hashes, streams | Strings only |
+| Persistence | Optional (AOF/RDB snapshots) | None |
 | Replication | Yes (primary + replicas) | No |
+| Multi-AZ | Yes | No |
+| Clustering | Yes (cluster mode with sharding) | Yes (simple) |
+| Lua scripts | Yes | No |
+| Use cases | Sessions, pub/sub, rate limiting, leaderboards, distributed locks | Simple caching |
 
-For most SRE use cases, choose Redis.
+**Cache patterns:**
+- **Lazy loading:** read cache first, fall back to DB on miss, write result to cache
+- **Write-through:** write to cache and DB together; no stale reads
+- **TTL expiry:** stale data expires; tolerable staleness is acceptable
+
+**Warning:** Cache outage must not cascade to full outage. Applications must handle cache unavailability gracefully.
+
+**ElastiCache clustering (Redis cluster mode):** shards data across multiple node groups, each with primary + replicas. Enables horizontal scaling of both reads and writes. Requires client-side cluster-aware routing.
 
 ---
 
-## SQS and SNS
+## Route 53
 
-### SQS — Managed Queue
+### Record Types
 
-SQS is a queue. Producers send messages, consumers poll and process them. The visibility timeout is the key mechanism: when a worker receives a message, SQS hides it temporarily. If the worker finishes, it deletes the message. If the worker crashes or times out, the message becomes visible again and is reprocessed.
+| Record | Purpose |
+|---|---|
+| A | Maps hostname to IPv4 address |
+| AAAA | Maps hostname to IPv6 address |
+| CNAME | Alias one hostname to another; cannot be used at zone apex |
+| Alias | AWS extension: maps to AWS resource DNS names; works at zone apex; no TTL billing |
+| MX | Mail server routing |
+| TXT | Text records; used for domain verification, SPF, DKIM |
+| NS | Name server records |
+| PTR | Reverse DNS |
 
-This is why handlers must be idempotent — the same message can be processed more than once.
+**Zone apex rule:** you cannot create a CNAME for `example.com` (zone apex). Use Route 53 Alias records to map zone apex to ALB, CloudFront, Elastic Beanstalk, etc.
+
+### Routing Policies
+
+| Policy | Description | Use Case |
+|---|---|---|
+| Simple | Single answer | Single resource |
+| Weighted | Traffic split by % weight | Canary deploys, A/B testing, migration |
+| Latency | Route to lowest-latency Region from user | Multi-Region performance |
+| Failover | Active-passive DR; routes to secondary when primary fails health check | Active-passive DR |
+| Geolocation | Route based on user country/continent | Data residency, localization |
+| Geoproximity | Location-based with bias adjustment | Fine-tuned regional routing |
+| Multivalue answer | Return up to 8 healthy records | Simple client-side load balancing |
+| IP-based | Route by client CIDR | ISP-specific routing |
+
+### Health Checks
+
+Types: endpoint monitoring (HTTP/HTTPS/TCP), calculated (combines multiple), CloudWatch alarm-based.
+
+**SRE caution:** DNS failover is limited by TTL and resolver behavior. It is not instant failover. Low TTL (30-60s) helps but does not eliminate propagation delay. Do not confuse DNS failover with load balancer health checking.
+
+**Route 53 Resolver:** DNS resolution for hybrid environments. Inbound endpoints let on-premises resources query Route 53 private hosted zones. Outbound endpoints let VPC resources query on-premises DNS via forwarding rules.
+
+---
+
+## S3 Advanced
+
+### Pre-signed URLs
+
+Time-limited access tokens to S3 objects, generated with your credentials. The requester does not need AWS credentials. Used for:
+- Direct user uploads to S3 bypassing app tier
+- Temporary download links for private objects
+- Delegating access without exposing AWS credentials
+
+### CORS
+
+S3 CORS allows browser requests from one domain to fetch objects from S3 on a different domain. Required for single-page apps that load assets directly from S3 buckets.
+
+### S3 Replication
+
+| Type | Direction | Use Case |
+|---|---|---|
+| Cross-Region Replication (CRR) | Different Region | Compliance, latency, multi-Region DR, cross-account |
+| Same-Region Replication (SRR) | Same Region | Log aggregation, prod-to-test copy, account separation |
+
+Requirements: versioning enabled on both source and destination. Replication is not retroactive. Delete markers can optionally be replicated.
+
+### S3 Transfer Acceleration
+
+Uploads use CloudFront edge locations to route over the AWS global network instead of the public internet. Useful for uploads from geographically distant clients.
+
+### Object Lock (WORM)
+
+Prevents deletion or overwrite during a retention period:
+- **Compliance mode:** nobody can delete, including root — for regulatory WORM compliance
+- **Governance mode:** users with `s3:BypassGovernanceRetention` permission can override
+
+### Intelligent-Tiering
+
+Automatically moves objects between access tiers based on actual access patterns with no retrieval fees. Good for unknown or variable access patterns.
+
+---
+
+## CloudFront
+
+### Key Concepts
 
 | Concept | Meaning |
 |---|---|
-| Visibility timeout | Time message is hidden after a consumer receives it |
-| Dead-letter queue | Messages that fail after `maxReceiveCount` retries land here |
-| Long polling | Wait for messages instead of tight polling (reduces empty receives) |
-| FIFO queue | Ordered delivery, exactly-once within message groups |
+| Distribution | CloudFront resource with origins, behaviors, and settings |
+| Origin | Where CloudFront fetches content (S3, ALB, API Gateway, custom HTTP) |
+| Behavior | URL path pattern mapped to an origin with cache settings |
+| Cache policy | Controls TTL, and which headers/cookies/query strings vary the cache |
+| Origin Shield | Additional caching layer to reduce origin load |
+| OAC | Origin Access Control — restricts S3 to CloudFront-only access |
+
+**Cache correctness rule:** static assets get long TTLs + versioned filenames. Dynamic APIs need carefully designed cache keys (headers, cookies, query strings).
+
+**Invalidation:** removes cached objects before TTL expiry. Frequent invalidation signals weak versioning strategy — prefer versioned filenames for static assets.
+
+### Lambda@Edge and CloudFront Functions
+
+- **Lambda@Edge:** Node.js/Python Lambda at edge; runs on viewer/origin request/response; A/B testing, auth, URL rewriting
+- **CloudFront Functions:** lightweight JavaScript for simple viewer-side transforms; lower latency and cost than Lambda@Edge for simple operations
+
+---
+
+## SQS — Simple Queue Service
+
+### Standard vs FIFO
+
+| Feature | Standard | FIFO |
+|---|---|---|
+| Ordering | Best-effort | Strict FIFO within message group |
+| Throughput | Effectively unlimited | 300 msg/sec (3,000 with batching per group) |
+| Deduplication | No | Yes (5-minute window) |
+| Use case | High-volume, order-insensitive | Order-sensitive workflows |
+
+### Key Concepts
+
+| Concept | Meaning |
+|---|---|
+| Visibility timeout | Time message is hidden after consumer receives it (default 30s) |
+| Dead-letter queue (DLQ) | Receives messages after max receive failures |
+| Long polling | Wait up to 20s for messages; reduces empty receives and cost |
 | Message retention | 1 minute to 14 days (default 4 days) |
+| Max message size | 256 KB |
 
-SRE pattern:
+**Visibility timeout too short:** causes duplicate processing (message reappears while still being processed).
+**No DLQ:** poison messages loop forever, blocking queue progress.
+
+**Scaling workers on queue metrics:**
+- `ApproximateAgeOfOldestMessage` — reflects processing latency; use for latency-sensitive workloads
+- `ApproximateNumberOfMessagesVisible / number of consumers` — use for throughput-sensitive workloads
+
+---
+
+## SNS — Simple Notification Service
+
+SNS is pub/sub fanout. One published message delivers to multiple subscribers: SQS queues, Lambda functions, HTTP/S endpoints, email, SMS, mobile push.
+
+**Fan-out pattern:**
 ```text
-API -> SQS queue -> Worker ASG/ECS -> Database
+S3 event -> SNS topic -> SQS queue A (consumer team A)
+                      -> SQS queue B (consumer team B)
+                      -> Lambda (audit/monitoring)
 ```
 
-Scale workers on queue depth per worker, not total queue depth.
+Each consumer has independent retry, scaling, and failure isolation.
 
-Monitoring critical metrics:
-- `ApproximateAgeOfOldestMessage` — user-visible processing delay
-- `ApproximateNumberOfMessagesNotVisible` — messages in-flight
-- `NumberOfMessagesSent` vs `NumberOfMessagesDeleted` — production/consumption balance
-- DLQ depth — indicates stuck or failing messages
-
-### SNS — Pub/Sub Fanout
-
-SNS distributes one published event to many subscribers: SQS, Lambda, HTTP endpoints, email, SMS, and more.
-
-Pattern:
-```text
-S3 event -> SNS topic -> multiple SQS queues -> independent consumers
-```
-
-This gives each consumer team independent retry behavior and failure isolation.
-
-### EventBridge
-
-EventBridge routes events using rules. Use it for:
-- SaaS integration (Datadog, PagerDuty, Stripe events)
-- AWS service events (EC2 state changes, ECS task failures, CodePipeline events)
-- Scheduled jobs (cron replacement)
-- Custom event buses for domain events
-
-Use EventBridge when you need event filtering/routing rather than simple queue buffering.
+**SNS FIFO topics:** ordered delivery to SQS FIFO queues; deduplication support; lower throughput than standard SNS.
 
 ---
 
-## EKS — Elastic Kubernetes Service
+## Kinesis
 
-EKS provides a managed Kubernetes control plane. You still operate worker nodes, add-ons, networking, policies, upgrades, and workload design.
+### Kinesis Data Streams (KDS)
 
-### Node Options
+Real-time ordered streaming for high-throughput event data.
 
-| Option | When to Use |
+| Concept | Meaning |
 |---|---|
-| Managed node groups | Standard workloads; AWS handles node lifecycle |
-| Self-managed nodes | Custom AMIs or launch behaviors required |
-| Fargate profiles | Serverless pods; no node management |
-| Karpenter | Just-in-time node provisioning with bin-packing |
+| Shard | Capacity unit: 1 MB/s write, 2 MB/s read |
+| Partition key | Determines which shard receives a record |
+| Retention | 24 hours default, up to 365 days |
+| Enhanced fan-out | Dedicated 2 MB/s read per consumer; no shared throughput |
 
-### EKS Networking — VPC CNI
+Hot partition problem: a concentrated partition key overloads one shard while others sit idle.
 
-EKS uses the AWS VPC CNI plugin. Each pod gets an IP address from the VPC subnet. This means:
-- Pod IPs are routable within the VPC without an overlay network
-- Subnet CIDR sizing is critical — pods consume IP addresses from your subnets
-- `max-pods` per node is limited by ENI and IP limits of the instance type
-- For large clusters, use IPv6 or VPC CNI prefix delegation to avoid IP exhaustion
+### Kinesis Data Firehose (KDF)
 
-Production concern: a cluster that grows to hundreds of pods can exhaust a /24 subnet. Plan CIDR ranges before you deploy.
+Managed delivery to S3, Redshift, OpenSearch, Splunk, HTTP endpoints. No shard management. Can transform with Lambda before delivery. Near-real-time (buffer time 60s-900s).
 
-### IAM Roles for Service Accounts (IRSA)
+### Kinesis Data Analytics (KDA)
 
-IRSA allows Kubernetes pods to assume AWS IAM roles without static credentials.
+SQL or Apache Flink streaming analytics over KDS or KDF data in real time.
 
-How it works:
-1. EKS cluster has an OIDC identity provider URL
-2. You create an IAM role with a trust policy that allows the Kubernetes service account
-3. The pod's service account is annotated with the IAM role ARN
-4. AWS STS issues temporary credentials to the pod via a projected token
+### SQS vs SNS vs Kinesis — Comparison
 
-This is the correct way to give pods AWS permissions — not instance profiles (too broad) and not static keys (dangerous).
-
-Common IRSA failure: trust policy condition does not match the actual service account namespace or name. The pod gets `AccessDenied` and the error message mentions STS, not the resource it was trying to access.
-
-### EKS Critical Add-ons
-
-| Add-on | Purpose |
-|---|---|
-| AWS Load Balancer Controller | Creates ALB/NLB for Kubernetes Services and Ingresses |
-| EBS CSI Driver | Dynamic provisioning of EBS volumes for PersistentVolumes |
-| EFS CSI Driver | Shared EFS volumes across pods |
-| CoreDNS | Cluster DNS — must be healthy for pod DNS resolution |
-| kube-proxy | Node-level service routing |
-| VPC CNI | Pod networking |
+| Aspect | SQS | SNS | Kinesis Data Streams |
+|---|---|---|---|
+| Pattern | Pull (polling) | Push (pub/sub) | Pull (consumer reads) |
+| Ordering | No (FIFO optional) | No | Yes, per shard |
+| Fan-out | No | Yes | Yes (multiple consumer apps) |
+| Retention | Up to 14 days | No retention | 24h to 365 days |
+| Replay | No | No | Yes |
+| Use case | Work buffering | Event notification | Ordered streaming, replay |
+| Throughput | Effectively unlimited | Very high | Shard-limited, predictable |
 
 ---
 
-## ECR — Elastic Container Registry
+## Amazon MQ
 
-ECR stores container images. Key operational practices:
-
-- Enable vulnerability scanning (Inspector integration)
-- Set lifecycle policies to delete old images and untagged layers
-- Use cross-Region replication for multi-Region deployments
-- Use ECR pull-through cache for public images to avoid rate limits
-- Authenticate ECR before pulling: `aws ecr get-login-password | docker login`
-
-ECR private registry does not have image rate limits like Docker Hub. Migrate base images from Docker Hub to ECR to avoid pull failures during deploys.
+Managed ActiveMQ or RabbitMQ-compatible message broker. Use when migrating apps that depend on AMQP, MQTT, OpenWire, or STOMP. Not preferred for greenfield AWS-native designs — SQS/SNS are simpler and more scalable.
 
 ---
 
-## CloudWatch — Metrics, Logs, and Alarms
+## Summary: Intermediate Design Principles
 
-### Metrics
-
-Important examples by service:
-- ALB: `TargetResponseTime`, `HTTPCode_Target_5XX_Count`, `HTTPCode_ELB_5XX_Count`
-- EC2: `CPUUtilization`, `StatusCheckFailed`, `NetworkIn/Out`
-- RDS: `CPUUtilization`, `DatabaseConnections`, `FreeStorageSpace`, `ReplicaLag`
-- Lambda: `Errors`, `Duration`, `Throttles`, `ConcurrentExecutions`
-- SQS: `ApproximateAgeOfOldestMessage`, `NumberOfMessagesSent`
-
-### CloudWatch Logs
-
-Centralize application and system logs. Use structured JSON logs where possible for Logs Insights queries.
-
-CloudWatch Logs Insights can query logs during incidents:
-```sql
-fields @timestamp, @message
-| filter @message like /ERROR/
-| sort @timestamp desc
-| limit 50
-```
-
-### Alarms
-
-Alarm on user impact and saturation, not only resource usage.
-
-Good alarms:
-- High 5xx rate (user-facing errors)
-- p95 latency above SLO threshold
-- SQS oldest message age rising
-- RDS storage below threshold
-- Lambda throttles in production
-- ALB target health check failures
-
-Noisy alarms destroy trust. Tune thresholds, add evaluation periods, and attach runbook links to alarm descriptions.
-
----
-
-## Route 53 — Production DNS
-
-Route 53 is AWS's DNS and domain registration service.
-
-| Routing Policy | Use Case |
-|---|---|
-| Simple | One answer, no health checking |
-| Weighted | Controlled traffic split, canary, migration |
-| Latency | Route users to the lowest-latency Region |
-| Failover | Active-passive DR between primary and secondary |
-| Geolocation | Route by user location (country, continent) |
-| Geoproximity | Location plus bias toward a region |
-| Multi-value | Simple health-aware multiple records |
-| IP-based | Route based on client CIDR block |
-
-SRE caution: DNS failover is limited by TTL, resolver caching behavior, and health-check design. It is not instant failover. Set TTL low (30–60s) for records that need fast failover. High TTLs (3600+) are appropriate for stable records.
-
-### Public vs Private Hosted Zones
-
-- **Public hosted zone**: resolvable from the internet
-- **Private hosted zone**: resolvable only inside associated VPCs — use for internal service discovery
-
-Common failure: private hosted zone is not associated with the correct VPC. Pods or instances inside the VPC cannot resolve internal DNS names.
-
----
-
-## Intermediate Summary
-
-By this level, you can design a complete production web application:
-
-```text
-Route 53 (latency routing)
-  -> CloudFront + WAF
-  -> ALB (multi-AZ listener)
-  -> Auto Scaling Group (private subnets, across AZs)
-  -> RDS Aurora Multi-AZ (private data subnets)
-  -> ElastiCache Redis (session store, hot reads)
-  -> SQS (async work decoupling)
-  -> Worker ECS/EKS service (scales on queue depth)
-  -> CloudWatch (metrics, logs, alarms)
-```
-
-Every component is multi-AZ. State is externalized. Traffic is private except at the edge. Scaling is metric-driven. The architecture can survive any single AZ failure without manual intervention.
+1. **Purchasing strategy:** On-Demand baseline + Savings Plans for committed usage + Spot for interruptible workloads
+2. **Storage choice:** `gp3` EBS for most cases; `io2` for demanding databases; instance store for ephemeral; EFS for shared filesystem
+3. **Load balancer health checks:** too deep causes false unhealthy cascades; too shallow misses real failures
+4. **ASG + ALB = control loop:** health checks drive replacement; scaling metrics drive capacity decisions
+5. **RDS Multi-AZ is HA; read replicas are read scaling:** never confuse them
+6. **ElastiCache must degrade gracefully:** cache outage cannot cascade to full outage
+7. **Route 53 routing policies:** latency routing for multi-Region, failover for active-passive DR, weighted for canary
+8. **Scale workers on queue age, not queue depth alone:** age reflects actual user-visible latency
+9. **SQS always needs a DLQ:** poison messages must have a landing place
+10. **Kinesis for ordered real-time with replay; SQS for work buffering**
