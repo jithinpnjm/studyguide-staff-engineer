@@ -465,6 +465,31 @@ argocd app create my-app \
 
 ## Kubernetes Security Hardening
 
+### Required Ports Reference
+
+Knowing which ports are required helps when configuring firewalls, security groups, and network policies.
+
+**Control Plane node ports:**
+
+| Protocol | Direction | Port Range | Purpose |
+|----------|-----------|------------|---------|
+| TCP | Inbound | 6443 | Kubernetes API server |
+| TCP | Inbound | 2379–2380 | etcd server client API (API server → etcd; etcd peer) |
+| TCP | Inbound | 10250 | kubelet API (API server → kubelet) |
+| TCP | Inbound | 10251 | kube-scheduler (localhost only in kubeadm setups) |
+| TCP | Inbound | 10252 | kube-controller-manager (localhost only) |
+| TCP | Inbound | 10255 | kubelet read-only API (deprecated; disable it) |
+
+**Worker node ports:**
+
+| Protocol | Direction | Port Range | Purpose |
+|----------|-----------|------------|---------|
+| TCP | Inbound | 10250 | kubelet API |
+| TCP | Inbound | 10255 | kubelet read-only API (deprecated) |
+| TCP | Inbound | 30000–32767 | NodePort Services |
+
+**Network policy implication:** etcd (2379-2380) should only be reachable from the API server IP. Exposing etcd publicly is a critical vulnerability — an attacker with etcd write access owns the entire cluster.
+
 ### Pod Security Standards (PSS)
 
 Replaces deprecated PodSecurityPolicy. Applied at namespace level.
@@ -1149,3 +1174,110 @@ Use CAPI for:
 - Reproducible cluster builds
 
 CAPI providers exist for AWS, GCP, Azure, vSphere, OpenStack, Equinix Metal, and others.
+
+---
+
+## Container Runtime Internals
+
+### What A Container Actually Is
+
+```text
+Image + writable layer + namespaces + cgroups + process = container
+```
+
+Containers share the host kernel. Isolation is provided by Linux kernel primitives, not hardware virtualization.
+
+### Linux Namespaces — What Each Isolates
+
+| Namespace | Isolates |
+|---|---|
+| PID | Process ID visibility — container PID 1 is not host PID 1 |
+| NET | Network interfaces, routes, ports |
+| MNT | Mount points and filesystem visibility |
+| UTS | Hostname and domain name |
+| IPC | Shared memory, semaphores, message queues |
+| USER | UID/GID mapping — container root may not be host root |
+
+Namespaces change what the process can **see**. cgroups control what it can **consume**.
+
+### cgroups — Resource Enforcement
+
+```bash
+docker run --memory=512m --cpus=1.5 app
+# kubernetes equivalent: resources.limits.memory / resources.limits.cpu
+```
+
+Behavior:
+- Memory limit exceeded → kernel OOM kills the containerized process (exit code 137)
+- CPU limit exceeded → CPU throttling, not kill
+- No limits set → noisy neighbor risk on shared nodes
+
+Check throttling on a node:
+
+```bash
+cat /sys/fs/cgroup/cpu/<pod_cgroup>/cpu.stat  # throttled_time
+```
+
+### PID 1 Problem
+
+The container entrypoint becomes PID 1. PID 1 must:
+- Handle `SIGTERM` and shut down gracefully
+- Reap zombie child processes (orphaned children of subprocesses)
+
+Common failures:
+- Shell-form `CMD` wraps in `/bin/sh -c` — the shell catches signals but may not forward to the app
+- App exits but leaves children running, keeping the container alive
+
+Fix: use exec-form `CMD ["app", "arg"]`, or add a lightweight init (`tini`) that handles signal forwarding and zombie reaping.
+
+### Overlay Filesystems
+
+Image layers are read-only. A thin writable layer is added per container.
+
+Implication: logs, temp files, and writes inside the container consume **node disk**, not the image. Monitor node disk usage separately from image sizes.
+
+```bash
+du -sh /var/lib/containerd   # containerd image/layer storage
+crictl images                # cached images on node
+```
+
+### Runtime Stack (Kubernetes)
+
+```text
+kubelet -> CRI (Container Runtime Interface) -> containerd -> runc -> Linux kernel
+```
+
+- `kubelet` speaks CRI to the container runtime
+- `containerd` handles image pulling, snapshotting, sandbox setup
+- `runc` creates the namespaces and cgroup and execs the process
+- `crictl` is the debug CLI for this stack — use it on nodes instead of Docker CLI
+
+```bash
+crictl ps -a              # all containers including exited
+crictl logs CONTAINER_ID  # container stdout/stderr
+crictl inspect POD_ID     # sandbox and container details
+crictl images             # local image cache
+```
+
+### Container → Kubernetes Mapping
+
+| Container World | Kubernetes World |
+|---|---|
+| `docker run` | Pod spec |
+| `-p` port publish | Service / Ingress |
+| Volume mount | `volume` / `PVC` |
+| Manual restart | Controller reconciliation |
+| `--memory`/`--cpus` | `resources.requests` / `resources.limits` |
+| `docker logs` | `kubectl logs` / `crictl logs` |
+
+Kubernetes adds orchestration on top of Linux container primitives. Understanding the Linux layer explains why node disk pressure evicts pods, why OOMKilled means a cgroup limit was exceeded, and why PID 1 behavior affects rolling restarts.
+
+### Production Incident Patterns
+
+| Symptom | Root Cause | Fix |
+|---|---|---|
+| `ImagePullBackOff` | Wrong tag, registry auth, rate limit, arch mismatch | Check registry, credentials, tag existence |
+| `CrashLoopBackOff` | App crashes on start: bad config, missing secret, dependency down | `kubectl logs --previous`, fix the startup error |
+| `OOMKilled` (exit 137) | Container memory limit too low, or memory leak | Raise limit or fix leak; check `dmesg` for OOM message |
+| Slow pod shutdown | PID 1 mishandles SIGTERM, grace period too short | Use exec-form CMD, add tini, increase `terminationGracePeriodSeconds` |
+| Node disk full | Container logs, old images, writable layers | `crictl rmi --prune`, rotate container logs, clean `/var/lib/containerd` |

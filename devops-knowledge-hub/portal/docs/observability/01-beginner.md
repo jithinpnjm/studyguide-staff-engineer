@@ -346,3 +346,94 @@ Beginner rule: use bounded labels for metrics and use logs/traces for high-cardi
 8. Good observability starts from operational questions.
 9. Use RED for services, USE for infrastructure.
 10. Alert on symptoms; investigate causes.
+
+---
+
+## Incident Response Basics
+
+Observability tools only matter if you can act on what they show. Incident response is the structured process for doing that.
+
+### The Incident Lifecycle
+
+```
+Detect → Triage → Mitigate → Communicate → Resolve → Learn
+```
+
+**Detect** — An alert fires, a user reports a problem, or an anomaly is spotted on a dashboard. Good detection means catching problems before users notice them.
+
+**Triage** — Assess scope and severity. The senior engineer order of questions:
+1. Are users hurting right now?
+2. How many users are affected?
+3. Is it getting worse or stable?
+4. What is the fastest safe mitigation?
+
+**Mitigate** — Stop the bleeding. This is not the same as fixing the root cause. A rollback, a feature flag disable, or traffic rerouting can restore service while investigation continues. Mitigation before root cause is almost always the right call during active user impact.
+
+**Communicate** — Keep stakeholders informed with regular updates. A short status update every 15–30 minutes is better than silence. Use a standard format: what is happening, what is the impact, what is being done, when is the next update.
+
+**Resolve** — Confirm the service is healthy. Check SLO burn rate is back to normal, error rate is at baseline, and latency is within bounds. Do not close the incident until metrics confirm recovery.
+
+**Learn** — Write a postmortem. Capture what happened, why it happened, and what will prevent recurrence. This is where incidents become reliability improvements.
+
+### Incident Severity Levels
+
+| Severity | Meaning | Example |
+|---|---|---|
+| SEV1 | Critical — major user impact | Checkout down, login broken |
+| SEV2 | High — partial user impact | Slow responses for 20% of users |
+| SEV3 | Medium — degraded but functional | Non-critical feature broken |
+| SEV4 | Low — minor or cosmetic | Dashboard shows wrong label |
+
+### Incident Roles
+
+**Incident Commander (IC)** — Owns the incident. Coordinates the response, makes decisions, delegates tasks, and drives communication. Does not do deep technical investigation.
+
+**Tech Lead** — Leads the technical investigation. Digs into metrics, logs, and traces. Reports findings to the IC.
+
+**Communications Lead** — Handles external and internal updates. Writes status page entries and stakeholder messages.
+
+**Subject Matter Experts (SMEs)** — Domain owners called in as needed. Database team, networking team, platform team.
+
+### What Good Detection Looks Like
+
+- Alert fires within 5 minutes of user impact starting
+- Alert message includes: what is broken, which service, severity, and a runbook link
+- On-call engineer can triage from the alert alone without needing to search dashboards
+
+### What Bad Detection Looks Like
+
+- User reports the problem before any alert fires
+- Alert fires but the message says "CPU high" with no context on user impact
+- Multiple alerts fire for the same root cause (alert storm)
+
+---
+
+## Postmortem Basics
+
+A postmortem is a structured document written after an incident to capture what happened and prevent recurrence. The goal is learning, not blame.
+
+### Why Blameless Matters
+
+Blame-focused postmortems cause engineers to hide mistakes and avoid on-call rotations. Blameless postmortems treat incidents as system failures, not individual failures. The question is always "what allowed this to happen?" not "who caused this?"
+
+### What a Postmortem Includes
+
+**Timeline** — A chronological sequence of events from first signal to resolution. Include timestamps. Include what was tried and what did not work.
+
+**Impact** — How many users were affected, for how long, and what was the business impact. Be specific: "checkout was unavailable for 23 minutes affecting approximately 4,000 users."
+
+**Detection quality** — How was the incident detected? Was it an alert, a user report, or a dashboard check? How long between the problem starting and detection? This section drives alert improvements.
+
+**Root cause chain** — Not a single cause but a chain. Each step in the chain is a place where a safeguard could have stopped the incident. Example: bad config deployed → no staging validation → no canary check → full rollout → outage.
+
+**Mitigation effectiveness** — What was tried, what worked, what did not work, and how long mitigation took. This section drives runbook improvements.
+
+**Prevention actions** — Concrete, specific actions with owners and due dates. Vague actions like "improve monitoring" are not acceptable. Specific actions like "add alert for connection pool exhaustion by [date] owned by [team]" are.
+
+### Postmortem Anti-Patterns
+
+- Writing the postmortem but never tracking the action items
+- Identifying a single root cause when there is always a chain
+- Assigning blame to an individual rather than the system
+- Writing the postmortem weeks after the incident when details are lost
+- Action items with no owner or no due date

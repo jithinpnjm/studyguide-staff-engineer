@@ -276,6 +276,47 @@ Core checklist:
 
 ---
 
+## Artifact Strategy and Supply Chain
+
+**Q19: Why should you "build once, promote many"?**
+
+Building an artifact once and promoting the same artifact across environments (dev → staging → production) guarantees what you tested is what you deployed. If you rebuild for each environment, you introduce the risk that the build differs — different dependency resolution, different build environment, different secrets baked in.
+
+An artifact built from commit `abc123` should be the identical binary/image that reaches production. Its digest is your proof.
+
+**Q20: Why are mutable image tags dangerous in production?**
+
+A mutable tag (`myapp:latest`, `myapp:release`) can point to different image content over time. Consequences:
+- Rollback fails: `kubectl set image deployment myapp app=myapp:latest` re-deploys the broken version if the tag was overwritten.
+- Audit trail breaks: you cannot determine which code ran at which time by looking at the tag alone.
+- Reproducibility fails: redeploying the same tag can produce a different running system.
+
+Always deploy with immutable references: a semantic version tag that you never overwrite (`2.4.1`), or a SHA digest pin.
+
+**Q21: What is an SBOM and when does it matter?**
+
+An SBOM (Software Bill of Materials) is a machine-readable list of all packages, libraries, and their transitive dependencies inside a container image or binary.
+
+It matters when:
+- You need to respond fast to a CVE: "Which of our running containers include `log4j >= 2.0 < 2.17`?" — answerable in seconds with an SBOM index, hours without.
+- Compliance requires a software inventory (SOC2, FedRAMP, financial industry regulations).
+- You want to prevent "dependency confusion" attacks — an SBOM surfaces unexpected packages.
+
+Generate with Syft, anchor with Grype for vulnerability matching.
+
+**Q22: What is the difference between image signing and image scanning?**
+
+| Concept | Purpose | Tool |
+|---------|---------|------|
+| Scanning | Find known vulnerabilities inside the image | Trivy, Grype, Clair |
+| Signing | Prove the image was produced by a specific, trusted build pipeline | Cosign (Sigstore) |
+
+Both are necessary. Scanning without signing: you know the image is clean, but not that it is the same image your CI produced. Signing without scanning: you know it came from your CI, but the CI might have built something with critical vulnerabilities.
+
+Production admission policies should require both: the image must be signed by your CI, and the scan must have passed at build time.
+
+---
+
 ## Quick-Answer Reference
 
 | Question | Key answer |
@@ -290,3 +331,7 @@ Core checklist:
 | Error budget? | Allowed unreliability within SLO period; when depleted, reliability work takes priority |
 | Feature flag use? | Separate deployment from release; enable gradual rollout and instant kill switch |
 | Chaos engineering goal? | Find reliability gaps through controlled failure before users find them |
+| Build once, promote many? | Same artifact (by digest) goes through all environments — no rebuilds |
+| Mutable tags risk? | Same tag can point to different content — breaks rollback and audit |
+| SBOM purpose? | Machine-readable inventory of all deps — enables fast CVE response and compliance |
+| Image signing vs scanning? | Signing: proves origin (trusted CI). Scanning: proves safety (no known vulns). Need both. |

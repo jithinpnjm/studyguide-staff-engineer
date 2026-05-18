@@ -340,3 +340,70 @@ Establish command, assess scope and user impact, mitigate quickly (rollback befo
 ### What is the senior summary on observability?
 
 Page only on user-impacting symptoms tied to SLO risk, then use metrics, logs, and traces to narrow blast radius quickly. During incidents prioritize mitigation over elegant root-cause hunting, communicate clearly, and convert outages into tracked reliability improvements.
+
+---
+
+## Incident Response Questions
+
+### How do you run a SEV1 incident?
+
+Establish an Incident Commander immediately — one person owns the incident, everyone else supports. The IC's first questions: are users hurting, how many, is it getting worse, what is the fastest safe mitigation? Mitigate before root cause if rollback confidence is high. Communicate every 15–30 minutes with a standard format: what is happening, what is the impact, what is being done, next update time. Once service is restored, confirm via SLO burn rate returning to normal, then open a postmortem within 24 hours while the timeline is fresh.
+
+### What is an Incident Commander and why do you need one?
+
+The IC is the single decision-maker during an incident. Without one, multiple engineers pull in different directions, communication breaks down, and mitigation takes longer. The IC does not do deep technical work — they coordinate, delegate, and drive decisions. The Tech Lead handles investigation and reports findings to the IC. Separating these roles prevents the most senior engineer from going heads-down on debugging while the incident communication falls apart.
+
+### Why do you rollback before finding the root cause?
+
+Because mitigation and investigation are separate goals. During active user impact, every minute matters. A rollback can restore service in minutes. Root cause analysis can take hours. If you have reasonable confidence that a recent deploy caused the problem, rollback first, then investigate on a stable system. The exception is when rollback itself carries risk — for example, a database migration that cannot be reversed cleanly.
+
+### What is a blameless postmortem and what does it include?
+
+A blameless postmortem treats incidents as system failures, not individual failures. The question is always "what allowed this to happen?" not "who caused this?" A complete postmortem includes: a timestamped timeline, a specific impact statement (users affected, duration, business impact), detection quality assessment, a root cause chain (not a single cause), mitigation effectiveness, and prevention actions with owners and due dates. Action items without owners and due dates are the most common postmortem failure — they get written and never done.
+
+### How do you reduce alert fatigue?
+
+Alert fatigue comes from too many low-signal alerts. Fix it by: alerting on symptoms (user-impacting signals) not causes (CPU, memory), tying every alert to an SLO or a user-visible impact, setting burn rate thresholds so alerts only fire when the error budget is genuinely at risk, adding inhibition rules in Alertmanager so a root cause alert suppresses downstream symptom alerts, and running a regular alert review to retire alerts that have never led to a real action. The goal is that every page requires a human decision — if an alert can be auto-resolved or ignored, it should not page.
+
+---
+
+## Scaling and Architecture Questions
+
+### How do you scale Prometheus beyond a single instance?
+
+Four main options in increasing complexity:
+
+1. **Bigger single instance** — vertical scaling, works up to a few million active time series, simplest to operate
+2. **Federation** — a global Prometheus scrapes aggregated metrics from regional Prometheus instances, good for cross-cluster dashboards but not for raw metric access
+3. **Sharding** — split scrape targets across multiple Prometheus instances using consistent hashing or manual assignment, each shard covers a subset of targets
+4. **Remote write to Thanos or Mimir/Cortex** — Prometheus instances write metrics to a long-term store that provides global query, HA deduplication, and multi-year retention
+
+The right choice depends on retention requirements, query patterns, and operational complexity tolerance. Most teams reach for Thanos or Mimir when they need more than 15 days of retention or global query across clusters.
+
+### What is Thanos and what problems does it solve?
+
+Thanos is a set of components that extend Prometheus with long-term storage, global query, and high availability. Core components: Sidecar (runs alongside Prometheus, uploads blocks to object storage), Store Gateway (serves historical data from object storage), Querier (provides a global query layer across all Prometheus instances and the Store Gateway), Compactor (downsamples and compacts old blocks). Thanos solves three problems single Prometheus cannot: retention beyond local disk, querying across multiple Prometheus instances in one query, and HA with deduplication when running Prometheus in pairs.
+
+### What is Prometheus federation and when do you use it?
+
+Federation lets a global Prometheus scrape a subset of metrics from other Prometheus instances using the `/federate` endpoint. Use it when you need a single dashboard that aggregates high-level metrics across clusters — for example, total request rate across all regions. Do not use federation for raw per-instance metrics at scale; the global Prometheus becomes a bottleneck. For full metric access across clusters, use remote write to Thanos or Mimir instead.
+
+### When do you use recording rules?
+
+Recording rules precompute expensive PromQL expressions and store the result as a new metric. Use them when: a query is used in multiple dashboards and is expensive to compute on every load, an SLO burn rate calculation involves a complex ratio that needs to be evaluated frequently, or a histogram quantile calculation over a long range window is slow. Recording rules also reduce query latency for dashboards because the result is already materialized. Name them with a consistent convention like `job:metric:aggregation` so they are easy to identify.
+
+---
+
+## Production Debugging Questions
+
+### Grafana shows no data — how do you debug it?
+
+Work through the layers in order. First check the data source: go to Configuration → Data Sources → Test. If the data source fails, Prometheus is unreachable or the URL is wrong. Second, run the query directly in Prometheus UI to confirm the metric exists and has data. Third, check the time range — if the dashboard is set to "last 5 minutes" and the metric has a 15-second scrape interval, there may simply be no data points in that window. Fourth, check for label mismatches — the dashboard variable may be filtering on a label value that does not exist in the current environment. Fifth, check if the metric name changed after a recent deploy or exporter upgrade.
+
+### An alert rule is firing in Prometheus but no notification was sent — how do you debug it?
+
+Check each layer of the pipeline. In Prometheus, confirm the alert is in `FIRING` state in the Alerts UI and that the `alertmanager_notifications_total` counter is incrementing. If Prometheus is not sending to Alertmanager, check the `--alertmanager.url` flag and network connectivity. In Alertmanager, check the `/api/v2/alerts` endpoint to confirm the alert arrived. Then check the routing tree — use `amtool config routes test` with the alert labels to see which route matches. Common failures: the alert labels do not match any route, the receiver is misconfigured (wrong webhook URL, expired API key), or a silence is active that matches the alert labels. Check `alertmanager_notifications_failed_total` for receiver errors.
+
+### The dashboard looked fine but users were slow — what happened and how do you prevent it?
+
+This is the "metrics lied" scenario. Common causes: the dashboard was showing averages that masked a slow tail (p50 looked fine but p99 was 10 seconds), the dashboard was aggregating across all instances and a single bad instance was diluted, or the metric being graphed was not actually measuring what users experience. Prevention: always include p99 latency alongside p50, use histogram metrics not summary metrics so you can compute any percentile after the fact, add synthetic monitoring (blackbox probes) that measures the full user request path end-to-end, and correlate dashboard metrics with SLO burn rate — if the burn rate is elevated, users are hurting even if the dashboard looks calm.

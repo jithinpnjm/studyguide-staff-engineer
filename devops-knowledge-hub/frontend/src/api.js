@@ -1,6 +1,17 @@
-const BASE = '/api';
+// When deployed to GitHub Pages, the dev server proxy is unavailable.
+// Fall back to a configurable backend URL stored in localStorage.
+// Default: localhost:8765 (local development). User can change via Settings.
+function getBase() {
+  const stored = typeof window !== 'undefined' && localStorage.getItem('devopshub_backend_url');
+  if (stored) return stored.replace(/\/$/, '') + '/api';
+  // During local dev (Vite proxy active), use relative /api
+  // On GitHub Pages, default to localhost:8765
+  const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  return isLocalDev ? '/api' : 'http://localhost:8765/api';
+}
 
 async function request(path, options = {}) {
+  const BASE = getBase();
   const res = await fetch(`${BASE}${path}`, options);
   if (!res.ok) {
     const text = await res.text().catch(() => '');

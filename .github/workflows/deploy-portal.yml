@@ -9,6 +9,9 @@ on:
       - 'devops-knowledge-hub/portal/docusaurus.config.ts'
       - 'devops-knowledge-hub/portal/sidebars.ts'
       - 'devops-knowledge-hub/portal/package.json'
+      - 'devops-knowledge-hub/frontend/src/**'
+      - 'devops-knowledge-hub/frontend/package.json'
+      - 'devops-knowledge-hub/frontend/vite.config.js'
   workflow_dispatch:
     inputs:
       reason:
@@ -27,11 +30,8 @@ concurrency:
 
 jobs:
   build:
-    name: Build Docusaurus
+    name: Build Docusaurus + Admin UI
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: devops-knowledge-hub/portal
 
     steps:
       - name: Checkout
@@ -46,13 +46,32 @@ jobs:
           cache: npm
           cache-dependency-path: devops-knowledge-hub/portal/package-lock.json
 
-      - name: Install dependencies
+      # ── Build Docusaurus portal ────────────────────────────────────────────
+      - name: Install portal dependencies
+        working-directory: devops-knowledge-hub/portal
         run: npm ci
 
       - name: Build portal
+        working-directory: devops-knowledge-hub/portal
         run: npm run build
         env:
           NODE_NO_WARNINGS: '1'
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      # ── Build Admin UI ─────────────────────────────────────────────────────
+      - name: Install admin UI dependencies
+        working-directory: devops-knowledge-hub/frontend
+        run: npm ci
+
+      - name: Build admin UI
+        working-directory: devops-knowledge-hub/frontend
+        run: npm run build
+        env:
+          VITE_BASE_PATH: /studyguide-staff-engineer/admin/
+
+      # Place admin UI inside the portal build at /admin/
+      - name: Copy admin UI into portal build
+        run: cp -r devops-knowledge-hub/frontend/dist devops-knowledge-hub/portal/build/admin
 
       - name: Upload build artifact
         uses: actions/upload-pages-artifact@v3

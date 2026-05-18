@@ -317,6 +317,119 @@ Monthly toil log:
 
 ---
 
+## Trusted Software Supply Chain
+
+At staff level, "the image was built from the code" is insufficient. A trusted supply chain proves that every artifact in production was produced from known, unmodified source, scanned for vulnerabilities, and signed by an authorised build system.
+
+### Key Concepts
+
+| Concept | What it answers |
+|---------|----------------|
+| **SBOM** (Software Bill of Materials) | What is inside this artifact? (all packages, libraries, transitive deps) |
+| **Provenance** | Where did this artifact come from? (which commit, which build pipeline, which builder) |
+| **Image signing** | Can I verify this artifact was produced by my CI, not an attacker? |
+| **Digest pinning** | Am I deploying exactly what I scanned and signed? |
+| **Admission policy** | Is the cluster enforcing artifact trust at deploy time? |
+
+### Practical Implementation
+
+```bash
+# Generate SBOM with Syft
+syft myrepo/myapp:2.4.1 -o spdx-json > sbom.json
+
+# Sign with Cosign (keyless — uses OIDC identity)
+cosign sign myrepo/myapp:2.4.1
+
+# Verify signature before deploying
+cosign verify myrepo/myapp:2.4.1 \
+  --certificate-identity=https://github.com/myorg/myapp/.github/workflows/build.yml \
+  --certificate-oidc-issuer=https://token.actions.githubusercontent.com
+
+# Pin image by digest in Kubernetes manifests
+# Get digest: docker inspect --format='{{index .RepoDigests 0}}' myrepo/myapp:2.4.1
+image: myrepo/myapp@sha256:3d1a4e8f2b...
+```
+
+### Admission Policy Enforcement
+
+Kyverno policy that requires image signatures:
+
+```yaml
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-image-signature
+spec:
+  validationFailureAction: Enforce
+  rules:
+  - name: check-image-signature
+    match:
+      resources: { kinds: [Pod] }
+    verifyImages:
+    - imageReferences: ["myrepo/*"]
+      attestors:
+      - entries:
+        - keyless:
+            subject: "https://github.com/myorg/*"
+            issuer: "https://token.actions.githubusercontent.com"
+```
+
+### Supply Chain Security Levels (SLSA)
+
+SLSA (Supply-chain Levels for Software Artifacts) is a framework:
+
+| Level | What is proven |
+|-------|---------------|
+| L1 | Build scripts exist |
+| L2 | Build service (hosted CI) produces provenance |
+| L3 | Hardened CI: builds are isolated, ephemeral, non-forgeable provenance |
+| L4 | Two-party review + hermetic builds |
+
+Most organisations target SLSA L2–L3. L3 means your CI provenance metadata cannot be forged even by a compromised CI job.
+
+---
+
+## Senior Signals by Domain
+
+When assessing a candidate's depth, interviewers listen for these signals. Know them for interviews and use them as a self-assessment checklist.
+
+### Linux
+
+- You can distinguish CPU saturation from CFS throttling, steal, lock contention, and I/O wait
+- You understand memory reclaim and pressure hierarchy before OOM
+- You use `cgroups` and `namespaces` as real debugging tools, not vocabulary
+- You know the difference between `vmstat`, `iostat`, `perf`, and `dmesg` and when each applies
+
+### Networking
+
+- You narrate packet flow clearly (client → DNS → TCP → TLS → LB → app)
+- You distinguish DNS, routing, firewall filtering, TLS handshake, and application delay
+- You reason about MTU, retransmits, conntrack exhaustion, backlog saturation, and NAT state
+- You know when to use `tcpdump`, `ss`, `conntrack`, `tracepath`, and `ip route`
+
+### Kubernetes
+
+- You connect Service failures to EndpointSlice, kube-proxy/eBPF datapath, readiness, and CNI
+- You understand kubelet behaviour under node pressure (eviction order, QoS classes)
+- You treat control-plane lag and eventual consistency as real system behaviour, not bugs
+- You can explain the packet path from an external client to a pod
+
+### Reliability
+
+- You define actionable alerts (not metric alerts — symptom alerts with runbooks)
+- You explain SLO tradeoffs (lower target = more deployment freedom vs higher user expectation)
+- You lead with mitigation when users are impacted; diagnose after stability
+- You can explain error budget burn rate (1h window at 14.4x burn = critical)
+
+### CI/CD
+
+- You reason about artifact trust (immutable, signed, digest-pinned)
+- You distinguish pipeline failure from application failure
+- You design rollback paths, not just forward-deploy paths
+- You have strong opinions about what must block a deploy vs what can be a warning
+
+---
+
 ## Summary
 
 The expert operating model requires:

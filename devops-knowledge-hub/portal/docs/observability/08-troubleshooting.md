@@ -528,6 +528,196 @@ sample_limit set on scrape configs as a guardrail
 
 ---
 
+## Runbook 9: Production Troubleshooting Flows By Symptom
+
+Use these flows when an incident is in progress and you need to narrow the blast radius quickly. Each flow starts with the symptom, not a hypothesis.
+
+### Traffic Drop
+
+Request rate has fallen significantly. Users cannot reach the service.
+
+Check in this order:
+
+1. Load balancer health and target groups
+2. DNS resolution — `dig service.example.com`
+3. Recent deploy markers on the dashboard
+4. Upstream routing changes (Ingress, Service selector)
+
+```promql
+# Confirm traffic drop
+sum(rate(http_requests_total[5m])) by (service)
+
+# Check per-region split
+sum(rate(http_requests_total[5m])) by (service, region)
+```
+
+If the drop is region-specific, suspect DNS or LB routing. If global, suspect the deploy or a dependency.
+
+---
+
+### Error Spike
+
+Error rate has risen sharply. Users are seeing failures.
+
+Check in this order:
+
+1. Latest deploy — rollback candidate if error started exactly at deploy time
+2. Dependency errors — downstream service returning 5xx
+3. Auth changes — token rotation, cert expiry
+4. Saturation — CPU, connection pool, queue depth
+
+```promql
+# Error ratio per service
+sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+/
+sum(rate(http_requests_total[5m])) by (service)
+
+# Identify which service started first
+sum(rate(http_requests_total{status=~"5.."}[2m])) by (service)
+```
+
+If errors are in a downstream dependency, the upstream is a victim — focus on the real source.
+
+---
+
+### Latency Increase
+
+Requests are succeeding but slowly. p99 is rising while error rate looks normal.
+
+Check in this order:
+
+1. p95/p99 split by service — is it one service or all?
+2. Traces — find the slow span in the call chain
+3. Queue depth — is a buffer growing?
+4. Database latency — `SELECT` or write throughput degraded?
+
+```promql
+# p99 latency per service
+histogram_quantile(0.99,
+  sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+)
+
+# Queue depth
+queue_depth{service="checkout"}
+```
+
+Average latency can mask p99 pain — always inspect tail latency first.
+
+---
+
+### Alert Storm
+
+Many alerts firing simultaneously, making it hard to identify the real cause.
+
+Check in this order:
+
+1. Is there a root dependency causing fan-out? (database, message broker, external API)
+2. Are duplicate rules firing on the same symptom?
+3. Are thresholds too tight on high-frequency signals?
+4. Are inhibit rules configured for parent/child alert relationships?
+
+```promql
+# Find alerts that all started at the same time
+ALERTS{alertstate="firing"} offset 5m
+```
+
+Alert storms usually point to one root failure amplifying across many symptom alerts. Find the root signal, not the loudest alert.
+
+---
+
+## Runbook 10: Real Incident Patterns
+
+Common production scenarios and how to interpret them.
+
+### CPU High, Users Fine
+
+Do not page on CPU alone. High CPU without user impact is not an incident.
+
+Observe:
+- Is error rate or latency elevated? If not, monitor.
+- Is this trending toward saturation? Set a watch.
+- Is there a specific process consuming abnormally?
+
+```bash
+ps aux --sort=-%cpu | head
+pidstat -u 1 5
+```
+
+Premature action on CPU noise creates unnecessary incidents.
+
+---
+
+### Errors After Deploy
+
+If error rate rose exactly when a deploy completed, rollback is often the fastest safe mitigation — even before full root cause analysis.
+
+Decision rule:
+
+```text
+high confidence deploy caused it -> rollback immediately
+uncertain -> collect 5 min of data, then decide
+```
+
+After rollback, verify error rate returns to baseline before marking resolved.
+
+---
+
+### Users Slow, Metrics Fine
+
+This is the hardest pattern. Average latency looks normal but users report slowness.
+
+Check:
+
+- p99 and p999 latency — averages hide tail pain
+- Region or datacenter split — is a subset of traffic affected?
+- Traces — find which span is slow for affected requests
+- Synthetic probes — are external checks also slow?
+
+```promql
+# p999 often reveals what p99 hides
+histogram_quantile(0.999,
+  sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)
+)
+```
+
+---
+
+### Nightly Noisy Alerts
+
+Alerts that fire predictably at low-traffic hours (nights, weekends) are usually misconfigured thresholds — not real incidents.
+
+Fix the alert, not the people:
+- Add minimum traffic guard: `and sum(rate(...[5m])) > 100`
+- Adjust thresholds for expected low-traffic behavior
+- Use time-of-day routing to reduce paging when risk is lower
+
+---
+
+### Dependency Brownout
+
+Your service is internally healthy but users are failing because a downstream service is degraded.
+
+Symptoms:
+- Your error rate is elevated
+- Your internal metrics look normal (CPU, memory, disk)
+- Errors cluster around requests that call a specific dependency
+
+Check:
+
+```promql
+# Errors by target dependency
+sum(rate(http_requests_total{status=~"5..", upstream="payment-api"}[5m]))
+```
+
+```bash
+# Check dependency reachability from within a pod
+kubectl exec -it <pod> -n <ns> -- curl -vk https://payment-api/health
+```
+
+Do not page the wrong team. Confirm which service is the root cause before escalating.
+
+---
+
 ## Quick Diagnostic Reference
 
 | Problem | First Check | Tool |
@@ -542,3 +732,8 @@ sample_limit set on scrape configs as a guardrail
 | SLO burn rate false positive | Check traffic volume and counter resets | PromQL |
 | Alert storm | Root cause inhibit rules configured? | Alertmanager config |
 | Dashboard slow | Recording rules missing? High-cardinality queries? | Grafana query inspector |
+| Traffic drop | LB + DNS + deploy markers + upstream routing | PromQL + dig |
+| Error spike | Latest deploy + dependencies + auth + saturation | PromQL + traces |
+| Latency increase | p99 + traces + queue depth + DB latency | histogram_quantile |
+| Users slow, metrics fine | p999 + region split + traces + synthetics | PromQL + Jaeger/Tempo |
+| Dependency brownout | Upstream service health + per-upstream error rate | PromQL + curl |

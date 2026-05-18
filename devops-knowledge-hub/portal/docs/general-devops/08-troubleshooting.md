@@ -638,3 +638,103 @@ For each signal that is regressing:
 ```
 
 After any intervention, recheck the signal metric after 30 days. Productivity improvements are only real if they sustain — a one-week improvement followed by regression means the root cause was not addressed.
+
+---
+
+## 11. "Works In Dev, Fails In Production"
+
+### What it is
+
+A service passes all tests in staging but fails or behaves incorrectly in production. This is one of the most common and most frustrating DevOps failure classes.
+
+### Systematic investigation
+
+The pattern "works in dev, fails in prod" always points to a difference between environments. Map the differences before touching code.
+
+```
+Environment diff checklist:
+  [ ] Environment variables — different values, missing entirely?
+  [ ] Secrets — same names but different values? Missing in prod namespace?
+  [ ] Resource limits — prod has tighter CPU/memory limits than dev?
+  [ ] NetworkPolicy — prod has default-deny not present in dev?
+  [ ] Database — prod has a different schema version, or different data volume?
+  [ ] Image tag — same tag, but the image was rebuilt? (mutable tag problem)
+  [ ] Architecture — amd64 image on arm64 nodes?
+  [ ] Config files — mounted from different ConfigMaps?
+  [ ] TLS — prod uses mutual TLS, dev does not?
+  [ ] External dependencies — prod hits real payment provider (5s latency); dev hits a mock (0ms)
+```
+
+### Most common causes
+
+| Pattern | Cause | Fix |
+|---------|-------|-----|
+| Missing env var in prod | Secret or ConfigMap not created in prod namespace | Audit env vars during deploy; validate at startup |
+| Stricter NetworkPolicy in prod | Dev allows all egress; prod has default-deny | Test with prod-equivalent NetworkPolicy in staging |
+| Different resource limits | Dev has no limits; prod has 256Mi — OOMKilled on first load spike | Set prod-equivalent limits in staging |
+| Mutable image tag | `myapp:latest` rebuilt between staging and prod deploy | Always deploy with immutable tags or digest pins |
+| Env-specific config mismatch | App reads `APP_ENV=production` and branches on it — branch not tested | Test the production branch in staging |
+
+### Prevention
+
+- **Environment parity**: staging should have the same NetworkPolicy, resource limits, secrets structure, and config shapes as production. Not necessarily the same data volume — but the same policy posture.
+- **Smoke tests** after every deploy (not just before): verify the key user journey in prod immediately after deployment completes.
+- **Startup validation**: apps should crash fast at startup if required env vars are missing, rather than failing silently at runtime.
+
+---
+
+## 12. Users Cannot Log In After a Deploy or Infrastructure Change
+
+### What it is
+
+Authentication fails for all or a subset of users. Login endpoints return errors. This often appears as a spike in 401/403 errors or user-facing "Session expired" / "Unable to authenticate" messages.
+
+### Rapid triage
+
+```bash
+# Is the auth service healthy?
+kubectl get pods -n auth
+kubectl logs -n auth deploy/auth-service --since=10m
+
+# Is the IdP reachable?
+curl -vk https://your-idp.com/.well-known/openid-configuration
+
+# Check clock skew (JWT tokens are time-sensitive)
+date && curl -sk https://your-idp.com/time
+timedatectl status   # on affected nodes
+
+# Check certificate validity
+echo | openssl s_client -connect your-idp.com:443 2>/dev/null | openssl x509 -noout -dates
+
+# Check OIDC secret/client credentials in Kubernetes
+kubectl get secret oidc-credentials -n auth -o yaml
+kubectl describe pod -n auth -l app=auth-service | grep -A 5 "Environment"
+```
+
+### Common causes
+
+| Cause | Detection | Fix |
+|-------|-----------|-----|
+| OIDC client secret rotated at IdP but not updated in cluster | Auth service logs: `invalid_client` or `unauthorized_client` | Update the Kubernetes secret, restart auth pod |
+| TLS cert expired on IdP endpoint | `openssl` shows `notAfter` in past | Renew cert; check cert-manager status |
+| Clock skew between cluster and IdP | JWT validation fails (iat/exp claims reject) | Sync NTP: `chronyc makestep` or restart `systemd-timesyncd` |
+| DNS failure to reach IdP | `curl -v` to IdP hangs or NXDOMAIN | Fix DNS; check CoreDNS; check NetworkPolicy |
+| OIDC `/.well-known/openid-configuration` URL changed | Auth service cannot discover endpoints | Update the OIDC issuer URL in config |
+| New deploy changed redirect URI | IdP rejects login callback | Add new redirect URI to IdP application settings |
+
+### Clock skew note
+
+JWT tokens include `iat` (issued at) and `exp` (expiry). If the cluster clock is ahead of the IdP clock by more than the JWT's tolerance (often 5 minutes), all tokens fail validation — even freshly issued ones.
+
+```bash
+# Quick check on every control-plane and worker node
+for node in $(kubectl get nodes -o name); do
+  kubectl debug node/${node##*/} -it --image=busybox -- date
+done
+```
+
+**Prevention:** Enable NTP synchronization via `chronyd` or `systemd-timesyncd` on all nodes. Monitor for clock drift with a Prometheus alert:
+
+```promql
+abs(node_time_seconds - time()) > 60
+```

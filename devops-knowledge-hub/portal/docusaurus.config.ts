@@ -7,6 +7,10 @@ const config: Config = {
   tagline: 'Your personal SRE & DevOps study portal',
   favicon: 'img/favicon.ico',
 
+  customFields: {
+    geminiApiKey: process.env.GEMINI_API_KEY || '',
+  },
+
   future: {
     v4: true,
   },
@@ -62,7 +66,7 @@ const config: Config = {
           label: 'Knowledge Base',
         },
         {
-          to: '/docs/interview-prep',
+          to: '/docs/interview-prep/linux-kubernetes-troubleshooting',
           label: 'Interview Prep',
           position: 'left',
         },
@@ -70,6 +74,11 @@ const config: Config = {
           to: '/docs/aws-deep-dive/beginner',
           label: 'AWS Deep Dive',
           position: 'left',
+        },
+        {
+          href: '/studyguide-staff-engineer/admin/',
+          label: 'Admin UI',
+          position: 'right',
         },
         {
           href: 'https://github.com/jithinpnjm/studyguide-staff-engineer',

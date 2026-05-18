@@ -270,6 +270,100 @@ Canary deployments work best when you can measure user impact automatically (err
 
 ---
 
+## Progressive Delivery
+
+Progressive delivery increases exposure incrementally — only promoting to the next stage if health metrics remain within bounds.
+
+```
+1% -> 5% -> 25% -> 50% -> 100%
+```
+
+Each promotion gate should check:
+- Error rate (e.g., < 0.5% sustained for 5 minutes before promoting)
+- Latency P99 (e.g., < 300ms)
+- Saturation (CPU/memory not spiking)
+- Business metrics (conversion, success rate)
+
+A canary without metric gates is just delayed failure. Tools: Argo Rollouts (`AnalysisRun`), Flagger.
+
+---
+
+## Artifact Strategy
+
+A core principle: **build once, promote many.** Build one immutable artifact from a commit. Test it. If it passes, promote the same artifact to staging, then production — never rebuild between environments.
+
+| Property | Why it matters |
+|----------|---------------|
+| **Immutable** | The same artifact tag always resolves to the same image/binary |
+| **Versioned** | Traceable to a specific commit or tag |
+| **Traceable** | Metadata in the image links back to the Git SHA, pipeline run, and build timestamp |
+| **Scanned** | Security vulnerabilities checked at build time before promotion |
+| **Digest-pinned** | Reference by SHA digest (`image@sha256:abc...`), not mutable tags like `latest` |
+
+**Mutable tags break rollback.** If `myapp:latest` is overwritten after a failed deployment, rolling back to `latest` deploys the broken version. Always deploy with immutable tags or digest pins.
+
+```bash
+# Dangerous — latest can point to anything
+image: myapp:latest
+
+# Safe — pinned to exact digest
+image: myapp@sha256:3d1a4e8f2b...
+
+# Safe — explicit semantic version tag
+image: myapp:2.4.1
+```
+
+### CI Credentials: Prefer OIDC Over Long-Lived Keys
+
+Long-lived cloud access keys in CI are a high-impact blast radius target. A leaked key provides persistent access.
+
+Instead, use **OIDC federation**: the CI system (GitHub Actions, GitLab CI) gets a short-lived token by proving its identity to the cloud provider. No key to rotate, no key to leak.
+
+```yaml
+# GitHub Actions: request OIDC token, assume AWS role
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789:role/github-actions-deploy
+          aws-region: us-east-1
+          # Token is short-lived (15 min), scoped to this repo, this environment
+```
+
+A CI pipeline credential should have only the permissions needed for that specific stage.
+
+---
+
+## CI/CD Testing Strategy
+
+| Test Type | Purpose | Where in pipeline |
+|-----------|---------|------------------|
+| Unit | Local logic — fast, no external deps | Early CI (block on failure) |
+| Integration | Components together (real DB, real queue) | Mid CI |
+| Contract | API compatibility between services | Mid CI |
+| End-to-End | Full user journey through staging | Staging gate |
+| Smoke | Basic health check after deploy | Post-deploy (every environment) |
+| Load | Capacity regression, latency under traffic | Scheduled or release gate |
+
+**Rule:** Cheap checks early, expensive checks later. Fast pipelines encourage good engineering behaviour. Slow pipelines create bypass culture — engineers stop running CI locally and merge speculatively.
+
+Pipeline time targets:
+
+| Stage | Target |
+|-------|--------|
+| Lint + unit tests | < 5 minutes |
+| Build + push image | < 3 minutes |
+| Integration tests | < 10 minutes |
+| End-to-end tests | < 15 minutes |
+| Total (critical path) | < 20 minutes |
+
+---
+
 ## Rolling Updates
 
 Kubernetes default strategy. Replaces pods one by one:

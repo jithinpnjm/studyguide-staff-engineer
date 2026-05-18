@@ -761,6 +761,157 @@ Risky (avoid unless necessary):
 
 ---
 
+## Kubernetes Node Triage
+
+When a Kubernetes node is unhealthy, Linux symptoms manifest as cluster symptoms. Start with the Linux host first, then connect to cluster signals.
+
+```bash
+systemctl status kubelet              # is kubelet running?
+journalctl -u kubelet -n 200 --no-pager  # kubelet errors
+crictl ps -a                          # all containers including exited
+crictl logs CONTAINER_ID              # container output
+df -h                                 # disk pressure evicts pods
+df -i                                 # inode exhaustion fails image pulls
+conntrack -S                          # conntrack table state
+```
+
+Node issues that appear as cluster symptoms:
+
+| Node symptom | Cluster impact |
+|---|---|
+| `kubelet` stopped | Node NotReady, pods evicted |
+| Disk full (bytes) | `DiskPressure`, pod evictions |
+| Disk full (inodes) | ImagePullBackOff, failed writes |
+| conntrack full | New pod connections silently dropped |
+| CNI misconfigured | Pods stuck in ContainerCreating |
+| Container runtime crash | Pods fail to start, crictl shows no containers |
+
+Useful `crictl` commands:
+
+```bash
+crictl images                        # locally cached images
+crictl ps -a | grep Exited           # recently exited containers
+crictl inspect CONTAINER_ID          # detailed container state
+crictl stopp POD_ID && crictl rmp POD_ID  # force-remove a stuck pod sandbox
+```
+
+---
+
+## Command Interpretation Table
+
+Use this table to quickly answer: "what does this command tell me?" and "what is a bad sign?"
+
+| Command | Answers | Bad signs |
+|---|---|---|
+| `uptime` | Load trend (1/5/15 min vs nproc) | 1m load much higher than 15m |
+| `vmstat 1 5` | CPU run queue, blocked tasks, IO wait | High `wa` (IO wait), high `b` (blocked), swap `si`/`so` |
+| `free -h` | Memory availability and swap | Low `available`, nonzero swap usage |
+| `iostat -xz 1 5` | Per-device IO latency and throughput | High `await` or `%util` approaching 100% |
+| `df -h` | Disk byte usage per filesystem | Filesystem at 95%+ |
+| `df -i` | Inode usage per filesystem | Inode at 90%+ |
+| `ss -s` | Socket state summary | Huge CLOSE_WAIT or TIME_WAIT counts |
+| `lsof +L1` | Deleted files still held open | Large deleted files consuming disk space |
+| `journalctl -p err` | Recent service and kernel errors | Repeated failures from same service |
+| `strace -p PID` | System calls a process is making | Stuck in `connect`, `futex`, `read`, or repeated `EACCES` |
+| `conntrack -S` | Conntrack table saturation | Count near max; new connections dropped |
+| `dmesg \| tail` | Kernel messages and hardware events | OOM kills, disk errors, NIC resets |
+| `pidstat -u 1 5` | Per-process CPU breakdown | One process consuming >90% CPU |
+
+---
+
+## Real Incident Stories
+
+### Disk Still Full After Log Cleanup
+
+**Symptom:** `df -h` shows 100% even after `rm -rf /var/log/app/*.log`.
+
+**Cause:** The running service still has the deleted file open. The kernel keeps the inode (and the disk blocks) until the last open file descriptor is closed.
+
+**Diagnosis:**
+
+```bash
+lsof +L1   # shows files deleted but still held open, with disk usage
+```
+
+**Fix:** Restart or reload the owning service to close the file descriptor. Use `> /var/log/app/app.log` to truncate in-place if restarting is not immediately possible.
+
+---
+
+### Load Average 40, CPU 10%
+
+**Symptom:** `uptime` shows load 40 on a 16-core host. `vmstat` shows CPU mostly idle but `b` column is high.
+
+**Cause:** Tasks are blocked in uninterruptible sleep (D-state) — typically on disk I/O, NFS, or a stuck storage driver.
+
+**Diagnosis:**
+
+```bash
+vmstat 1 5          # high b (blocked) and wa (IO wait)
+ps aux | awk '$8 ~ /D/ {print}'   # list D-state processes
+iostat -xz 1 5      # disk await/util — high values confirm storage bottleneck
+```
+
+**Fix:** Identify the storage or NFS dependency causing the block. Resolve the storage issue; `kill -9` on D-state processes does nothing until the block clears.
+
+---
+
+### Service Flapping (Repeated Restarts)
+
+**Symptom:** Service is up briefly then down again. `systemctl status` shows restart cycles.
+
+**Diagnosis:**
+
+```bash
+systemctl status SERVICE
+journalctl -u SERVICE -n 200 --no-pager
+```
+
+**Common Causes:**
+- Missing env var or config file on startup
+- Port already in use
+- Dependency unavailable (DB, API)
+- Crash on startup after a bad deploy
+
+**Fix:** Read the exit reason from `journalctl`. Address the root cause — do not just increase `RestartSec`.
+
+---
+
+### One Kubernetes Node Has Failures
+
+**Symptom:** Pods on one node are failing. Other nodes are healthy.
+
+**Cause candidates:**
+
+| Candidate | Evidence |
+|---|---|
+| kubelet sick | `systemctl status kubelet` shows errors |
+| CNI issue | `journalctl -u kubelet` shows network setup failures |
+| Disk pressure | `df -h` / `df -i` shows full filesystem |
+| conntrack exhaustion | `conntrack -S` count near max |
+| Container runtime crash | `crictl ps -a` shows no containers, runtime errors in journal |
+
+**Sequence:**
+
+```bash
+systemctl status kubelet
+journalctl -u kubelet -n 200
+df -h && df -i
+conntrack -S
+crictl ps -a
+```
+
+Resolve the Linux layer first; the Kubernetes symptom will clear once the node is healthy.
+
+---
+
+## Senior Answer Shape
+
+When asked how you troubleshoot a Linux host:
+
+> I classify the symptom as process-local, host-wide, network, storage, memory, or dependency-related. I take a quick evidence snapshot: `uptime`, `vmstat`, `free -h`, `df -h/-i`, `iostat`, `ss -s`, top processes by CPU and memory, and recent errors from `journalctl` and `dmesg`. I interpret before acting — high load with low CPU points to blocked work, disk full may be inodes or deleted-open files, and service reachability must separate listening, routing, DNS, and policy. I prefer reversible mitigations, preserve evidence before restart, and follow up with root cause after recovery.
+
+---
+
 ## Final Rule
 
 Be precise:

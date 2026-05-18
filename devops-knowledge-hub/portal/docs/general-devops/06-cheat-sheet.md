@@ -299,3 +299,336 @@ kubectl create secret generic my-secret \
   --from-literal=password=hunter2
 kubectl get secret my-secret -o jsonpath='{.data.password}' | base64 -d
 ```
+
+---
+
+## Incident Mitigation Priority Order
+
+When users are impacted, use this ordering. Diagnose after stability is restored.
+
+1. **Rollback the recent change** — most incidents are caused by changes. Rollback fast.
+2. **Failover region or traffic path** — if a zone or region is impaired, reroute.
+3. **Disable the feature flag** — if the broken feature is gated, kill the flag instantly.
+4. **Scale capacity** — if the cause is load-induced, buy time with more replicas.
+5. **Bypass a non-critical dependency** — if a downstream is down and not required, fail gracefully.
+6. **Deep root-cause hunt** — only after service is stable.
+
+The instinct to understand before acting is natural but counterproductive during an active incident.
+
+---
+
+## Incident Anti-Patterns
+
+Avoid these — they make incidents worse or harder to recover from:
+
+| Anti-pattern | Why it is harmful |
+|---|---|
+| Restarting everything immediately | Masks evidence; doesn't fix the root cause |
+| Changing multiple variables at once | Makes it impossible to know what fixed (or broke) it |
+| "Assuming DNS is always the issue" | DNS is common but not always. Test it; don't assume. |
+| Granting `cluster-admin` to fix RBAC fast | Creates a persistent security hole; fix with scoped roles |
+| Applying `terraform apply` blindly | Destructive changes can make an incident worse |
+| Disabling TLS verification to debug | Trains bad habits and can persist in production |
+| Deep root-cause hunting before mitigation | User impact grows while you investigate |
+| "Retries are harmless" | Retries can amplify load and cascade into full outage |
+| Assuming healthy averages = healthy tails | P99 problems are invisible in averages |
+
+---
+
+## Troubleshooting Framework Quick Reference
+
+### The 5 Universal Questions
+
+Ask these in order before touching anything:
+
+1. **What exactly is failing?** — specific service, endpoint, or operation (not "the site is down")
+2. **Who is impacted?** — all users, a region, a subset, internal only?
+3. **What changed recently?** — deployment, config change, dependency update, traffic spike?
+4. **Is it getting worse, stable, or recovering?** — trend determines urgency
+5. **What is the fastest safe mitigation?** — rollback, scale, disable feature flag, reroute traffic?
+
+### Failure Layers Model
+
+Map symptoms to layers to narrow the blast radius quickly:
+
+```
+User-facing symptom
+  -> DNS          (NXDOMAIN, SERVFAIL, wrong IP)
+    -> Network    (packet loss, routing, firewall)
+      -> TLS      (expired cert, hostname mismatch, self-signed)
+        -> Load Balancer  (health check failing, no healthy backends)
+          -> Application  (crash, OOM, bug in new deploy)
+            -> Dependency (database, cache, external API)
+              -> Data Store (disk full, connection pool exhausted, replication lag)
+```
+
+For delivery failures, use the delivery layer model:
+
+```
+Git (auth, branch protection)
+  -> CI (test failure, permission denied, secret unavailable)
+    -> Artifact (build failed, image not pushed)
+      -> Registry (pull rate limit, auth failure)
+        -> Deploy Controller (ArgoCD sync error, Helm failure)
+          -> Cluster (node not ready, resource quota exceeded)
+            -> Pod (CrashLoopBackOff, ImagePullBackOff, OOMKilled)
+              -> Service (no endpoints, wrong selector, port mismatch)
+```
+
+### Symptom-to-Layer Mapping
+
+| Symptom | Likely layer | First command |
+|---------|-------------|---------------|
+| DNS resolution fails | DNS | `nslookup <host>` or `dig <host>` |
+| Connection refused | Network / App not running | `telnet <host> <port>` or `nc -zv <host> <port>` |
+| Connection timeout | Network / Firewall | `traceroute <host>` |
+| TLS handshake error | TLS | `openssl s_client -connect <host>:443` |
+| 502 Bad Gateway | Load balancer / App crashed | Check pod status, LB health checks |
+| 503 Service Unavailable | No healthy backends | `kubectl get endpoints <svc>` |
+| 403 Forbidden | IAM / RBAC | Check role bindings, policy attachments |
+| CrashLoopBackOff | Application / Config | `kubectl logs <pod> --previous` |
+| ImagePullBackOff | Registry auth / Image tag | `kubectl describe pod <pod>` |
+
+---
+
+## Common Error Patterns
+
+| Error | Likely Cause | First Step |
+|-------|-------------|------------|
+| `CrashLoopBackOff` | App crashes on start: bad config, missing env var, OOM | `kubectl logs <pod> --previous` |
+| `ImagePullBackOff` | Wrong image tag, registry auth failure, private registry | `kubectl describe pod <pod>` — check Events section |
+| `OOMKilled` (exit 137) | Container exceeded memory limit | `kubectl describe pod <pod>` — check `Last State` reason |
+| `Error: exit code 127` | Command not found in container | Check Dockerfile CMD/ENTRYPOINT, verify binary exists |
+| `403 Forbidden` | Missing IAM policy, wrong RBAC role, expired token | Check role bindings: `kubectl auth can-i <verb> <resource>` |
+| `DNS NXDOMAIN` | Service name wrong, namespace missing, DNS not propagated | `kubectl exec <pod> -- nslookup <svc>.<namespace>.svc.cluster.local` |
+| `DNS SERVFAIL` | CoreDNS pod unhealthy, upstream resolver issue | `kubectl get pods -n kube-system -l k8s-app=kube-dns` |
+| `TLS: certificate expired` | Cert not renewed (Let's Encrypt, cert-manager) | `openssl s_client -connect <host>:443 2>/dev/null \| openssl x509 -noout -dates` |
+| `TLS: hostname mismatch` | Cert issued for different domain, SNI misconfigured | Check cert SANs: `openssl x509 -noout -text -in cert.pem` |
+| `Connection refused` | Service not running, wrong port, firewall rule | `kubectl get svc`, `kubectl get endpoints` |
+| `Connection timeout` | Firewall blocking, network policy, wrong security group | `traceroute`, check network policies and security groups |
+| `GitHub Actions: permission denied` | Missing `permissions:` block in workflow YAML | Add `permissions: contents: read` (or required scope) to job |
+| `ArgoCD: OutOfSync` | Manual cluster change not committed to Git | Commit the change to Git; never rely on manual `kubectl apply` in GitOps |
+| `ArgoCD: Degraded` | Rollout unhealthy, pod not reaching Ready state | `kubectl describe rollout <name>`, check pod logs |
+
+---
+
+## DevOps Toolchain Quick Reference
+
+| Category | Tool | Primary Use |
+|----------|------|-------------|
+| **SCM** | GitHub, GitLab, Bitbucket | Source code hosting, PR workflow, branch protection |
+| **CI** | GitHub Actions, Jenkins, CircleCI, GitLab CI | Automated build, test, lint on every push |
+| **CD** | ArgoCD, Flux, Spinnaker, GitHub Actions | Deploy artifacts to environments |
+| **IaC** | Terraform, Pulumi, CloudFormation, Ansible | Provision and manage infrastructure as code |
+| **Containers** | Docker, Podman, containerd | Build and run container images |
+| **Orchestration** | Kubernetes, ECS, Nomad | Schedule and manage containers at scale |
+| **Observability** | Prometheus, Grafana, Datadog, Loki, Jaeger | Metrics, dashboards, logs, traces |
+| **Alerting** | PagerDuty, Opsgenie, Alertmanager | Route alerts to on-call engineers |
+| **Secrets** | Vault, AWS Secrets Manager, External Secrets Operator | Store and inject secrets securely |
+| **Service Mesh** | Istio, Linkerd, Cilium | mTLS, traffic management, observability between services |
+| **Artifact Registry** | Nexus, JFrog Artifactory, ECR, GHCR | Store and version build artifacts and container images |
+| **Package Mgmt** | npm, pip, Maven, Gradle, Helm | Manage code and infrastructure dependencies |
+
+---
+
+## Incident Communication Templates
+
+Copy-paste these into your incident channel. Fill in the brackets.
+
+### Initial Acknowledgment
+
+```
+[INVESTIGATING] [Service/Feature] — [brief symptom description]
+
+Time: [HH:MM UTC]
+Impact: [who is affected, estimated scope]
+On-call: @[your name] engaged
+Next update: [HH:MM UTC] or when status changes
+```
+
+Example:
+```
+[INVESTIGATING] Payment service — elevated 5xx error rate (~12%)
+
+Time: 14:37 UTC
+Impact: Checkout failures for ~8% of users attempting payment
+On-call: @alice engaged
+Next update: 14:52 UTC or when status changes
+```
+
+### Status Update
+
+```
+[UPDATE] [Service/Feature] — [current status]
+
+Time: [HH:MM UTC]
+Finding: [what you know so far]
+Action: [what you are doing right now]
+Next update: [HH:MM UTC]
+```
+
+Example:
+```
+[UPDATE] Payment service — still investigating
+
+Time: 14:51 UTC
+Finding: Errors correlate with deploy at 14:15 UTC. Rolling back now.
+Action: kubectl rollout undo deployment/payment-service
+Next update: 15:00 UTC or when rollback completes
+```
+
+### Resolution
+
+```
+[RESOLVED] [Service/Feature] — service restored
+
+Time: [HH:MM UTC]
+Duration: [start time] – [end time] ([X] minutes)
+Impact: [final scope — users affected, error rate peak]
+Cause: [one-sentence root cause]
+Fix: [what was done to restore service]
+Follow-up: Postmortem to be published within 48 hours. Tracking issue: [link]
+```
+
+### Postmortem Announcement
+
+```
+Postmortem published: [Incident title] — [date]
+
+Link: [URL to postmortem doc]
+Summary: [2–3 sentence summary of what happened and root cause]
+Key action items:
+  - [Action 1] — @[owner], due [date]
+  - [Action 2] — @[owner], due [date]
+  - [Action 3] — @[owner], due [date]
+
+Questions or additions? Comment on the doc or reply here.
+```
+
+---
+
+## Linux Host Troubleshooting Quick Reference
+
+```bash
+# Load and CPU
+uptime                              # load averages (1m, 5m, 15m)
+top -bn1 | head -20                 # snapshot of top processes
+ps aux --sort=-%cpu | head -10      # top CPU consumers
+
+# Memory
+free -h                             # memory overview
+cat /proc/meminfo | grep -E 'MemTotal|MemFree|Cached|SwapUsed'
+
+# Disk
+df -h                               # disk usage by filesystem
+du -sh /var/log/*                   # log directory sizes
+lsof +D /var/log | wc -l            # open file handles in /var/log
+
+# Network
+ss -tlnp                            # listening TCP ports with process
+netstat -s | grep -i error          # network error counters
+curl -o /dev/null -sw "%{http_code} %{time_total}s\n" http://localhost:8080/health
+
+# Systemd services
+systemctl status <service>
+journalctl -u <service> --since "10 minutes ago"
+journalctl -u <service> -n 100 --no-pager
+```
+
+### High Load Triage
+
+```bash
+# Is load CPU-bound or I/O-bound?
+vmstat 1 5          # r = run queue, b = blocked on I/O, wa = I/O wait %
+
+# If wa (I/O wait) is high:
+iostat -x 1 5       # check %util per disk
+iotop -o            # which processes are doing the I/O
+
+# If r (run queue) is high:
+pidstat -u 1 5      # per-process CPU usage over time
+```
+
+### Disk Full Response
+
+```bash
+# Find the biggest files
+find /var -type f -size +100M -exec ls -lh {} \; 2>/dev/null | sort -k5 -rh | head -20
+
+# Find and remove old logs (confirm before deleting)
+find /var/log -name "*.gz" -mtime +30 -ls
+find /var/log -name "*.gz" -mtime +30 -delete
+
+# Truncate a log file without deleting it (safe for open file handles)
+truncate -s 0 /var/log/myapp/app.log
+```
+
+---
+
+## CI/CD Failure Quick Reference
+
+### GitHub Actions
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `Permission denied` on `git push` | Missing `contents: write` permission | Add `permissions: contents: write` to job |
+| `Secret unavailable` | Secret not set in repo/org settings | Add secret in Settings → Secrets and variables |
+| `Resource not accessible by integration` | GITHUB_TOKEN lacks scope | Add required `permissions:` block |
+| Workflow not triggering | Branch protection or wrong `on:` trigger | Check `on:` filter matches the branch/event |
+
+### ArgoCD
+
+```bash
+# Check sync status
+argocd app get <app-name>
+argocd app list
+
+# Force sync (use with caution)
+argocd app sync <app-name>
+
+# Check why a rollout is degraded
+kubectl describe rollout <name> -n <namespace>
+kubectl argo rollouts get rollout <name> -n <namespace> --watch
+
+# Common states
+# OutOfSync  — cluster state differs from Git (manual change or drift)
+# Degraded   — sync succeeded but pods are not healthy
+# Progressing — rollout in progress
+```
+
+### Jenkins
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `Credential not found` | Credential ID mismatch | Check Manage Jenkins → Credentials |
+| `No such DSL method` | Missing plugin | Install required plugin, restart Jenkins |
+| `Agent offline` | Build agent disconnected | Check agent logs, restart agent |
+| Workspace permission error | Jenkins user lacks write access | Fix directory ownership: `chown -R jenkins:jenkins /var/lib/jenkins/workspace` |
+
+---
+
+## SLO Burn Rate Alerts Quick Reference
+
+Burn rate alerts fire before the error budget is exhausted. They give you time to act.
+
+| Window | Burn Rate | Budget Consumed | Alert Severity |
+|--------|-----------|----------------|----------------|
+| 1 hour | 14.4x | 2% in 1h | Page (critical) |
+| 6 hours | 6x | 5% in 6h | Page (critical) |
+| 1 day | 3x | 10% in 1d | Ticket (warning) |
+| 3 days | 1x | 10% in 3d | Ticket (info) |
+
+```yaml
+# Prometheus burn rate alert for 99.9% SLO
+- alert: ErrorBudgetBurnRateHigh
+  expr: |
+    (
+      rate(http_requests_total{status=~"5.."}[1h]) /
+      rate(http_requests_total[1h])
+    ) > (14.4 * 0.001)
+  for: 2m
+  labels:
+    severity: page
+  annotations:
+    summary: "Error budget burning at 14.4x rate — will exhaust in ~5 days at this rate"
+```

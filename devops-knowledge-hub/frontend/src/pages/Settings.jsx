@@ -6,6 +6,17 @@ export default function Settings() {
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [backendOk, setBackendOk] = useState(null);
+  const [backendUrl, setBackendUrl] = useState(
+    () => localStorage.getItem('devopshub_backend_url') || 'http://localhost:8765'
+  );
+  const [urlSaved, setUrlSaved] = useState(false);
+
+  const saveBackendUrl = () => {
+    const url = backendUrl.replace(/\/$/, '');
+    localStorage.setItem('devopshub_backend_url', url);
+    setUrlSaved(true);
+    setTimeout(() => { setUrlSaved(false); window.location.reload(); }, 800);
+  };
 
   useEffect(() => {
     api.getStats()
@@ -24,6 +35,27 @@ export default function Settings() {
 
       <div style={styles.content}>
         <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Backend URL</h2>
+          <p style={styles.desc}>
+            Set the URL of your local backend. Default: <code>http://localhost:8765</code>
+          </p>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              style={{ ...styles.codePath, flex: 1, padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6 }}
+              value={backendUrl}
+              onChange={e => setBackendUrl(e.target.value)}
+              placeholder="http://localhost:8765"
+            />
+            <button
+              onClick={saveBackendUrl}
+              style={{ padding: '8px 16px', background: urlSaved ? '#057642' : '#0a66c2', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}
+            >
+              {urlSaved ? '✓ Saved' : 'Save & Reload'}
+            </button>
+          </div>
+        </section>
+
+        <section style={styles.section}>
           <h2 style={styles.sectionTitle}>Backend Status</h2>
           <div style={styles.statusRow}>
             <div
@@ -36,8 +68,8 @@ export default function Settings() {
               {backendOk === null
                 ? 'Checking…'
                 : backendOk
-                ? 'Connected to http://localhost:8765'
-                : 'Offline — start backend with: python main.py'}
+                ? `Connected to ${backendUrl}`
+                : `Offline — start backend with: python main.py (should listen on ${backendUrl})`}
             </span>
           </div>
         </section>

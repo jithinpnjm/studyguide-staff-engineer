@@ -373,3 +373,101 @@ Incident roles:
 | postgres_exporter | PostgreSQL metrics |
 | redis_exporter | Redis metrics |
 | nginx exporter | Web server metrics |
+
+---
+
+## Postmortem Template
+
+```
+## Incident Postmortem — [Service] [Date]
+
+### Summary
+One paragraph: what broke, how long, how many users affected.
+
+### Timeline
+| Time (UTC) | Event |
+|---|---|
+| HH:MM | First signal (alert / user report) |
+| HH:MM | IC declared, team assembled |
+| HH:MM | Hypothesis formed |
+| HH:MM | Mitigation attempted |
+| HH:MM | Service restored |
+| HH:MM | Incident closed |
+
+### Impact
+- Duration: X minutes
+- Users affected: ~N (estimated from error rate × traffic)
+- Business impact: [revenue, SLA breach, user-facing error message]
+
+### Detection Quality
+- How detected: [alert / user report / dashboard]
+- Time from start to detection: X minutes
+- Was detection fast enough? If not, what alert would have caught it sooner?
+
+### Root Cause Chain
+1. [Proximate cause — what directly caused the failure]
+2. [Contributing factor — what allowed the proximate cause to have impact]
+3. [Systemic gap — what safeguard was missing]
+
+### Mitigation Effectiveness
+- What was tried first and why it did not work
+- What ultimately resolved the incident
+- Time from mitigation start to service restored: X minutes
+
+### Prevention Actions
+| Action | Owner | Due Date | Status |
+|---|---|---|---|
+| Add alert for X | Team A | YYYY-MM-DD | Open |
+| Add validation for Y in deploy pipeline | Team B | YYYY-MM-DD | Open |
+| Write runbook for Z | Team C | YYYY-MM-DD | Open |
+
+### Lessons Learned
+- What went well
+- What did not go well
+- What we would do differently
+```
+
+---
+
+## Prometheus Scaling Options
+
+| Option | Retention | Global Query | HA | Complexity | When to Use |
+|---|---|---|---|---|---|
+| Single instance | Local disk (15d default) | No | No | Low | Small teams, single cluster |
+| Federation | Short-term only | Aggregated only | No | Low-Medium | Cross-cluster summary dashboards |
+| Sharding | Local disk per shard | No (without Thanos) | Partial | Medium | High scrape volume, single cluster |
+| Thanos | Object storage (years) | Yes | Yes (dedup) | High | Multi-cluster, long retention, HA |
+| Mimir / Cortex | Object storage (years) | Yes | Yes | High | SaaS-style multi-tenant, large scale |
+
+**Thanos components:**
+- `sidecar` — runs next to Prometheus, uploads TSDB blocks to object storage
+- `store-gateway` — serves historical blocks from object storage
+- `querier` — global query layer, deduplicates across replicas
+- `compactor` — downsamples old data, compacts blocks
+- `ruler` — evaluates recording/alert rules against global data
+
+**Remote write config snippet:**
+```yaml
+remote_write:
+  - url: http://thanos-receive:19291/api/v1/receive
+    queue_config:
+      max_samples_per_send: 10000
+      capacity: 20000
+```
+
+---
+
+## Common Exporters Reference
+
+| Exporter | Purpose | Key Metrics |
+|---|---|---|
+| node_exporter | Linux host CPU, memory, disk, network | `node_cpu_seconds_total`, `node_memory_MemAvailable_bytes`, `node_disk_io_time_seconds_total` |
+| kube-state-metrics | Kubernetes object state (pods, deployments, nodes) | `kube_pod_status_phase`, `kube_deployment_status_replicas_unavailable` |
+| cAdvisor | Container CPU, memory, network per container | `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes` |
+| blackbox_exporter | HTTP/TCP/ICMP probes, synthetic uptime | `probe_success`, `probe_duration_seconds`, `probe_http_status_code` |
+| postgres_exporter | PostgreSQL connections, queries, replication lag | `pg_stat_activity_count`, `pg_replication_lag`, `pg_stat_bgwriter_buffers_alloc_total` |
+| redis_exporter | Redis memory, commands, keyspace | `redis_memory_used_bytes`, `redis_commands_processed_total`, `redis_connected_clients` |
+| nginx-prometheus-exporter | NGINX active connections, requests, errors | `nginx_connections_active`, `nginx_http_requests_total` |
+| mysqld_exporter | MySQL queries, connections, replication | `mysql_global_status_queries`, `mysql_slave_status_seconds_behind_master` |
+| elasticsearch_exporter | ES cluster health, index stats, JVM | `elasticsearch_cluster_health_status`, `elasticsearch_jvm_memory_used_bytes` |
+| kafka_exporter | Kafka consumer lag, topic offsets | `kafka_consumergroup_lag`, `kafka_topic_partition_current_offset` |
