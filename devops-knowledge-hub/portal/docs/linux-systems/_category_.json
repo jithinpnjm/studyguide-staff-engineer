@@ -1,6 +1,9 @@
 {
-  "label": "🐧 Linux & Systems",
+  "label": "\ud83d\udc27 Linux & Systems",
   "position": 9,
   "collapsible": true,
-  "collapsed": false
+  "collapsed": false,
+  "link": {
+    "type": "generated-index"
+  }
 }

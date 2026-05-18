@@ -2425,8 +2425,8 @@ This is why Kubernetes CPU limits can cause latency spikes without high CPU util
 
 ### What to Study Next
 
-- [02-kubernetes-cilium-production.md](/docs/nebius/kubernetes-cilium-production) — how Linux primitives map to Kubernetes
-- [06-stress-interview-incident-response.md](/docs/nebius/stress-interview-incident-response) — apply this knowledge to live debugging scenarios
+- 02-kubernetes-cilium-production.md — how Linux primitives map to Kubernetes
+- 06-stress-interview-incident-response.md — apply this knowledge to live debugging scenarios
 - Brendan Gregg's "Systems Performance" — chapters 5 (CPUs) and 7 (Memory)
 
 ---
@@ -3058,9 +3058,9 @@ Solutions:
 
 ### What to Study Next
 
-- [03-gpu-ai-infrastructure.md](/docs/nebius/gpu-ai-infrastructure) — GPU hardware and distributed training operations
-- [04-system-design.md](/docs/nebius/system-design) — Design a fault-tolerant GPU cluster
-- [01-linux-deep-dive.md](/docs/nebius/linux-deep-dive) — The Linux primitives that Kubernetes is built on
+- 03-gpu-ai-infrastructure.md — GPU hardware and distributed training operations
+- 04-system-design.md — Design a fault-tolerant GPU cluster
+- 01-linux-deep-dive.md — The Linux primitives that Kubernetes is built on
 
 ---
 
@@ -3692,9 +3692,9 @@ ib_write_bw -d mlx5_0 <node2-ip>
 
 ### What to Study Next
 
-- [04-system-design.md](/docs/nebius/system-design) — Design the GPU cluster reliability system from scratch
-- [02-kubernetes-cilium-production.md](/docs/nebius/kubernetes-cilium-production) — Kubernetes orchestration for GPU workloads
-- [06-stress-interview-incident-response.md](/docs/nebius/stress-interview-incident-response) — Incident scenarios involving GPU failures
+- 04-system-design.md — Design the GPU cluster reliability system from scratch
+- 02-kubernetes-cilium-production.md — Kubernetes orchestration for GPU workloads
+- 06-stress-interview-incident-response.md — Incident scenarios involving GPU failures
 
 ---
 
@@ -4196,9 +4196,9 @@ sum by (namespace) (
 
 ### What to Study Next
 
-- [06-stress-interview-incident-response.md](/docs/nebius/stress-interview-incident-response) — apply these designs to incident scenarios
-- [03-gpu-ai-infrastructure.md](/docs/nebius/gpu-ai-infrastructure) — the hardware detail behind these designs
-- Interview-prep foundations [07-system-design-cloud-architecture.md](../foundations/07-system-design-cloud-architecture.md) — broader system design principles
+- 06-stress-interview-incident-response.md — apply these designs to incident scenarios
+- 03-gpu-ai-infrastructure.md — the hardware detail behind these designs
+- Interview-prep foundations 07-system-design-cloud-architecture.md — broader system design principles
 
 ---
 
@@ -4909,7 +4909,7 @@ Examples:
 
 ### What to Study Next
 
-- [06-stress-interview-incident-response.md](/docs/nebius/stress-interview-incident-response) — apply coding skills to live incident debugging
+- 06-stress-interview-incident-response.md — apply coding skills to live incident debugging
 - LeetCode practice: Pascal's Triangle, Minimum Path Sum, Maximum Units on a Truck, Isomorphic Strings, Custom Sort String
 - Python docs: `collections`, `pathlib`, `subprocess`, `argparse`, `contextlib`
 
@@ -5275,7 +5275,7 @@ Root cause: incomplete logrotate configuration — missing `postrotate: kill -US
 ### Part 3: Common Stress Interview Patterns
 
 #### "The chmod doesn't work" Pattern
-Tests creative Linux problem-solving. See [01-linux-deep-dive.md](/docs/nebius/linux-deep-dive) for the full answer.
+Tests creative Linux problem-solving. See 01-linux-deep-dive.md for the full answer.
 
 **Key tools to mention:**
 - `getfacl`/`setfacl` — POSIX ACLs
@@ -5417,45 +5417,45 @@ Goal: become confident with host triage, packet flow, and Kubernetes core behavi
 
 #### Day 1 — Linux and networking base
 
-- Read [foundations/10-linux-and-network-administration.md](foundations/10-linux-and-network-administration.md)
-- Read [foundations/01-networking-fundamentals.md](foundations/01-networking-fundamentals.md)
+- Read foundations/10-linux-and-network-administration.md
+- Read foundations/01-networking-fundamentals.md
 - Practice: describe TCP handshake, what TIME_WAIT means operationally, and how NAT changes packet flow
 
 #### Day 2 — Linux debugging
 
-- Read [foundations/05-linux-debug-playbook.md](foundations/05-linux-debug-playbook.md)
-- Work through [hands-on-labs/linux/lab-01-host-triage.md](hands-on-labs/linux/lab-01-host-triage.md)
+- Read foundations/05-linux-debug-playbook.md
+- Work through hands-on-labs/linux/lab-01-host-triage.md
 - Practice: walk a slow service scenario from uptime to strace without notes
 
 #### Day 3 — Linux to Kubernetes
 
-- Read [foundations/02-linux-kubernetes-foundations.md](foundations/02-linux-kubernetes-foundations.md)
-- Work through [hands-on-labs/linux/lab-03-processes-cgroups-namespaces.md](hands-on-labs/linux/lab-03-processes-cgroups-namespaces.md)
+- Read foundations/02-linux-kubernetes-foundations.md
+- Work through hands-on-labs/linux/lab-03-processes-cgroups-namespaces.md
 - Practice: explain how Linux namespaces and cgroups map to a running pod
 
 #### Day 4 — Kubernetes networking
 
-- Read [foundations/06-kubernetes-networking-deep-dive.md](foundations/06-kubernetes-networking-deep-dive.md)
-- Read [foundations/11-cloud-networking-and-kubernetes-networking.md](foundations/11-cloud-networking-and-kubernetes-networking.md)
-- Work through [hands-on-labs/cloud-networking/drill-04-kubernetes-cloud-networking-path.md](hands-on-labs/cloud-networking/drill-04-kubernetes-cloud-networking-path.md)
+- Read foundations/06-kubernetes-networking-deep-dive.md
+- Read foundations/11-cloud-networking-and-kubernetes-networking.md
+- Work through hands-on-labs/cloud-networking/drill-04-kubernetes-cloud-networking-path.md
 - Practice: trace a packet from an external client to a pod, naming each hop
 
 #### Day 5 — Containers and manifest design
 
-- Read [foundations/13-docker-and-container-runtime.md](foundations/13-docker-and-container-runtime.md)
-- Read [foundations/25-yaml-and-kubernetes-manifest-design.md](foundations/25-yaml-and-kubernetes-manifest-design.md)
-- Work through [hands-on-labs/kubernetes/lab-01-pod-service-debug.md](hands-on-labs/kubernetes/lab-01-pod-service-debug.md)
+- Read foundations/13-docker-and-container-runtime.md
+- Read foundations/25-yaml-and-kubernetes-manifest-design.md
+- Work through hands-on-labs/kubernetes/lab-01-pod-service-debug.md
 - Practice: write a production-quality Deployment manifest with probes, resource limits, and PDB from memory
 
 #### Day 6 — Networking labs
 
-- Work through [hands-on-labs/networking/lab-01-http-dns-flow.md](hands-on-labs/networking/lab-01-http-dns-flow.md)
-- Work through [hands-on-labs/linux-admin/drill-03-process-socket-and-network-admin.md](hands-on-labs/linux-admin/drill-03-process-socket-and-network-admin.md)
+- Work through hands-on-labs/networking/lab-01-http-dns-flow.md
+- Work through hands-on-labs/linux-admin/drill-03-process-socket-and-network-admin.md
 - Practice: diagnose a "service not reachable" scenario by checking DNS, endpoints, and NetworkPolicy
 
 #### Day 7 — Practice scenario 1
 
-- Run [mock-interviews/01-nebius-linux-kubernetes-troubleshooting.md](mock-interviews/01-nebius-linux-kubernetes-troubleshooting.md)
+- Run mock-interviews/01-nebius-linux-kubernetes-troubleshooting.md
 - Keep it to 45 minutes; answer without notes first
 - Write down the exact gaps — those are Week 2 targets
 
@@ -5467,41 +5467,41 @@ Goal: become strong at production debugging, SLO design, and alert triage.
 
 #### Day 8 — Observability and SLOs
 
-- Read [foundations/09-observability-slos-and-incident-response.md](foundations/09-observability-slos-and-incident-response.md)
+- Read foundations/09-observability-slos-and-incident-response.md
 - Practice: design an SLO for a customer-facing API — define the SLI, threshold, error budget, and burn rate alerts
 
 #### Day 9 — Prometheus and Grafana
 
-- Read [foundations/19-prometheus-grafana-and-alertmanager.md](foundations/19-prometheus-grafana-and-alertmanager.md)
+- Read foundations/19-prometheus-grafana-and-alertmanager.md
 - Practice: write PromQL for error rate, p99 latency, and a burn rate alert rule without reference
 
 #### Day 10 — Kubernetes rollouts and scheduling
 
-- Work through [hands-on-labs/kubernetes/lab-02-rollout-and-probes.md](hands-on-labs/kubernetes/lab-02-rollout-and-probes.md)
-- Work through [hands-on-labs/kubernetes/lab-03-node-pressure-and-scheduling.md](hands-on-labs/kubernetes/lab-03-node-pressure-and-scheduling.md)
+- Work through hands-on-labs/kubernetes/lab-02-rollout-and-probes.md
+- Work through hands-on-labs/kubernetes/lab-03-node-pressure-and-scheduling.md
 - Practice: explain how kubelet handles OOMKilled, evictions, and probe failures during a bad rollout
 
 #### Day 11 — Structured troubleshooting
 
-- Read [foundations/26-devops-troubleshooting-and-security-errors.md](foundations/26-devops-troubleshooting-and-security-errors.md)
-- Work through [hands-on-labs/linux-admin/drill-01-service-and-systemd-triage.md](hands-on-labs/linux-admin/drill-01-service-and-systemd-triage.md)
+- Read foundations/26-devops-troubleshooting-and-security-errors.md
+- Work through hands-on-labs/linux-admin/drill-01-service-and-systemd-triage.md
 - Practice: run the orient → hypothesis → test → interpret framework against a CrashLoopBackOff scenario
 
 #### Day 12 — CI/CD and delivery
 
-- Read [foundations/08-cicd-trusted-delivery-and-platform-security.md](foundations/08-cicd-trusted-delivery-and-platform-security.md)
-- Read [foundations/17-delivery-systems-jenkins-github-actions-and-argocd.md](foundations/17-delivery-systems-jenkins-github-actions-and-argocd.md)
+- Read foundations/08-cicd-trusted-delivery-and-platform-security.md
+- Read foundations/17-delivery-systems-jenkins-github-actions-and-argocd.md
 - Practice: describe a secure path from code commit to production, including image signing and policy gates
 
 #### Day 13 — Linux admin depth
 
-- Work through [hands-on-labs/linux-admin/drill-02-filesystem-and-storage-admin.md](hands-on-labs/linux-admin/drill-02-filesystem-and-storage-admin.md)
-- Work through [hands-on-labs/linux/lab-02-filesystem-and-io.md](hands-on-labs/linux/lab-02-filesystem-and-io.md)
+- Work through hands-on-labs/linux-admin/drill-02-filesystem-and-storage-admin.md
+- Work through hands-on-labs/linux/lab-02-filesystem-and-io.md
 - Practice: diagnose a disk-full scenario including deleted-but-open file handles and inode exhaustion
 
 #### Day 14 — Practice scenario 2
 
-- Run [mock-interviews/02-distributed-systems-and-resilience.md](mock-interviews/02-distributed-systems-and-resilience.md)
+- Run mock-interviews/02-distributed-systems-and-resilience.md
 - Keep answers structured: hypothesis, evidence, action, outcome
 - Score yourself on clarity, tradeoff reasoning, and failure mode coverage
 
@@ -5513,41 +5513,41 @@ Goal: design production-grade systems and reason through cross-layer tradeoffs.
 
 #### Day 15 — System design and cloud architecture
 
-- Read [foundations/07-system-design-cloud-architecture.md](foundations/07-system-design-cloud-architecture.md)
-- Read [foundations/14-aws-cloud-services-and-platform-design.md](foundations/14-aws-cloud-services-and-platform-design.md)
+- Read foundations/07-system-design-cloud-architecture.md
+- Read foundations/14-aws-cloud-services-and-platform-design.md
 - Practice: sketch a multi-AZ web application with VPC design, EKS, RDS Multi-AZ, and Route 53
 
 #### Day 16 — Terraform and IaC
 
-- Read [foundations/15-terraform-infrastructure-as-code.md](foundations/15-terraform-infrastructure-as-code.md)
+- Read foundations/15-terraform-infrastructure-as-code.md
 - Practice: describe how you structure Terraform state across infrastructure layers and why
 
 #### Day 17 — Cloud design labs
 
-- Work through [hands-on-labs/cloud-design/lab-01-gcp-public-platform.md](hands-on-labs/cloud-design/lab-01-gcp-public-platform.md)
-- Read [hands-on-labs/cloud-design/reference-answer-gcp-public-platform.md](hands-on-labs/cloud-design/reference-answer-gcp-public-platform.md)
+- Work through hands-on-labs/cloud-design/lab-01-gcp-public-platform.md
+- Read hands-on-labs/cloud-design/reference-answer-gcp-public-platform.md
 - Compare your answer to the reference; identify gaps in failure domain reasoning
 
 #### Day 18 — GPU and AI platform
 
-- Read [foundations/12-kubernetes-gpu-ai-platforms-and-operators.md](foundations/12-kubernetes-gpu-ai-platforms-and-operators.md)
-- Work through [hands-on-labs/kubernetes/lab-04-gpu-ml-ai-platform-review.md](hands-on-labs/kubernetes/lab-04-gpu-ml-ai-platform-review.md)
-- Read [hands-on-labs/kubernetes/reference-answer-gpu-ml-ai-platform.md](hands-on-labs/kubernetes/reference-answer-gpu-ml-ai-platform.md)
+- Read foundations/12-kubernetes-gpu-ai-platforms-and-operators.md
+- Work through hands-on-labs/kubernetes/lab-04-gpu-ml-ai-platform-review.md
+- Read hands-on-labs/kubernetes/reference-answer-gpu-ml-ai-platform.md
 
 #### Day 19 — Platform services
 
-- Read [foundations/20-kafka-and-event-streaming.md](foundations/20-kafka-and-event-streaming.md)
-- Read [foundations/22-http-apis-and-reverse-proxy-paths.md](foundations/22-http-apis-and-reverse-proxy-paths.md)
+- Read foundations/20-kafka-and-event-streaming.md
+- Read foundations/22-http-apis-and-reverse-proxy-paths.md
 - Practice: explain how consumer lag develops and how you diagnose it; describe NGINX upstream config and rate limiting
 
 #### Day 20 — End-to-end composition
 
-- Read [foundations/27-end-to-end-project-and-capstone-patterns.md](foundations/27-end-to-end-project-and-capstone-patterns.md)
+- Read foundations/27-end-to-end-project-and-capstone-patterns.md
 - Practice: trace a deployment failure from CI log to pod event to log line, naming each tool at each step
 
 #### Day 21 — Practice scenario 3
 
-- Run [mock-interviews/03-platform-cloud-and-security.md](mock-interviews/03-platform-cloud-and-security.md)
+- Run mock-interviews/03-platform-cloud-and-security.md
 - Follow up with a written architecture summary in under one page
 - Record what you were confident about and what you hedged on
 
@@ -5560,11 +5560,11 @@ Goal: convert knowledge into confident, precise execution — including areas yo
 #### Day 22 — Remaining foundations
 
 Pick two you haven't read:
-- [foundations/18-ansible-and-host-automation.md](foundations/18-ansible-and-host-automation.md)
-- [foundations/21-sql-and-relational-data-for-sre.md](foundations/21-sql-and-relational-data-for-sre.md)
-- [foundations/16-git-and-version-control-for-platform-engineers.md](foundations/16-git-and-version-control-for-platform-engineers.md)
-- [foundations/23-azure-devops-crossover.md](foundations/23-azure-devops-crossover.md)
-- [foundations/24-sonarqube-and-code-quality-gates.md](foundations/24-sonarqube-and-code-quality-gates.md)
+- foundations/18-ansible-and-host-automation.md
+- foundations/21-sql-and-relational-data-for-sre.md
+- foundations/16-git-and-version-control-for-platform-engineers.md
+- foundations/23-azure-devops-crossover.md
+- foundations/24-sonarqube-and-code-quality-gates.md
 
 #### Day 23 — Redo weak scenarios
 
@@ -5574,9 +5574,9 @@ Pick two you haven't read:
 
 #### Day 24 — Scripting depth
 
-- Read [foundations/03-bash-and-shell-scripting.md](foundations/03-bash-and-shell-scripting.md) or [foundations/04-python-for-sre.md](foundations/04-python-for-sre.md)
-- Work through [hands-on-labs/bash/lab-03-retry-and-guardrails.md](hands-on-labs/bash/lab-03-retry-and-guardrails.md)
-- Work through [hands-on-labs/python/lab-03-k8s-event-summary.md](hands-on-labs/python/lab-03-k8s-event-summary.md)
+- Read foundations/03-bash-and-shell-scripting.md or foundations/04-python-for-sre.md
+- Work through hands-on-labs/bash/lab-03-retry-and-guardrails.md
+- Work through hands-on-labs/python/lab-03-k8s-event-summary.md
 
 #### Day 25 — Mixed mock
 
@@ -5594,12 +5594,12 @@ Build short recall sheets for:
 
 #### Day 27 — Final system design drill
 
-- Work through [hands-on-labs/cloud-design/lab-04-low-latency-multi-region-control-plane.md](hands-on-labs/cloud-design/lab-04-low-latency-multi-region-control-plane.md)
+- Work through hands-on-labs/cloud-design/lab-04-low-latency-multi-region-control-plane.md
 - Focus on failure domains, latency tradeoffs, and multi-region consistency
 
 #### Day 28 — Review and calibrate
 
-- Read [foundations/00-senior-staff-operating-manual.md](foundations/00-senior-staff-operating-manual.md)
+- Read foundations/00-senior-staff-operating-manual.md
 - Run one final mock scenario
 - Prioritize calm execution over last-minute breadth
 
@@ -5632,7 +5632,7 @@ Walk through the site like a story:
 | 5 | Automation | Hospital playbook desk | repeatable safe operations, scripts, idempotency |
 | 6 | Staff synthesis | Operating review board | tradeoffs, failure modes, platform maturity |
 
-Read [Study Memory Palace](memory-palace.md) before deep study. Use [How To Use Each Module](module-template.md) as the standard pattern for reading each page.
+Read Study Memory Palace before deep study. Use How To Use Each Module as the standard pattern for reading each page.
 
 ---
 
@@ -5660,10 +5660,10 @@ Memory hooks:
 
 Read in this order:
 
-1. [Linux and network administration](foundations/10-linux-and-network-administration.md)
-2. [Networking fundamentals](foundations/01-networking-fundamentals.md)
-3. [Linux and Kubernetes foundations](foundations/02-linux-kubernetes-foundations.md)
-4. [Linux debug playbook](foundations/05-linux-debug-playbook.md)
+1. Linux and network administration
+2. Networking fundamentals
+3. Linux and Kubernetes foundations
+4. Linux debug playbook
 
 Exit criteria:
 
@@ -5673,9 +5673,9 @@ Exit criteria:
 
 Practice:
 
-- [Linux labs](hands-on-labs/linux/)
-- [Linux admin labs](hands-on-labs/linux-admin/)
-- [Networking labs](hands-on-labs/networking/)
+- Linux labs
+- Linux admin labs
+- Networking labs
 
 ---
 
@@ -5689,11 +5689,11 @@ Memory hook:
 
 Read in this order:
 
-1. [Kubernetes networking deep dive](foundations/06-kubernetes-networking-deep-dive.md)
-2. [Cloud networking and Kubernetes networking](foundations/11-cloud-networking-and-kubernetes-networking.md)
-3. [Docker and container runtime](foundations/13-docker-and-container-runtime.md)
-4. [YAML and Kubernetes manifest design](foundations/25-yaml-and-kubernetes-manifest-design.md)
-5. [Kubernetes GPU, AI platforms, and operators](foundations/12-kubernetes-gpu-ai-platforms-and-operators.md)
+1. Kubernetes networking deep dive
+2. Cloud networking and Kubernetes networking
+3. Docker and container runtime
+4. YAML and Kubernetes manifest design
+5. Kubernetes GPU, AI platforms, and operators
 
 Exit criteria:
 
@@ -5703,8 +5703,8 @@ Exit criteria:
 
 Practice:
 
-- [Kubernetes labs](hands-on-labs/kubernetes/)
-- [Cloud networking labs](hands-on-labs/cloud-networking/)
+- Kubernetes labs
+- Cloud networking labs
 
 ---
 
@@ -5718,9 +5718,9 @@ Memory hook:
 
 Read in this order:
 
-1. [Observability, SLOs, and incident response](foundations/09-observability-slos-and-incident-response.md)
-2. [Prometheus, Grafana, and Alertmanager](foundations/19-prometheus-grafana-and-alertmanager.md)
-3. [DevOps troubleshooting and security errors](foundations/26-devops-troubleshooting-and-security-errors.md)
+1. Observability, SLOs, and incident response
+2. Prometheus, Grafana, and Alertmanager
+3. DevOps troubleshooting and security errors
 
 Exit criteria:
 
@@ -5741,12 +5741,12 @@ Memory hooks:
 
 Read in this order:
 
-1. [System design and cloud architecture](foundations/07-system-design-cloud-architecture.md)
-2. [AWS cloud services and platform design](foundations/14-aws-cloud-services-and-platform-design.md)
-3. [Terraform infrastructure as code](foundations/15-terraform-infrastructure-as-code.md)
-4. [CI/CD trusted delivery and platform security](foundations/08-cicd-trusted-delivery-and-platform-security.md)
-5. [Delivery systems: Jenkins, GitHub Actions, and ArgoCD](foundations/17-delivery-systems-jenkins-github-actions-and-argocd.md)
-6. [Git and version control for platform engineers](foundations/16-git-and-version-control-for-platform-engineers.md)
+1. System design and cloud architecture
+2. AWS cloud services and platform design
+3. Terraform infrastructure as code
+4. CI/CD trusted delivery and platform security
+5. Delivery systems: Jenkins, GitHub Actions, and ArgoCD
+6. Git and version control for platform engineers
 
 Exit criteria:
 
@@ -5766,14 +5766,14 @@ Memory hook:
 
 Read in this order:
 
-1. [Bash and shell scripting](foundations/03-bash-and-shell-scripting.md)
-2. [Python for SRE](foundations/04-python-for-sre.md)
-3. [Ansible and host automation](foundations/18-ansible-and-host-automation.md)
-4. [Kafka and event streaming](foundations/20-kafka-and-event-streaming.md)
-5. [SQL and relational data for SRE](foundations/21-sql-and-relational-data-for-sre.md)
-6. [HTTP, APIs, and reverse proxy paths](foundations/22-http-apis-and-reverse-proxy-paths.md)
-7. [Azure DevOps crossover](foundations/23-azure-devops-crossover.md)
-8. [SonarQube and code quality gates](foundations/24-sonarqube-and-code-quality-gates.md)
+1. Bash and shell scripting
+2. Python for SRE
+3. Ansible and host automation
+4. Kafka and event streaming
+5. SQL and relational data for SRE
+6. HTTP, APIs, and reverse proxy paths
+7. Azure DevOps crossover
+8. SonarQube and code quality gates
 
 Exit criteria:
 
@@ -5793,10 +5793,10 @@ Memory hook:
 
 Read in this order:
 
-1. [End-to-end project and capstone patterns](foundations/27-end-to-end-project-and-capstone-patterns.md)
-2. [Senior/staff operating manual](foundations/00-senior-staff-operating-manual.md)
-3. [Reference answer: GCP public platform](hands-on-labs/cloud-design/reference-answer-gcp-public-platform.md)
-4. [Reference answer: GPU ML/AI platform](hands-on-labs/kubernetes/reference-answer-gpu-ml-ai-platform.md)
+1. End-to-end project and capstone patterns
+2. Senior/staff operating manual
+3. Reference answer: GCP public platform
+4. Reference answer: GPU ML/AI platform
 
 Exit criteria:
 
@@ -5810,14 +5810,14 @@ Exit criteria:
 
 Use this only if preparing for a Nebius AI Staff SRE interview. It is intentionally specific and should not be the default learning path.
 
-- [Nebius sprint overview](nebius/README.md)
-- [Company, stack, and interview guide](nebius/00-company-stack-interview-guide.md)
-- [Linux deep dive](nebius/01-linux-deep-dive.md)
-- [Kubernetes and Cilium production](nebius/02-kubernetes-cilium-production.md)
-- [GPU AI infrastructure](nebius/03-gpu-ai-infrastructure.md)
-- [System design](nebius/04-system-design.md)
-- [Coding and algorithms](nebius/05-coding-algorithms.md)
-- [Stress interview and incident response](nebius/06-stress-interview-incident-response.md)
+- Nebius sprint overview
+- Company, stack, and interview guide
+- Linux deep dive
+- Kubernetes and Cilium production
+- GPU AI infrastructure
+- System design
+- Coding and algorithms
+- Stress interview and incident response
 
 ---
 

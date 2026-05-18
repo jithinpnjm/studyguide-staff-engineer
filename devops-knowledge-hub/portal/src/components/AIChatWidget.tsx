@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
 
-const API = 'http://localhost:8765';
+const API = '';
 
 interface Message {
   role: 'user' | 'assistant';

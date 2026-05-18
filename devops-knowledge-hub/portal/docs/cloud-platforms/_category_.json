@@ -1,6 +1,9 @@
 {
-  "label": "☁️ Cloud Platforms",
+  "label": "\u2601\ufe0f Cloud Platforms",
   "position": 4,
   "collapsible": true,
-  "collapsed": false
+  "collapsed": false,
+  "link": {
+    "type": "generated-index"
+  }
 }

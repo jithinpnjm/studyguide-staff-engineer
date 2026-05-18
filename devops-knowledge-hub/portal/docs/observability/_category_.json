@@ -1,6 +1,9 @@
 {
-  "label": "📡 Observability",
+  "label": "\ud83d\udce1 Observability",
   "position": 11,
   "collapsible": true,
-  "collapsed": false
+  "collapsed": false,
+  "link": {
+    "type": "generated-index"
+  }
 }

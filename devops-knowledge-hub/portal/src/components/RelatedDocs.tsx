@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 
-const API = 'http://localhost:8765';
+const API = '';
 
 interface Doc {
   id: number;

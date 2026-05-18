@@ -3,20 +3,22 @@ import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
 
 const DOMAINS = [
-  { key: 'kubernetes-containers',  label: 'Kubernetes & Containers',    color: '#326ce5', doc: 'kubernetes-containers' },
-  { key: 'cicd-gitops',            label: 'CI/CD & GitOps',             color: '#f97316', doc: 'cicd-gitops' },
-  { key: 'cloud-platforms',        label: 'Cloud Platforms',            color: '#0ea5e9', doc: 'cloud-platforms' },
-  { key: 'infrastructure-as-code', label: 'Infrastructure as Code',     color: '#10b981', doc: 'infrastructure-as-code' },
-  { key: 'linux-systems',          label: 'Linux & Systems',            color: '#64748b', doc: 'linux-systems' },
-  { key: 'networking-service-mesh',label: 'Networking & Service Mesh',  color: '#06b6d4', doc: 'networking-service-mesh' },
-  { key: 'observability',          label: 'Observability',              color: '#8b5cf6', doc: 'observability' },
-  { key: 'security-devsecops',     label: 'Security & DevSecOps',       color: '#ef4444', doc: 'security-devsecops' },
-  { key: 'databases-storage',      label: 'Databases & Storage',        color: '#6366f1', doc: 'databases-storage' },
-  { key: 'platform-engineering',   label: 'Platform Engineering',       color: '#ec4899', doc: 'platform-engineering' },
-  { key: 'general-devops',         label: 'General DevOps',             color: '#6b7280', doc: 'general-devops' },
-  { key: 'scripting-python',       label: 'Python for DevOps',          color: '#3b82f6', doc: 'scripting-python' },
-  { key: 'scripting-bash-shell',   label: 'Bash & Shell Scripting',     color: '#22c55e', doc: 'scripting-bash-shell' },
-  { key: 'aws-deep-dive',          label: 'AWS Deep Dive',              color: '#f59e0b', doc: 'aws-deep-dive' },
+  { key: 'kubernetes-containers',  label: 'Kubernetes & Containers',    color: '#326ce5', doc: 'kubernetes-containers/beginner' },
+  { key: 'cicd-gitops',            label: 'CI/CD & GitOps',             color: '#f97316', doc: 'cicd-gitops/beginner' },
+  { key: 'cloud-platforms',        label: 'Cloud Platforms',            color: '#0ea5e9', doc: 'cloud-platforms/beginner' },
+  { key: 'infrastructure-as-code', label: 'Infrastructure as Code',     color: '#10b981', doc: 'infrastructure-as-code/beginner' },
+  { key: 'linux-systems',          label: 'Linux & Systems',            color: '#64748b', doc: 'linux-systems/beginner' },
+  { key: 'networking-service-mesh',label: 'Networking & Service Mesh',  color: '#06b6d4', doc: 'networking-service-mesh/beginner' },
+  { key: 'observability',          label: 'Observability',              color: '#8b5cf6', doc: 'observability/beginner' },
+  { key: 'security-devsecops',     label: 'Security & DevSecOps',       color: '#ef4444', doc: 'security-devsecops/beginner' },
+  { key: 'databases-storage',      label: 'Databases & Storage',        color: '#6366f1', doc: 'databases-storage/beginner' },
+  { key: 'platform-engineering',   label: 'Platform Engineering',       color: '#ec4899', doc: 'platform-engineering/beginner' },
+  { key: 'general-devops',         label: 'General DevOps',             color: '#6b7280', doc: 'general-devops/beginner' },
+  { key: 'scripting-python',       label: 'Python for DevOps',          color: '#3b82f6', doc: 'scripting-python/beginner' },
+  { key: 'scripting-bash-shell',   label: 'Bash & Shell Scripting',     color: '#22c55e', doc: 'scripting-bash-shell/beginner' },
+  { key: 'aws-deep-dive',          label: 'AWS Deep Dive',              color: '#f59e0b', doc: 'aws-deep-dive/beginner' },
+  { key: 'aiops',                  label: 'AIOps',                      color: '#14b8a6', doc: 'aiops/beginner' },
+  { key: 'mlops',                  label: 'MLOps',                      color: '#f43f5e', doc: 'mlops/beginner' },
   { key: 'interview-prep',         label: 'SRE Interview Prep',         color: '#a855f7', doc: 'interview-prep' },
 ];
 
@@ -38,7 +40,7 @@ export default function Home() {
             <Link className="button button--secondary" to="/docs/interview-prep">
               Interview Prep
             </Link>
-            <Link className="button button--secondary" to="/docs/aws-deep-dive">
+            <Link className="button button--secondary" to="/docs/aws-deep-dive/beginner">
               AWS Deep Dive
             </Link>
           </div>

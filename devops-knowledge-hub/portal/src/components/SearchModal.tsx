@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {useHistory} from '@docusaurus/router';
 
-const API = 'http://localhost:8765';
+const API = '';
 
 interface Result {
   id: number;

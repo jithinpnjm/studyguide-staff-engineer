@@ -20,28 +20,31 @@ synthesised from your personal document library.
 
 | Domain | Docs | Guide |
 |--------|------|-------|
-| ☸️ [Kubernetes & Containers](kubernetes-containers) | 78 | ✅ |
-| 🔄 [CI/CD & GitOps](cicd-gitops) | 30 | ✅ |
-| 📊 [Observability](observability) | 4 | ✅ |
-| ☁️ [Cloud Platforms](cloud-platforms) | 38 | ✅ |
-| 🏗️ [Infrastructure as Code](infrastructure-as-code) | 33 | ✅ |
-| 🔐 [Security & DevSecOps](security-devsecops) | 6 | ✅ |
-| 🌐 [Networking & Service Mesh](networking-service-mesh) | 16 | ✅ |
-| 🐧 [Linux & Systems](linux-systems) | 31 | ✅ |
-| 🗄️ [Databases & Storage](databases-storage) | 6 | ✅ |
-| 🛠️ [Platform Engineering](platform-engineering) | 4 | ✅ |
-| 🐍 [Python for DevOps](scripting-python) | 11 | ✅ |
-| 💻 [Bash & Shell Scripting](scripting-bash-shell) | 4 | ✅ |
-| 🚀 [General DevOps](general-devops) | 56 | ✅ |
+| ☸️ [Kubernetes & Containers](kubernetes-containers/beginner) | 78 | ✅ |
+| 🔄 [CI/CD & GitOps](cicd-gitops/beginner) | 30 | ✅ |
+| 📊 [Observability](observability/beginner) | 4 | ✅ |
+| ☁️ [Cloud Platforms](cloud-platforms/beginner) | 38 | ✅ |
+| 🏗️ [Infrastructure as Code](infrastructure-as-code/beginner) | 33 | ✅ |
+| 🔐 [Security & DevSecOps](security-devsecops/beginner) | 6 | ✅ |
+| 🌐 [Networking & Service Mesh](networking-service-mesh/beginner) | 16 | ✅ |
+| 🐧 [Linux & Systems](linux-systems/beginner) | 31 | ✅ |
+| 🗄️ [Databases & Storage](databases-storage/beginner) | 6 | ✅ |
+| 🛠️ [Platform Engineering](platform-engineering/beginner) | 4 | ✅ |
+| 🐍 [Python for DevOps](scripting-python/beginner) | 11 | ✅ |
+| 💻 [Bash & Shell Scripting](scripting-bash-shell/beginner) | 4 | ✅ |
+| 🚀 [General DevOps](general-devops/beginner) | 56 | ✅ |
+| ☁️ [AWS Deep Dive](aws-deep-dive/beginner) | — | ✅ |
+| 🤖 [AIOps](aiops/beginner) | — | ✅ |
+| 🧠 [MLOps](mlops/beginner) | — | ✅ |
 
-**Legend:** ✅ Study guide ready · ⏳ Generate from Admin UI → Study Guides tab
+**Legend:** ✅ Study guide ready
 
 ## 🚀 Quick Start
 
 1. Pick a domain below and read the full study guide
-2. Use the **🤖 AI chat button** on any page to ask questions
-3. Add more documents via [Admin UI](http://localhost:3000) → Add Content
-4. Regenerate guides as your library grows: Admin UI → Study Guides → Generate All
+2. Browse by level: Beginner → Intermediate → Expert
+3. Use the Interview Questions and Cheat Sheet files before interviews
+4. Work through the Hands-On Labs for practical experience
 
 ---
 

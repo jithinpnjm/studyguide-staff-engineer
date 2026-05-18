@@ -67,7 +67,7 @@ const config: Config = {
           position: 'left',
         },
         {
-          to: '/docs/aws-deep-dive',
+          to: '/docs/aws-deep-dive/beginner',
           label: 'AWS Deep Dive',
           position: 'left',
         },

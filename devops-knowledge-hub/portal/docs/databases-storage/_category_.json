@@ -1,6 +1,9 @@
 {
-  "label": "🗄️ Databases & Storage",
+  "label": "\ud83d\uddc4\ufe0f Databases & Storage",
   "position": 10,
   "collapsible": true,
-  "collapsed": false
+  "collapsed": false,
+  "link": {
+    "type": "generated-index"
+  }
 }

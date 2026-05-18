@@ -1,6 +1,9 @@
 {
-  "label": "🔄 CI/CD & GitOps",
+  "label": "\ud83d\udd04 CI/CD & GitOps",
   "position": 2,
   "collapsible": true,
-  "collapsed": false
+  "collapsed": false,
+  "link": {
+    "type": "generated-index"
+  }
 }

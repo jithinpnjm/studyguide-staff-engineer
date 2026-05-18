@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 
-const API_BASE = 'http://localhost:8765';
+const API_BASE = '';
 
 interface Props {
   docId: number | string;
