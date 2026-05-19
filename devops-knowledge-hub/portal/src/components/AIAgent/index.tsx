@@ -121,6 +121,7 @@ export default function AIAgent(): React.ReactElement {
 
   // Live session refs
   const wsRef = useRef<WebSocket | null>(null);
+  const playbackCtxRef = useRef<AudioContext | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const streamRef = useRef<MediaStream | null>(null);
@@ -173,7 +174,8 @@ export default function AIAgent(): React.ReactElement {
   const stopAllPlayback = useCallback(() => {
     audioQueueRef.current.forEach((s) => { try { s.stop(); } catch {} });
     audioQueueRef.current = [];
-    if (audioCtxRef.current) nextStartTimeRef.current = audioCtxRef.current.currentTime;
+    const pb = playbackCtxRef.current;
+    if (pb) nextStartTimeRef.current = pb.currentTime;
   }, []);
 
   // ── Live voice session (direct browser → Gemini Live WebSocket) ─────────────
@@ -195,6 +197,10 @@ export default function AIAgent(): React.ReactElement {
       audioCtxRef.current.close().catch(() => {});
       audioCtxRef.current = null;
     }
+    if (playbackCtxRef.current) {
+      playbackCtxRef.current.close().catch(() => {});
+      playbackCtxRef.current = null;
+    }
     stopAllPlayback();
     setLiveStatus('idle');
     setInputTranscript('');
@@ -211,12 +217,30 @@ export default function AIAgent(): React.ReactElement {
     const OUTPUT_RATE = 24000;
 
     try {
+      // ── Step 1: Get mic + create AudioContexts while inside the user gesture ──
+      // Chrome suspends AudioContext created outside a user gesture.
+      // Doing this here (button click handler) ensures they start in running state.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+
+      const captureCtx: AudioContext = new AudioCtxClass({ sampleRate: INPUT_RATE });
+      await captureCtx.resume();
+      audioCtxRef.current = captureCtx;
+
+      const playbackCtx: AudioContext = new AudioCtxClass({ sampleRate: OUTPUT_RATE });
+      await playbackCtx.resume();
+      playbackCtxRef.current = playbackCtx;
+      nextStartTimeRef.current = playbackCtx.currentTime + 0.1;
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      // ── Step 2: Connect WebSocket ──────────────────────────────────────────
       const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
-        // Send setup as first message
         ws.send(JSON.stringify({
           setup: {
             model: 'models/gemini-2.0-flash-live-001',
@@ -235,41 +259,29 @@ export default function AIAgent(): React.ReactElement {
         const text = typeof event.data === 'string' ? event.data : await (event.data as Blob).text();
         const msg = JSON.parse(text);
 
-        // After setup, Gemini sends setupComplete — then start mic
         if (msg.setupComplete) {
+          // ── Step 3: Start sending mic audio — captureCtx already running ──
+          const source = captureCtx.createMediaStreamSource(stream);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const processor = (captureCtx as any).createScriptProcessor(2048, 1, 1);
+          processorRef.current = processor;
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          processor.onaudioprocess = (e: any) => {
+            if (ws.readyState === WebSocket.OPEN) {
+              const b64 = arrayBufferToBase64(floatTo16BitPCM(e.inputBuffer.getChannelData(0)));
+              ws.send(JSON.stringify({
+                realtimeInput: {
+                  mediaChunks: [{ mimeType: `audio/pcm;rate=${INPUT_RATE}`, data: b64 }],
+                },
+              }));
+            }
+          };
+
+          // Connect source → processor only (NOT to destination — avoids mic echo)
+          source.connect(processor);
+          processor.connect(captureCtx.createGain()); // silent sink to keep processor alive
           setLiveStatus('listening');
-          try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-            const audioCtx: AudioContext = new AudioCtxClass({ sampleRate: INPUT_RATE });
-            audioCtxRef.current = audioCtx;
-            nextStartTimeRef.current = audioCtx.currentTime + 0.1;
-
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            streamRef.current = stream;
-
-            const source = audioCtx.createMediaStreamSource(stream);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const processor = (audioCtx as any).createScriptProcessor(2048, 1, 1);
-            processorRef.current = processor;
-
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            processor.onaudioprocess = (e: any) => {
-              if (ws.readyState === WebSocket.OPEN) {
-                const b64 = arrayBufferToBase64(floatTo16BitPCM(e.inputBuffer.getChannelData(0)));
-                ws.send(JSON.stringify({
-                  realtimeInput: {
-                    mediaChunks: [{ mimeType: `audio/pcm;rate=${INPUT_RATE}`, data: b64 }],
-                  },
-                }));
-              }
-            };
-            source.connect(processor);
-            processor.connect(audioCtx.destination);
-          } catch (micErr) {
-            setLiveError('Microphone access denied.');
-            stopLiveSession();
-          }
           return;
         }
 
@@ -283,8 +295,26 @@ export default function AIAgent(): React.ReactElement {
         if (sc.modelTurn?.parts) {
           for (const part of sc.modelTurn.parts) {
             if (part.inlineData?.data) {
-              playAudioChunk(part.inlineData.data, OUTPUT_RATE);
-              setLiveStatus('speaking');
+              // Play on dedicated 24kHz playback context
+              const pb = playbackCtxRef.current;
+              if (pb) {
+                const float32 = base64ToFloat32(part.inlineData.data);
+                const buf = pb.createBuffer(1, float32.length, OUTPUT_RATE);
+                buf.getChannelData(0).set(float32);
+                const src = pb.createBufferSource();
+                src.buffer = buf;
+                src.connect(pb.destination);
+                const JITTER = 0.01;
+                const startTime = Math.max(pb.currentTime + JITTER, nextStartTimeRef.current);
+                src.start(startTime);
+                nextStartTimeRef.current = startTime + buf.duration;
+                audioQueueRef.current.push(src);
+                src.onended = () => {
+                  audioQueueRef.current = audioQueueRef.current.filter((s) => s !== src);
+                  if (audioQueueRef.current.length === 0) setLiveStatus('listening');
+                };
+                setLiveStatus('speaking');
+              }
             }
             if (part.text) {
               setOutputTranscript((prev) => prev + ' ' + part.text);
@@ -297,13 +327,16 @@ export default function AIAgent(): React.ReactElement {
         setLiveError('Connection to Gemini failed. Check your API key.');
         stopLiveSession();
       };
-      ws.onclose = () => stopLiveSession();
+      ws.onclose = (e) => {
+        if (e.code !== 1000) setLiveError(`Disconnected (${e.code}): ${e.reason || 'unknown'}`);
+        stopLiveSession();
+      };
 
     } catch (err: unknown) {
       setLiveError(err instanceof Error ? err.message : 'Failed to start session');
       stopLiveSession();
     }
-  }, [apiKey, playAudioChunk, stopAllPlayback, stopLiveSession]);
+  }, [apiKey, stopAllPlayback, stopLiveSession]);
 
   // ── Text chat ────────────────────────────────────────────────────────────────
 
