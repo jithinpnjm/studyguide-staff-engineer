@@ -236,7 +236,7 @@ export default function AIAgent(): React.ReactElement {
       streamRef.current = stream;
 
       // ── Step 2: Connect WebSocket ──────────────────────────────────────────
-      const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
+      const wsUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${apiKey}`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
