@@ -76,7 +76,7 @@ const config: Config = {
           position: 'left',
         },
         {
-          href: '/studyguide-staff-engineer/admin/',
+          href: 'https://jithinpnjm.github.io/studyguide-staff-engineer/admin/#/library',
           label: 'Admin UI',
           position: 'right',
         },

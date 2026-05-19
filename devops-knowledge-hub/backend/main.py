@@ -227,7 +227,7 @@ def view_file(doc_id: str):
             media_type="application/pdf",
             headers={
                 "Content-Disposition": f'inline; filename="{doc["filename"]}"',
-                "X-Frame-Options": "SAMEORIGIN",
+                "X-Frame-Options": "ALLOWALL",
                 "Cache-Control": "private, max-age=3600",
             },
         )

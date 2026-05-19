@@ -39,7 +39,15 @@ export default function Admin() {
     <div style={styles.page}>
       <div style={styles.header}>
         <h1 style={styles.title}>Admin</h1>
-        <a href="/library" style={styles.backLink}>← Back to Library</a>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <a
+            href="https://jithinpnjm.github.io/studyguide-staff-engineer/"
+            style={{ ...styles.backLink, color: '#6d28d9', fontWeight: 700 }}
+          >
+            ↗ DevOps Hub
+          </a>
+          <a href="#/library" style={styles.backLink}>← Back to Library</a>
+        </div>
       </div>
 
       {stats && (
