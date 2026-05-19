@@ -448,3 +448,129 @@ Expert-level platform engineering requires:
 5. **Policy as code** — Kyverno and OPA enforcing security standards on every admission
 6. **Event-driven automation** — operators and generate policies removing operational toil
 7. **Platform SLOs** — commitments to internal customers, error budget process applied to platform reliability
+
+---
+
+## Staff Engineer Operating Manual
+
+### What Senior/Staff Interviewers Actually Test
+
+They are testing whether you can:
+- Reason from first principles under ambiguity
+- Reduce blast radius before chasing elegance
+- Connect app symptoms to OS, network, runtime, and control-plane behavior
+- Make safe operational decisions with incomplete information
+- Explain tradeoffs clearly without the product answer
+
+At staff level they also want:
+- Platform judgment (what to centralize vs. leave to teams)
+- Strong defaults and guardrails
+- Understanding of organizational and operational coupling
+- Ability to choose what NOT to build
+- Awareness of cost, complexity, and operator burden
+
+### The Senior Answer Template
+
+When answering a troubleshooting or design question, use this structure:
+
+```text
+1. Clarify the real goal and constraints
+2. Name the likely layers or failure domains
+3. State the most informative next checks
+4. Explain what evidence would change your mind
+5. Propose mitigation before perfect diagnosis if user impact is active
+6. Close with prevention and validation
+```
+
+Skipping steps 1-2 makes answers sound reactive rather than senior.
+
+### Failure Domain Habit
+
+Always ask where a problem can live:
+
+| Scope | Examples |
+|---|---|
+| Single process | app crash, OOM, deadlock |
+| Single host | disk full, kernel bug, OOM killer |
+| Single node pool | node taint, CNI misconfiguration |
+| Single zone/rack | network partition, hardware failure |
+| Single cluster | control plane overload, etcd issues |
+| Shared dependency | database, cache, auth service |
+| Control plane | API server, scheduler, kubelet |
+| Deploy/config domain | bad config map, wrong image tag |
+| Identity/policy domain | RBAC, admission webhook |
+
+This framing is one of the fastest ways to sound senior. Naming the failure domain narrows the search space and shows structured thinking.
+
+### The Symptom Stack
+
+Translate vague symptoms into diagnostic layers:
+
+**"The app is slow":**
+```text
+DNS → TCP connect → TLS handshake → request queuing
+→ app CPU → lock contention → database wait → retries
+```
+
+**"The cluster is broken":**
+```text
+scheduler → kubelet → CNI → kube-proxy/dataplane
+→ container runtime → node pressure → stale endpoints → auth/admission
+```
+
+### Mentor Mode: How to Sound Senior in Troubleshooting
+
+**Bad style:**
+> "I would check logs and metrics and then debug networking."
+
+**Better style:**
+> "First I would split host-local versus dependency latency. I'd compare one healthy node and one unhealthy node, check request path timings, then inspect TCP state, retransmits, and node pressure before blaming the app."
+
+**Great style:**
+> "Because the symptom is intermittent and load-correlated, I'm prioritizing queueing, DNS, conntrack, and dependency saturation over static config errors. I would first compare a good node and bad node, check `ss -s`, packet retransmits, app latency breakdown, and node PSI to decide whether the host is overloaded, network-impaired, or waiting on a dependency."
+
+### Mentor Mode: How to Sound Senior in System Design
+
+Do not start with products. Start with constraints. Use this order:
+
+1. Users and traffic shape
+2. SLOs and latency target
+3. Consistency needs
+4. Failure domains
+5. Core data model
+6. Request path
+7. Observability and rollback
+8. Security and access control
+9. Cost and operational complexity
+
+### Common Staff-Level Traps
+
+| Trap | Why it's a red flag |
+|---|---|
+| Treating Kubernetes as the system rather than one layer | Missing the upstream (cloud) and downstream (app) layers |
+| Assuming healthy averages mean healthy tail latency | p99/p999 problems are invisible in averages |
+| Confusing node capacity with safe allocatable capacity | kubelet, OS, and system pods need headroom |
+| Assuming LB health check proves real user health | Health check may be shallower than the real request path |
+| Treating retries as harmless | Retry amplification can 10x load on a degraded dependency |
+| Assuming one cloud abstraction maps cleanly to another | AWS ALB ≠ GCP GLB; IAM models differ significantly |
+| Proposing aggressive automation without blast-radius controls | Automation failures can be faster and larger than manual failures |
+
+### Senior Signals By Domain
+
+**Linux:** Distinguish CPU saturation from throttling, steal, lock contention, and IO wait. Understand reclaim and PSI pressure before OOM. Use namespaces and cgroups as debugging tools, not vocabulary.
+
+**Networking:** Narrate packet flow clearly. Distinguish DNS, routing, filtering, handshake, and application delay. Reason about MTU, retransmits, conntrack, backlog, and NAT state.
+
+**Kubernetes:** Connect Service issues to EndpointSlice, kube-proxy/dataplane, readiness, and CNI. Understand kubelet and node behavior during stress. Treat control-plane lag and eventual consistency as real system behavior.
+
+**Reliability:** Define actionable alerts. Explain SLO tradeoffs. Know how to lead with mitigation while preserving evidence for root cause.
+
+### The Four-Line Self-Check
+
+For every answer you give, add these four lines to verify you've answered at senior level:
+```text
+- First likely failure domain:
+- Fastest disambiguating signal:
+- Safest immediate mitigation:
+- Prevention / class elimination:
+```

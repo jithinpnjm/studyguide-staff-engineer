@@ -567,6 +567,124 @@ journalctl --since "2026-05-17 10:00" --until "2026-05-17 10:30"
 
 ---
 
+## Kernel Module Management
+
+Kernel modules extend Linux functionality without rebooting. Device drivers, filesystem types, and network protocols are typically modules.
+
+```bash
+lsmod                              # list loaded modules
+modprobe MODULE                    # load a module (with dependencies)
+modprobe -r MODULE                 # unload a module
+insmod /path/to/module.ko          # load from file (no dependency resolution)
+rmmod MODULE                       # unload directly
+modinfo MODULE                     # show module metadata and parameters
+```
+
+View module parameters:
+
+```bash
+ls /sys/module/MODULE/parameters/
+cat /sys/module/tcp_bbr/parameters/
+```
+
+Persistence across reboots:
+
+```bash
+# Load at boot
+echo "MODULE" >> /etc/modules-load.d/custom.conf
+
+# Set module parameters at boot
+echo "options MODULE param=value" >> /etc/modprobe.d/custom.conf
+```
+
+Common scenarios:
+- `br_netfilter` must be loaded for Kubernetes networking (`iptables` to see bridge traffic)
+- `overlay` must be loaded for container storage drivers
+- Missing modules cause `crictl` or `containerd` startup errors
+
+---
+
+## Memory Pressure — PSI
+
+PSI (Pressure Stall Information) gives a precise measure of how much time is being lost to resource contention. Unlike `free` or `vmstat`, it quantifies actual stall time.
+
+```bash
+cat /proc/pressure/cpu           # CPU pressure
+cat /proc/pressure/memory        # memory pressure
+cat /proc/pressure/io            # IO pressure
+```
+
+Output format:
+
+```text
+some avg10=0.00 avg60=0.01 avg300=0.00 total=12345
+full avg10=0.00 avg60=0.00 avg300=0.00 total=5678
+```
+
+- `some`: at least one task was stalled
+- `full`: all tasks were stalled (complete loss of progress)
+- `avg10/60/300`: stall percentage over 10s, 60s, 5min windows
+
+Threshold guidance:
+
+| Value | Interpretation |
+|---|---|
+| `some avg10 < 5%` | Healthy |
+| `some avg10 5-20%` | Moderate pressure — investigate |
+| `some avg10 > 20%` | High pressure — service at risk |
+| `full avg10 > 5%` | Severe — all progress stalling |
+
+PSI is preferred over load average for modern Kubernetes node alerting. The kernel and cgroup v2 expose PSI per-cgroup, allowing per-pod pressure measurement.
+
+---
+
+## Kubernetes Node From Linux Perspective
+
+When debugging a Kubernetes node, Linux host tools are the entry point. Node problems appear as cluster symptoms.
+
+```bash
+systemctl status kubelet           # is the node agent running?
+journalctl -u kubelet -n 100 --no-pager  # kubelet error messages
+
+crictl ps -a                       # all containers (running + exited)
+crictl logs CONTAINER_ID           # container stdout/stderr
+crictl inspect CONTAINER_ID        # full container spec and state
+crictl images                      # locally cached images
+
+df -h                              # disk full -> pod evictions (DiskPressure)
+df -i                              # inodes full -> ImagePullBackOff
+conntrack -S                       # conntrack full -> new connections dropped
+```
+
+Map from node symptom to cluster impact:
+
+| Node signal | Kubernetes symptom |
+|---|---|
+| kubelet not running | Node NotReady |
+| Disk bytes full | DiskPressure, pod evictions |
+| Inodes full | ImagePullBackOff, failed log writes |
+| conntrack exhausted | New service connections silently dropped |
+| Container runtime crash | Pods fail to start, `crictl ps` shows nothing |
+| NTP drift > 2s | TLS cert failures, leader election issues |
+
+Quick node rescue sequence:
+
+```bash
+# Node in NotReady state
+systemctl restart kubelet
+journalctl -u kubelet -n 50 --no-pager
+
+# Pods stuck ContainerCreating
+crictl ps -a | grep Exited
+journalctl -u containerd -n 50 --no-pager
+
+# Free disk space on node (safe)
+crictl rmi --prune              # remove unused container images
+journalctl --vacuum-size=500M  # trim journal logs
+```
+
+---
+
 ## Intermediate Takeaways
 
 1. Start with host-wide signals before changing anything.

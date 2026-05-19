@@ -517,3 +517,106 @@ cosign sign --key cosign.key myregistry/myimage:patched-tag
 | Falco noise | `kubectl logs -n falco daemonset/falco \| jq -r '.rule' \| sort \| uniq -c` |
 | Secret in git | `git log -p --all -S "SECRET_VALUE"` |
 | Compromised image | `kubectl get pods -A -o json \| jq '...'` → scan with Grype |
+
+---
+
+## Command Packs By Symptom
+
+### Web Service Down
+
+```bash
+curl -vk URL
+kubectl get pods -n NAMESPACE
+kubectl get svc -n NAMESPACE
+kubectl get endpointslice -n NAMESPACE
+kubectl logs deploy/APP --since=10m
+kubectl describe pod POD
+```
+
+### Auth Failure
+
+```bash
+date                                           # clock skew (JWT validation)
+curl -vk AUTH_URL
+kubectl describe secret AUTH_SECRET
+kubectl auth can-i get pods --as=system:serviceaccount:NAMESPACE:SA
+kubectl get rolebinding,clusterrolebinding -A | grep SA_NAME
+```
+
+### TLS / Certificate Issues
+
+```bash
+openssl s_client -connect api.example.com:443 -servername api.example.com
+echo | openssl s_client -connect api.example.com:443 2>/dev/null | openssl x509 -noout -dates
+
+kubectl describe certificate NAME -n NAMESPACE
+kubectl describe certificaterequest -n NAMESPACE
+kubectl logs -n cert-manager deploy/cert-manager | tail -30
+```
+
+Common: expired certificate, hostname mismatch, missing intermediate CA, HTTPS to HTTP port.
+
+### Secret Failure
+
+```bash
+kubectl get secret NAME -n NAMESPACE -o yaml
+kubectl describe pod POD | grep -A 20 "Environment"
+kubectl exec POD -- env | grep KEY
+# Common: wrong key name, missing namespace, base64 confusion, rotation without pod restart
+```
+
+### Rollout Failure
+
+```bash
+kubectl rollout status deploy/APP -n NAMESPACE
+kubectl rollout history deploy/APP -n NAMESPACE
+kubectl describe deploy/APP -n NAMESPACE | grep -A 10 "Events"
+kubectl rollout undo deploy/APP -n NAMESPACE
+```
+
+Common: readiness probe failing, image pull failure, config incompatibility, DB migration issue.
+
+---
+
+## Troubleshooting Anti-Patterns to Avoid
+
+| Anti-pattern | Why it's dangerous |
+|---|---|
+| Restart everything immediately | Loses in-flight state, hides root cause |
+| Change multiple variables at once | Can't attribute which change fixed/broke it |
+| Assume DNS is always the issue | Masks real failures; wastes time |
+| Assume high CPU is the root cause | CPU is often a symptom, not a cause |
+| Apply Terraform plan blindly | `-/+` lines may destroy production data |
+| Grant `cluster-admin` to fix RBAC fast | Permanent privilege escalation |
+| Disable TLS verification casually | `--insecure-skip-verify` in prod = security incident |
+| Deep root-cause hunt during active user impact | Delay stable rollback; fix user pain first |
+
+---
+
+## Senior Incident Response Pattern
+
+Work in this order when users are impacted:
+
+```text
+1. Identify the failing layer:
+   identity → DNS → network → TLS → workload health → dependency health → policy
+
+2. Test one hypothesis at a time
+
+3. For recent-change incidents → rollback first, root-cause after stability
+
+4. Mitigation priority order:
+   1. Rollback recent change
+   2. Fail over region/path
+   3. Disable feature flag
+   4. Scale capacity
+   5. Bypass non-critical dependency
+   6. Root-cause hunt after user impact resolved
+
+5. After stability:
+   → Eliminate the class of failure through automation and guardrails
+   → Write runbook for this failure mode
+   → Add alerting for earlier detection
+```
+
+**Interview answer shape:** "I troubleshoot by isolating the failing layer first. I test one hypothesis at a time and prefer fast reversible mitigations when users are impacted. For recent-change incidents, rollback is often the safest first move. After recovery, I eliminate the class of failure through automation, guardrails, and better observability."

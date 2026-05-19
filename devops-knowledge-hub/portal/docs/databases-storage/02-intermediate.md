@@ -507,6 +507,82 @@ kafka-topics.sh --bootstrap-server kafka:9092 \
   --alter --topic user-events --partitions 24
 ```
 
+### Dead Letter Queue (DLQ) Pattern
+
+When a consumer can't process a message, it must not loop-retry indefinitely — this blocks the partition. Use a DLQ:
+
+```python
+MAX_RETRIES = 3
+
+def process_with_dlq(consumer, dlq_producer):
+    msg = consumer.poll(timeout=1.0)
+    if msg is None:
+        return
+
+    retry_count = int(msg.headers().get('retry-count', 0))
+    try:
+        process_order(msg.value())
+        consumer.commit(msg)
+    except ProcessingError as e:
+        if retry_count < MAX_RETRIES:
+            dlq_producer.produce(
+                topic=f'{msg.topic()}-retry',
+                key=msg.key(),
+                value=msg.value(),
+                headers={'retry-count': str(retry_count + 1), 'error': str(e)}
+            )
+        else:
+            dlq_producer.produce(
+                topic=f'{msg.topic()}-dlq',
+                key=msg.key(),
+                value=msg.value(),
+                headers={'error': str(e), 'original-offset': str(msg.offset())}
+            )
+        consumer.commit(msg)  # move past the poison message
+```
+
+**Alert on DLQ growth:** Monitor DLQ topic lag — messages stuck in DLQ silently = undetected business logic failures.
+
+### Partition Assignment Strategy
+
+```python
+consumer = Consumer({
+    'group.id': 'processor',
+    'partition.assignment.strategy': 'cooperative-sticky',
+    # Options:
+    # 'range':             consecutive partitions per consumer
+    # 'roundrobin':        round-robin distribution
+    # 'sticky':            minimize partition movement on rebalance
+    # 'cooperative-sticky': incremental rebalance, no stop-the-world
+})
+```
+
+`cooperative-sticky` is preferred in production — uses incremental rebalancing so consumers don't all stop processing during a rebalance. Default `eager` strategies cause a full stop-the-world during rebalance.
+
+### Common Kafka Failure Modes
+
+**Consumer lag growing:** Consumer is slower than producer. Check if processing time increased. Solutions: scale out consumers (up to partition count), increase batch size, async processing, cache DB lookups.
+
+**Rebalance storm:** Frequent consumer group rebalances cause constant partition reassignment and processing stoppage. Causes: consumer heartbeat timeouts, slow polling (consumer does too much work between `poll()` calls). Fix: tune `session.timeout.ms`, `heartbeat.interval.ms`, `max.poll.interval.ms`; switch to `cooperative-sticky`.
+
+**Under-replicated partitions:** A broker is slow or down, causing replicas to fall behind. If `min.insync.replicas=2` and only 1 ISR remains, new writes will fail with `NotEnoughReplicasException`. Alert on `kafka_server_replication_leadercount` metric.
+
+**Disk full on broker:** Kafka writes append-only. If disk fills, broker crashes. Set `log.retention.bytes` as a safety bound alongside `log.retention.ms`.
+
+### Key Kafka Interview Questions
+
+**Q: How does Kafka guarantee message ordering?**
+> Within a partition only. Use the entity ID (e.g., user ID) as the partition key so all events for that entity go to the same partition. Ordering across partitions is not guaranteed.
+
+**Q: How do you handle a slow consumer falling behind?**
+> Measure and characterize: is lag growing or stable? Check if processing time increased (code change, slow downstream). Solutions in order: (1) scale out — add consumers up to partition count; (2) increase batch size; (3) async processing — poll fast, process in thread pool; (4) optimize slow operation (cache DB lookups, batch writes); (5) increase partition count if consumers are maxed.
+
+**Q: What happens when a Kafka broker fails?**
+> Kafka detects failure via ZooKeeper/KRaft heartbeat timeout. For partitions where the failed broker was leader, a new leader is elected from the ISR. Producers and consumers get updated metadata and reconnect. If the broker had partitions with no other ISR copies, those partitions become unavailable. Recovery time depends on whether the broker disk is intact.
+
+**Q: Kafka vs SQS — when to use which?**
+> Use Kafka when: you need replay capability, multiple independent consumer groups read the same messages, you need ordered processing per entity, or throughput is millions of events/second. Use SQS when: simple task distribution with worker pattern, messages don't need retention after consumption, ordering doesn't matter.
+
 ---
 
 ## Intermediate Takeaways

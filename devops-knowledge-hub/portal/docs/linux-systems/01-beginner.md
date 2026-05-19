@@ -634,6 +634,40 @@ Use `SIGTERM` before `SIGKILL` unless the process is causing immediate harm. `SI
 
 ---
 
+## Load Average vs CPU — A Key Distinction
+
+Load average measures the number of tasks either running or waiting. It includes:
+- Tasks actively using CPU
+- Tasks blocked waiting for disk, network, or other I/O (D-state)
+
+CPU percentage only measures how busy processors are.
+
+**Why this matters:** A host can have load average of 40 with CPU at 10%. That means 30 tasks are stuck waiting — not that CPU is the bottleneck. The culprit is usually IO wait, a stuck NFS mount, or disk latency.
+
+```bash
+uptime              # shows 1/5/15 min load averages
+nproc               # number of CPU cores (load healthy if below this)
+vmstat 1 5          # r = running, b = blocked (D-state), wa = IO wait %
+```
+
+Interpretation:
+
+| Observation | Likely cause |
+|---|---|
+| High load, high CPU (us/sy) | CPU-bound: hot process, request spike, bad code |
+| High load, low CPU, high `wa` | IO wait: disk latency, NFS hang, slow storage |
+| High load, low CPU, low `wa` | Lock contention, D-state, kernel scheduling issue |
+| Load < nproc, CPU < 70% | System is healthy; load is normal |
+
+```bash
+# Find D-state (uninterruptible sleep) processes
+ps aux | awk '$8 ~ /D/ {print}'
+```
+
+D-state processes cannot be killed with `kill -9` — they are waiting on the kernel. Resolve the IO dependency instead.
+
+---
+
 ## Services And systemd
 
 Most modern Linux distributions use systemd.

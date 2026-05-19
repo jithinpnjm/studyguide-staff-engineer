@@ -27,6 +27,14 @@ A field guide. Each scenario follows the same pattern: how it shows up, where to
 | Ingress 502 | Backend not Ready / readinessProbe failing | Check Pod logs + endpoints |
 | HPA `unable to fetch metrics` | metrics-server not installed/healthy | `kubectl get deploy -n kube-system metrics-server` |
 | `context deadline exceeded` | API server unreachable or under load | Check control plane health |
+| `Terminating` (stuck) | Finalizer stuck or volume detach hang | `--grace-period=0 --force` after investigation |
+| `ContainerCreating` (stuck) | Volume mount fail, runtime issue, missing Secret/ConfigMap | `kubectl describe pod` → Events |
+| `Failed to create pod sandbox` | Container runtime crash or stale sandbox | `crictl rmp`, restart containerd |
+| Namespace stuck `Terminating` | Finalizers on resources inside namespace | Patch namespace `spec.finalizers` |
+| Certs expired (`x509` error) | kubeadm cluster cert 1-year default | `kubeadm certs renew all` |
+| `EXTERNAL-IP: <pending>` | No cloud LB provider or quota | Use NodePort or install MetalLB |
+| Volume `Permission denied` | fsGroup not set; volume owned by root | Set `securityContext.fsGroup` |
+| Pod status `Unknown` | Node unreachable, kubelet lost | Delete node, force-delete pod |
 
 ---
 
@@ -859,3 +867,267 @@ Sidecars participate in pod-level QoS. If the app has `requests=limits` but the 
 - Set `requests=limits` on both the app **and** the sidecar.
 - Bump sidecar request/limit to handle p99 sidecar memory under traffic (typically 200-300Mi for Envoy in Istio).
 - For high-density workloads, consider Istio ambient mode to drop per-pod sidecars entirely.
+
+---
+
+## Scenario 29: Pod Stuck in `Terminating`
+
+**Symptom:** `kubectl get pods` shows a Pod in `Terminating` state for minutes or hours. `kubectl delete pod <name>` does nothing.
+
+**Investigate:**
+
+```bash
+kubectl describe pod <pod-name>      # check for finalizers, volume detach events
+kubectl get pod <pod-name> -o yaml | grep finalizers -A 5
+```
+
+**Common causes:**
+
+| Cause | Fix |
+|-------|-----|
+| Finalizer stuck (custom controller not running) | Patch finalizers: `kubectl patch pod <name> -p '{"metadata":{"finalizers":[]}}' --type=merge` |
+| Volume detach hang (cloud disk not detaching) | Check cloud provider console; restart node or force-detach |
+| App ignoring SIGTERM | Container must handle SIGTERM; increase `terminationGracePeriodSeconds` |
+| Node itself is gone / unreachable | Force-delete the pod |
+
+**Force-delete (last resort):**
+
+```bash
+kubectl delete pod <pod-name> --grace-period=0 --force
+```
+
+Force-delete bypasses the graceful shutdown sequence. Only use it when the node is confirmed dead or the pod is truly stuck.
+
+**Prevention:** Set `terminationGracePeriodSeconds` appropriately. Ensure apps catch SIGTERM and flush connections. Avoid finalizers unless strictly required — they block deletion.
+
+---
+
+## Scenario 30: Pod Stuck in `ContainerCreating`
+
+**Symptom:** Pod stays in `ContainerCreating` indefinitely. No container has started.
+
+```bash
+kubectl describe pod <pod-name>          # Events section is the diagnosis
+kubectl get events -n <ns> --sort-by=.lastTimestamp
+```
+
+**Common causes:**
+
+| Event message | Root cause | Fix |
+|---|---|---|
+| `MountVolume.SetUp failed` | PVC not bound or disk attach failed | Check PVC status, cloud disk attach logs |
+| `failed to pull image` | Registry unreachable, wrong imagePullSecret | Verify registry + secret |
+| `Failed to create pod sandbox` | Container runtime or CNI issue | See Scenario 31 |
+| `node has insufficient memory` | Resource shortage | Lower requests or add capacity |
+| `secrets "foo" not found` | Referenced Secret missing | Create the Secret before the Pod |
+| `configmap "foo" not found` | Referenced ConfigMap missing | Create the ConfigMap |
+
+```bash
+# Check PVC binding
+kubectl get pvc -n <ns>
+kubectl describe pvc <pvc-name>
+
+# Check imagePullSecret
+kubectl get secret <pull-secret> -n <ns>
+```
+
+---
+
+## Scenario 31: Failed to Start Pod Sandbox
+
+**Symptom:** `kubectl describe pod` shows `failed to create pod sandbox` in Events. Pods on specific nodes keep failing while other nodes are fine.
+
+```bash
+# On the affected node
+crictl pods
+crictl rmp --force <sandbox-id>          # remove stale sandbox
+journalctl -u containerd -n 200 --no-pager
+journalctl -u kubelet -n 200 --no-pager
+```
+
+**Causes and fixes:**
+
+- **Stale sandboxes from a previous crash** — remove them with `crictl rmp --force`.
+- **CNI plugin failure** — check CNI config in `/etc/cni/net.d/`; restart the CNI DaemonSet pod on this node.
+- **containerd/CRI-O crash** — restart the runtime: `systemctl restart containerd`.
+- **Port conflict** — another process grabbed the port the sandbox tries to bind. Check with `ss -tlnp`.
+
+**Recovery:**
+
+```bash
+# Restart container runtime on affected node
+systemctl restart containerd
+# Verify CNI on that node
+kubectl get pods -n kube-system -o wide | grep <node>
+```
+
+If the node keeps producing sandbox failures, cordon and drain it, then investigate or replace.
+
+---
+
+## Scenario 32: Namespace Deletion Stuck in `Terminating`
+
+**Symptom:** `kubectl delete namespace <ns>` runs but namespace stays `Terminating` for a long time.
+
+```bash
+kubectl describe namespace <ns>          # lists stuck finalizers
+kubectl api-resources --verbs=list --namespaced -o name | \
+  xargs -n 1 kubectl get --show-kind --ignore-not-found -n <ns>
+```
+
+**Root cause:** Resources with finalizers inside the namespace are blocking deletion. Often:
+- Custom Resource Definitions whose operator is gone (no one processes the finalizer).
+- Velero backups referencing objects in the namespace.
+- Orphaned `Job` or `CronJob` objects.
+
+**Fix — patch the namespace finalizer directly:**
+
+```bash
+# Export, edit, re-apply
+kubectl get namespace <ns> -o json > /tmp/ns.json
+# Edit: remove "kubernetes" from spec.finalizers array
+kubectl replace --raw "/api/v1/namespaces/<ns>/finalize" -f /tmp/ns.json
+```
+
+Or remove individual resource finalizers:
+
+```bash
+kubectl patch <resource-type> <name> -n <ns> \
+  -p '{"metadata":{"finalizers":[]}}' --type=merge
+```
+
+**Prevention:** Ensure operator lifecycle management includes cleanup of CRD finalizers before uninstalling an operator.
+
+---
+
+## Scenario 33: Cluster Certificates Expired
+
+**Symptom:** `kubectl` returns `x509: certificate has expired or is not yet valid`. API server unreachable. Control-plane pods failing.
+
+```bash
+kubeadm certs check-expiration          # lists cert expiry for all control plane certs
+openssl x509 -noout -enddate -in /etc/kubernetes/pki/apiserver.crt
+```
+
+**Fix:**
+
+```bash
+# Renew all certificates at once
+kubeadm certs renew all
+
+# Restart control-plane components to pick up new certs
+systemctl restart kubelet
+
+# For static pod manifests, they restart automatically after cert files change
+# Verify
+kubeadm certs check-expiration
+kubectl get nodes
+```
+
+**For HA clusters:** run `kubeadm certs renew all` on every control-plane node. Certs are not shared automatically.
+
+**Prevention:**
+- Set a calendar reminder 60 days before expiry.
+- `kubeadm certs` certificates expire by default after 1 year.
+- Managed clusters (EKS, GKE, AKS) rotate control-plane certs automatically — this scenario applies to self-managed clusters.
+
+---
+
+## Scenario 34: Service `EXTERNAL-IP` Stuck in `<pending>`
+
+**Symptom:** `kubectl get svc` shows `LoadBalancer` type service with `EXTERNAL-IP` as `<pending>` indefinitely.
+
+```bash
+kubectl describe svc <name>              # Events section
+kubectl get svc <name> -o yaml
+```
+
+**Common causes:**
+
+| Cause | Fix |
+|-------|-----|
+| No cloud provider integration (bare-metal) | Install MetalLB or switch to NodePort |
+| Wrong subnet / security group permissions | Cloud provider console — LB provisioning logs |
+| Cloud LB quota exceeded | Request quota increase |
+| Missing annotation for specific LB type | Add cloud-specific annotation (e.g., `service.beta.kubernetes.io/aws-load-balancer-type`) |
+
+**Bare-metal workaround:**
+
+```bash
+# Use NodePort instead for bare-metal clusters
+kubectl patch svc <name> -p '{"spec":{"type":"NodePort"}}'
+
+# Or install MetalLB for bare-metal LoadBalancer support
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.0/config/manifests/metallb-native.yaml
+```
+
+---
+
+## Scenario 35: Volume Mount — `Permission Denied`
+
+**Symptom:** Container starts but immediately exits with `permission denied` accessing its mount path. Or the app logs `cannot write to /data`.
+
+```bash
+kubectl describe pod <pod-name>
+kubectl exec -it <pod-name> -- ls -la /data
+kubectl exec -it <pod-name> -- id
+```
+
+**Root cause:** The volume is owned by `root:root` but the container runs as a non-root user.
+
+**Fix — use `securityContext.fsGroup`:**
+
+```yaml
+spec:
+  securityContext:
+    fsGroup: 1000        # Kubernetes chowns the volume to this GID on mount
+    runAsUser: 1000
+    runAsNonRoot: true
+  containers:
+  - name: app
+    securityContext:
+      allowPrivilegeEscalation: false
+```
+
+`fsGroup` causes kubelet to recursively `chown` the volume to that GID when attaching it to a Pod. The container's process then has group access.
+
+**When fsGroup chown is slow:** For large volumes, recursive chown takes minutes. Set `fsGroupChangePolicy: OnRootMismatch` to only chown if the volume's root directory GID doesn't match — dramatically faster for pre-initialized volumes.
+
+```yaml
+spec:
+  securityContext:
+    fsGroup: 1000
+    fsGroupChangePolicy: OnRootMismatch
+```
+
+---
+
+## Scenario 36: Pod Status `Unknown`
+
+**Symptom:** `kubectl get pods` shows a Pod as `Unknown` status. The node it was on is either gone or unreachable.
+
+```bash
+kubectl get nodes                        # check if the node is NotReady
+kubectl describe pod <pod-name>          # last known state
+kubectl get events -n <ns> | grep <pod-name>
+```
+
+**What `Unknown` means:** The API server lost communication with the node's kubelet. The pod's last known state is preserved, but the actual state is unknown. Kubernetes will mark it `Unknown` after the `node-monitor-grace-period` (default 40s).
+
+**Recovery:**
+
+```bash
+# If the node is permanently gone
+kubectl delete node <node-name>
+# This triggers the pod to be rescheduled by its owning controller (Deployment, etc.)
+
+# Force-delete the unknown pod if the controller isn't rescheduling
+kubectl delete pod <pod-name> --grace-period=0 --force
+```
+
+**For StatefulSets:** An `Unknown` pod from a StatefulSet is intentionally NOT replaced automatically — Kubernetes avoids split-brain by not scheduling the same StatefulSet ordinal on two nodes. You must manually delete the unknown pod after confirming the node is truly gone.
+
+```bash
+# Only after confirming node is dead
+kubectl delete pod <statefulset-pod-name> --grace-period=0 --force
+```

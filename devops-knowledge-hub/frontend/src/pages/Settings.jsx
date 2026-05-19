@@ -108,6 +108,27 @@ export default function Settings() {
         )}
 
         <section style={styles.section}>
+          <h2 style={styles.sectionTitle}>Quick Start Backend</h2>
+          <p style={styles.desc}>
+            Run this command in your terminal to start the local backend:
+          </p>
+          <code style={{ ...styles.codePath, color: '#a8d8a8', background: '#1a1a2e' }}>
+            cd devops-knowledge-hub/backend &amp;&amp; /opt/anaconda3/bin/python main.py
+          </code>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText('cd devops-knowledge-hub/backend && /opt/anaconda3/bin/python main.py');
+            }}
+            style={{ marginTop: 10, padding: '7px 16px', fontSize: 12, fontWeight: 600, background: '#0a66c2', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+          >
+            Copy command
+          </button>
+          <p style={{ ...styles.desc, marginTop: 10 }}>
+            Once running, it auto-watches <code>~/Downloads/devops-hub/</code> for new files.
+          </p>
+        </section>
+
+        <section style={styles.section}>
           <h2 style={styles.sectionTitle}>Storage Location</h2>
           <p style={styles.desc}>
             Documents are stored locally at:

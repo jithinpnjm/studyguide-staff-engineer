@@ -913,3 +913,149 @@ aws ce create-anomaly-subscription \
     "Subscribers": [{"Address":"arn:aws:sns:us-east-1:123456789012:billing-alerts","Type":"SNS"}]
   }'
 ```
+
+---
+
+## SRE Incident Playbooks
+
+### AccessDenied After Deployment
+
+Likely causes: wrong runtime role, missing action in identity policy, missing resource policy, bad trust policy, SCP denying the action, KMS key policy blocking access, condition key mismatch.
+
+```bash
+# Who am I running as?
+aws sts get-caller-identity
+
+# Find the specific API that was denied
+aws cloudtrail lookup-events \
+  --lookup-attributes AttributeKey=EventName,AttributeValue=GetObject \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ)
+
+# Simulate the policy check
+aws iam simulate-principal-policy \
+  --policy-source-arn arn:aws:iam::ACCOUNT:role/ROLE \
+  --action-names s3:GetObject \
+  --resource-arns arn:aws:s3:::BUCKET/KEY
+```
+
+**Debug order:** IAM identity policy → resource policy (S3 bucket policy, KMS key policy) → SCP → condition keys (aws:RequestedRegion, aws:SourceVpc, s3:prefix).
+
+### Service Unreachable
+
+Check in this order — each step narrows the failure scope:
+
+```bash
+# 1. Does DNS resolve?
+dig api.example.com
+
+# 2. Can you reach the load balancer? (test from inside the VPC)
+curl -v http://LOAD_BALANCER_DNS
+
+# 3. Target group healthy?
+aws elbv2 describe-target-health \
+  --target-group-arn arn:aws:elasticloadbalancing:...
+
+# 4. Security group allows traffic?
+aws ec2 describe-security-groups --group-ids sg-xxx
+
+# 5. Route table correct?
+aws ec2 describe-route-tables --filters Name=vpc-id,Values=vpc-xxx
+
+# 6. App listening on expected port?
+# (ssh or SSM into target and check)
+ss -tlnp | grep 8080
+```
+
+**Checklist:** DNS → LB reachable → listener rule matches → target group healthy → security groups allow → NACLs allow → route tables → app listening → app logs show requests.
+
+### One AZ Failure
+
+```bash
+# Check target health per AZ
+aws elbv2 describe-target-health --target-group-arn ARN | \
+  jq '.TargetHealthDescriptions[] | {az: .Target.AvailabilityZone, state: .TargetHealth.State}'
+
+# Check RDS failover status
+aws rds describe-db-instances --db-instance-identifier DBID | \
+  jq '{az: .DBInstances[].AvailabilityZone, multiaz: .DBInstances[].MultiAZ}'
+
+# Check NAT Gateway status per AZ
+aws ec2 describe-nat-gateways --filter Name=state,Values=available
+```
+
+**Resolution checklist:**
+- Spread all tiers (EC2/ECS, RDS, NAT) across AZs
+- Remove single-AZ dependencies (EBS volumes that only attach in one AZ)
+- Enable cross-zone load balancing on ALB
+- Test AZ evacuation in pre-production quarterly
+
+### NAT Gateway Cost Spike
+
+```bash
+# Top talkers in VPC Flow Logs (Athena query)
+SELECT srcaddr, dstaddr, SUM(bytes) as total_bytes
+FROM vpc_flow_logs
+WHERE action = 'ACCEPT'
+  AND timestamp BETWEEN 1700000000 AND 1700086400
+GROUP BY srcaddr, dstaddr
+ORDER BY total_bytes DESC
+LIMIT 20;
+
+# Check if S3/ECR traffic is going through NAT (it shouldn't)
+# Fix: add Gateway endpoints for S3 and DynamoDB (free)
+aws ec2 create-vpc-endpoint \
+  --vpc-id vpc-xxx \
+  --service-name com.amazonaws.us-east-1.s3 \
+  --route-table-ids rtb-xxx
+```
+
+**Common causes:** Private workloads pulling from S3/ECR through NAT (fix: gateway/interface endpoints), logs/backups routed via NAT, cross-AZ NAT path (put NAT in same AZ as workload).
+
+### Database Saturation
+
+```bash
+# RDS performance insights (top waits)
+aws pi get-resource-metrics \
+  --service-type RDS \
+  --identifier db-IDENTIFIER \
+  --metric-queries '[{"Metric":"db.load.avg","GroupBy":{"Group":"db.wait_event"}}]' \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period-in-seconds 60
+
+# Check connection count
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/RDS \
+  --metric-name DatabaseConnections \
+  --dimensions Name=DBInstanceIdentifier,Value=DBID \
+  --period 60 --statistics Average \
+  --start-time $(date -u -v-30M +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ)
+```
+
+**Resolution priority:** tune slow queries → add missing indexes → right-size connection pool → scale instance/storage → add read replicas for read workloads → cache hot reads in ElastiCache → separate reporting workloads to read replica.
+
+---
+
+## AWS Interview-Ready Explanations
+
+**Public vs Private Subnet:**
+A public subnet has a route to an Internet Gateway and resources can be publicly reachable if they have public IPs. A private subnet does not expose workloads to the internet. Private workloads use NAT Gateway for outbound internet or VPC endpoints for private AWS service access.
+
+**Security Group vs NACL:**
+Security groups are stateful, resource-level allow rules (return traffic automatically allowed). NACLs are stateless, subnet-level allow/deny rules (must explicitly allow return traffic). Use security groups as the primary control; NACLs as coarse subnet guardrails.
+
+**RDS Multi-AZ vs Read Replica:**
+Multi-AZ = synchronous standby for failover (availability). Read replica = asynchronous copy for read scaling (performance). Do not use a read replica as your only DR mechanism — it can lag behind the primary.
+
+**ALB vs NLB:**
+ALB is Layer 7 — routes by host, path, headers; supports HTTP/HTTPS, WebSocket, gRPC. NLB is Layer 4 — static IP, TCP/UDP/TLS, ultra-low latency, non-HTTP protocols. Choose NLB for extremely high throughput or when you need a static IP for whitelisting.
+
+**SQS vs SNS vs EventBridge:**
+SQS = queue, buffering, worker pattern, at-least-once. SNS = pub/sub fanout to multiple subscribers. EventBridge = event routing with filtering, content-based routing, event buses, external SaaS integration. Use EventBridge when you need filtering logic; use SNS for simple fan-out; use SQS for decoupled workers.
+
+**ECS vs EKS:**
+ECS is simpler, AWS-native, lower operational overhead — good for teams that don't need Kubernetes-specific capabilities. EKS gives Kubernetes ecosystem portability (Helm, ArgoCD, Karpenter, any CNI/service mesh) but adds operational complexity. Choose EKS when Kubernetes capabilities or organizational standardization justifies the cost.
+
+**Cost Engineering — Top Watch Items:**
+NAT Gateway data processing, cross-AZ data transfer, CloudWatch Logs ingestion/retention, idle EC2/EBS/EIP/load balancers, oversized RDS instances, unattached EBS volumes, old snapshots, S3 versions without lifecycle rules, high-cardinality custom metrics. Every production service should have cost tags, dashboards, and Cost Anomaly Detection alerts.

@@ -1136,6 +1136,248 @@ Tradeoffs: Pulumi has a smaller ecosystem than Terraform/OpenTofu, and its state
 
 ---
 
+## Terraform Three-Reality Model
+
+Terraform manages three versions of reality simultaneously. Misunderstanding this causes the most common Terraform errors.
+
+| Reality | Where It Lives | What It Represents |
+|---|---|---|
+| **Desired** | `.tf` source files | What you want to exist |
+| **Recorded** | `terraform.tfstate` | What Terraform last observed |
+| **Actual** | Cloud provider API | What actually exists right now |
+
+**What `terraform plan` really does:**
+1. Read desired state from `.tf` files
+2. Read recorded state from `tfstate`
+3. Call cloud APIs to refresh actual state
+4. Compute diff between desired and actual
+5. Show you the change set (plan output)
+
+**What goes wrong when they diverge:**
+
+```text
+Desired  ≠  Recorded  →  Someone edited .tf without applying
+Recorded ≠  Actual    →  Manual change in console (drift)
+Desired  ≠  Actual    →  Both of the above
+```
+
+**Practical rule:** Never change infrastructure through the console in Terraform-managed accounts. Every manual change creates recorded/actual divergence and makes the next plan unreliable.
+
+---
+
+## Terraform Plan Symbol Reference
+
+When reading `terraform plan` output, each symbol tells you the risk level of the change:
+
+| Symbol | Meaning | Risk |
+|---|---|---|
+| `+` | Create new resource | Low — adds something new |
+| `~` | Update in-place | Medium — modifies existing resource |
+| `-` | Destroy resource | High — deletes resource |
+| `-/+` | Destroy then recreate | High — downtime risk; resource is replaced |
+| `<=` | Data source read | None — read-only refresh |
+
+**Force-replace triggers** — attributes that cause `-/+` on common resources:
+
+| Resource | Attribute that forces replacement |
+|---|---|
+| `aws_instance` | `ami`, `instance_type` (some), `subnet_id` |
+| `aws_db_instance` | `engine`, `engine_version` (major), `identifier` |
+| `aws_iam_role` | `name` (rename = destroy + recreate) |
+| `aws_s3_bucket` | `bucket` (name) |
+| `aws_eks_node_group` | `ami_type`, `disk_size`, `instance_types` |
+
+**Reviewing a plan:** Before approving, scan for any `-/+` lines and verify the resource is either stateless (safe to replace) or you have a migration plan for the data.
+
+---
+
+## for_each vs count — When to Use Each
+
+```hcl
+# count — use only for homogeneous sets where order doesn't matter
+resource "aws_iam_user" "ops" {
+  count = length(var.ops_users)
+  name  = var.ops_users[count.index]
+}
+# Problem: if you remove "alice" from the middle of the list,
+# Terraform renumbers the list — it may recreate "charlie" as "alice".
+
+# for_each — use for named sets; index is stable
+resource "aws_iam_user" "ops" {
+  for_each = toset(var.ops_users)
+  name     = each.key
+}
+# Removing "alice" only destroys alice; bob and charlie are untouched.
+```
+
+**Rule:** Use `for_each` any time you have named resources. Use `count` only for identical replicas (e.g., `count = 3` EC2 instances behind a load balancer where individual identity doesn't matter).
+
+---
+
+## Ansible Rolling Update with Load Balancer Integration
+
+Rolling updates with Ansible let you update a fleet of servers without downtime by batching the rollout and checking health at each step.
+
+```yaml
+# rolling-update.yml
+- name: Rolling update with health checks
+  hosts: app_servers
+  serial: "25%"               # update 25% of hosts per batch
+  max_fail_percentage: 10     # abort if >10% of hosts fail
+  order: sorted               # deterministic order (not random)
+
+  pre_tasks:
+    - name: Remove host from load balancer
+      uri:
+        url: "{{ lb_api }}/deregister/{{ inventory_hostname }}"
+        method: POST
+      delegate_to: localhost
+
+    - name: Wait for in-flight requests to drain
+      wait_for:
+        timeout: 30
+
+  tasks:
+    - name: Update application
+      apt:
+        name: myapp
+        state: latest
+      notify: Restart application
+
+  handlers:
+    - name: Restart application
+      systemd:
+        name: myapp
+        state: restarted
+        enabled: yes
+
+  post_tasks:
+    - name: Wait for application to be healthy
+      uri:
+        url: "http://{{ ansible_host }}:8080/healthz"
+        status_code: 200
+        return_content: yes
+      register: health
+      retries: 10
+      delay: 6
+      until: health.status == 200
+
+    - name: Re-register host in load balancer
+      uri:
+        url: "{{ lb_api }}/register/{{ inventory_hostname }}"
+        method: POST
+      delegate_to: localhost
+```
+
+**Key parameters:**
+- `serial: "25%"` — rolls 25% of hosts at a time (can also use integer: `serial: 2`)
+- `max_fail_percentage: 10` — Ansible aborts the entire play if more than 10% of hosts fail in any batch
+- `pre_tasks` — run before roles/tasks (drain from LB)
+- `post_tasks` — run after all tasks (verify health before adding back to LB)
+- `delegate_to: localhost` — load balancer API calls run from the control node, not the target host
+
+---
+
+## Ansible: Kubernetes GPU Node Configuration
+
+Configuring GPU nodes for Kubernetes requires specific kernel modules, NVIDIA drivers, containerd runtime configuration, and sysctl settings. Ansible automates this consistently across a fleet.
+
+```yaml
+# gpu-node-setup.yml
+- name: Configure Kubernetes GPU nodes
+  hosts: gpu_nodes
+  become: yes
+
+  tasks:
+    - name: Install NVIDIA driver prerequisites
+      apt:
+        name:
+          - linux-headers-{{ ansible_kernel }}
+          - build-essential
+          - dkms
+        state: present
+        update_cache: yes
+
+    - name: Add NVIDIA CUDA repository
+      apt_repository:
+        repo: "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64 /"
+        state: present
+        filename: cuda
+
+    - name: Install NVIDIA driver
+      apt:
+        name: nvidia-driver-535
+        state: present
+      notify: reboot if needed
+
+    - name: Load required kernel modules
+      modprobe:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - nvidia
+        - nvidia_uvm
+        - nvidia_drm
+
+    - name: Persist kernel modules across reboots
+      copy:
+        dest: /etc/modules-load.d/nvidia.conf
+        content: |
+          nvidia
+          nvidia_uvm
+          nvidia_drm
+
+    - name: Configure containerd for NVIDIA runtime
+      blockinfile:
+        path: /etc/containerd/config.toml
+        marker: "# {mark} ANSIBLE MANAGED — NVIDIA runtime"
+        block: |
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+            runtime_type = "io.containerd.runc.v2"
+            [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+              BinaryName = "/usr/bin/nvidia-container-runtime"
+      notify: Restart containerd
+
+    - name: Set GPU sysctl parameters
+      sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        sysctl_file: /etc/sysctl.d/99-gpu-nodes.conf
+        reload: yes
+      loop:
+        - { key: "vm.max_map_count", value: "262144" }
+        - { key: "kernel.numa_balancing", value: "0" }
+
+    - name: Verify NVIDIA GPU detected
+      command: nvidia-smi --query-gpu=name --format=csv,noheader
+      register: gpu_check
+      changed_when: false
+      failed_when: gpu_check.rc != 0
+
+    - name: Show detected GPUs
+      debug:
+        msg: "GPUs found: {{ gpu_check.stdout_lines }}"
+
+  handlers:
+    - name: Restart containerd
+      systemd:
+        name: containerd
+        state: restarted
+
+    - name: reboot if needed
+      reboot:
+        reboot_timeout: 300
+```
+
+**What this does:**
+- Installs NVIDIA driver via CUDA repository (driver version pinned — do not use `latest`)
+- Loads `nvidia`, `nvidia_uvm`, `nvidia_drm` kernel modules and persists them in `/etc/modules-load.d/`
+- Patches containerd `config.toml` to register the NVIDIA container runtime
+- Sets `vm.max_map_count` (required for GPU ML frameworks) and disables NUMA balancing (improves GPU memory locality)
+- Runs `nvidia-smi` to verify the GPU is detected before finishing
+
+---
+
 ## Intermediate Takeaways
 
 1. Remote state and locking are mandatory for teams.
@@ -1150,3 +1392,6 @@ Tradeoffs: Pulumi has a smaller ecosystem than Terraform/OpenTofu, and its state
 10. Vault encrypts secrets in Git; the vault password lives outside Git.
 11. Dynamic inventory queries the cloud API at runtime — no manual host lists.
 12. `moved` blocks record safe refactors without destroy/recreate.
+13. The three-reality model (desired/recorded/actual) explains almost every Terraform problem.
+14. Plan symbols `+/~/−/−+` map directly to risk — review every `-/+` before approving.
+15. Rolling updates with `serial` + `max_fail_percentage` prevent full-fleet outages during Ansible runs.

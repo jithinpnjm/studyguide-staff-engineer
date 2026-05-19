@@ -704,6 +704,41 @@ Runtime behavior:
 
 The scheduler uses **requests**, not actual usage. A node showing 43% real memory but 96% requested memory is full from a scheduling perspective.
 
+### OOM Score Adjustment
+
+When the kernel's OOM killer must pick a process to terminate, it uses an **OOM score** (higher = more likely to be killed). Kubernetes sets this automatically based on QoS:
+
+| QoS Class | Kernel oom_score_adj | Result |
+|-----------|---------------------|--------|
+| `Guaranteed` | -998 | Very unlikely to be killed |
+| `Burstable` | Proportional (0–999) | Depends on memory usage |
+| `BestEffort` | 1000 | Killed first |
+
+You can override this per-container with `oomScoreAdj` (range: -1000 to 1000):
+
+```yaml
+spec:
+  containers:
+  - name: app
+    resources:
+      requests: { memory: "256Mi" }
+      limits: { memory: "512Mi" }
+    securityContext:
+      oomScoreAdj: -500   # less likely to be killed vs other Burstable containers
+```
+
+Lower values mean less likely to be killed. Setting `-1000` makes the process immune to OOM kill (use with caution — if it leaks, nothing saves the node).
+
+**Detect OOMKill:**
+
+```bash
+kubectl get pod <name> -o jsonpath="{.status.containerStatuses[*].state.terminated.reason}"
+# Returns "OOMKilled" if the container was killed by the kernel OOM killer
+
+kubectl get pod <name> -o jsonpath="{.status.containerStatuses[*].lastState.terminated.reason}"
+# For the previous container run
+```
+
 ---
 
 ## PriorityClass And Preemption

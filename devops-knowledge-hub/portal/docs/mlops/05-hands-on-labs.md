@@ -677,6 +677,137 @@ Watch the Grafana dashboard update in real time as requests flow through the mod
 
 ---
 
+---
+
+## Lab 6: GPU and AI Platform Architecture Review
+
+### Scenario
+
+A company is building an AI compute platform on Kubernetes. It must support four distinct workload classes:
+
+- general stateless product services (web APIs, microservices)
+- scheduled CPU-heavy batch jobs (data pipelines, preprocessing)
+- distributed GPU training jobs (multi-node, long-running, expensive)
+- GPU-based and CPU-based model inference (latency-sensitive, availability-critical)
+
+The platform must enforce cost control, prevent resource interference between workload classes, and support multiple tenant teams without any single team being able to monopolize scarce GPU capacity.
+
+**Prerequisites:** Kubernetes node pools, taints/tolerations, ResourceQuota, PriorityClass, GPU device plugin basics, familiarity with Kubeflow Trainer, KServe, and Kueue.
+
+**Time Estimate:** 60-90 minutes for a written design. 20-30 minutes additional for pressure questions.
+
+---
+
+### How To Think About This
+
+Before writing anything, break the problem into layers:
+
+**Layer 1: Workload classification** — what are the distinct workload types and what do they each need from the scheduler, network, storage, and cost model?
+
+**Layer 2: Isolation** — how do I prevent training jobs from consuming inference capacity, and general services from landing on GPU nodes?
+
+**Layer 3: Scheduling and admission** — how do I control who gets GPU resources, in what order, and at what cost?
+
+**Layer 4: Training platform specifics** — what happens if a distributed training job half-starts? How does the platform handle preemption and node loss?
+
+**Layer 5: Inference platform specifics** — what does warm capacity mean here? What is the difference between predictive and generative inference?
+
+**Layer 6: Observability** — what does a GPU sitting idle look like in metrics? What tells me a training job is making no progress?
+
+**Layer 7: Cost and governance** — who can approve very large training runs? How do I show teams their GPU spend?
+
+---
+
+### Building Blocks
+
+| Component | What it does |
+|---|---|
+| Node pools | Separate groups of nodes with distinct hardware, taints, and scaling policies |
+| Taints and tolerations | Repel general workloads from GPU nodes by default |
+| Node affinity | Attract GPU workloads to nodes with specific hardware labels |
+| ResourceQuota | Limit how much CPU, memory, or GPU a namespace can consume |
+| PriorityClass | Allow inference traffic to preempt lower-priority training jobs |
+| Kueue | Queue-based admission for batch and GPU jobs — prevents partial starts |
+| Kubeflow Trainer | Higher-level controller for distributed multi-worker training jobs |
+| KServe | Standardized model serving platform with inference protocol support |
+| NVIDIA device plugin | Exposes GPU resources to Kubernetes as schedulable units |
+| Checkpoint storage (PVC / object store) | Persists training state for resume after failure |
+| OPA / Kyverno | Admission policies to block unqualified GPU requests |
+
+---
+
+### Starter Skeleton
+
+GPU node pool taint — applied at node pool creation:
+
+```bash
+kubectl taint nodes <gpu-node> workload=gpu-training:NoSchedule
+```
+
+GPU workload toleration — only GPU pods carry this:
+
+```yaml
+tolerations:
+  - key: "workload"
+    operator: "Equal"
+    value: "gpu-training"
+    effect: "NoSchedule"
+```
+
+Block unintended GPU consumption in general namespaces:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: no-gpu
+  namespace: general-services
+spec:
+  hard:
+    requests.nvidia.com/gpu: "0"
+```
+
+---
+
+### Tasks
+
+**Task 1: Node pool strategy** — Describe the node pool layout. What pools exist, what hardware, what taints each GPU pool carries, what autoscaling policy each uses.
+
+**Task 2: GPU isolation strategy** — Explain how you prevent a general service team from accidentally consuming GPU capacity. Cover taints, tolerations, quota, and admission policy.
+
+**Task 3: Training platform design** — Explain how the platform supports multi-worker distributed training. Address the partial-start problem, node loss mid-job, Jobs vs Kubeflow Trainer, and checkpointing.
+
+**Task 4: Inference platform design** — Explain how the platform supports GPU model inference. Address warm capacity, generative vs predictive inference, and whether KServe is appropriate.
+
+**Task 5: Scheduling and quota design** — Describe how you allocate GPU capacity across multiple tenant teams using ResourceQuota, PriorityClass, and Kueue.
+
+**Task 6: Observability for GPU workloads** — List signals at both platform level and workload level. What tells you a training job is stalled versus making progress?
+
+**Task 7: Failure handling** — Describe your failure model for: a training node going down at hour 3; an inference pod OOMing under traffic spike; the GPU device plugin crashing.
+
+**Task 8: Tooling decision** — State which controllers you would adopt (Trainer, KServe, Kueue, plain Kubernetes) and which you would defer. Give a reason for each choice.
+
+---
+
+### Answer Quality Rubric
+
+| Level | Indicators |
+|---|---|
+| Beginner | Separates training/inference at node pool level. Identifies checkpointing. Reaches for Kubeflow/KServe by name but doesn't explain tradeoffs. Misses partial-start problem, cost governance. |
+| Intermediate | Separates all four workload classes. Adds Kueue for queued GPU admission. Addresses partial-start problem. Distinguishes generative from predictive inference. Addresses checkpointing as reliability concern. |
+| Strong | Adds cost governance (GPU budget visibility per team, approval flow). Clear principle that inference and training don't share scheduling policy. Addresses driver readiness vs node readiness. Deliberate minimalism on tooling. Separate SLOs for inference, training, and control services. |
+
+---
+
+### Interviewer Pressure Questions
+
+1. You said dedicated GPU node pools. What if inference demand is low and training demand is high — do you allow overflow?
+2. Your quota prevents general teams from getting GPUs. But what if a critical team needs a temporary GPU allocation outside their quota?
+3. How do you validate that a GPU node is actually healthy before scheduling a training job? The node can be Ready without the device plugin being functional.
+4. A training job ran for 18 hours and produced no checkpoint. The node was preempted. What do you do with this information operationally?
+
+---
+
 ## Lab Summary
 
 | Lab | Skill Practiced |
@@ -686,3 +817,4 @@ Watch the Grafana dashboard update in real time as requests flow through the mod
 | Lab 3 | Deploy MLflow model as a production FastAPI API |
 | Lab 4 | Capstone: full Python project with FastAPI + asyncio + SQLAlchemy |
 | Lab 5 | Observability: Prometheus metrics + Grafana for ML serving |
+| Lab 6 | GPU/AI platform architecture design — node pools, isolation, training, inference, cost governance |

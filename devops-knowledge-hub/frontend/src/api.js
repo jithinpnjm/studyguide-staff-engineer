@@ -57,8 +57,8 @@ export const api = {
 
   getSimilarDocs: (id) => request(`/documents/${id}/similar`),
 
-  fileUrl: (id) => `${BASE}/documents/${id}/file`,
-  viewUrl: (id) => `${BASE}/documents/${id}/view`,
+  fileUrl: (id) => `${getBase()}/documents/${id}/file`,
+  viewUrl: (id) => `${getBase()}/documents/${id}/view`,
 
   // ── Batch categorization ───────────────────────────────────────────────
   startBatchCategorize: (limit = 500) =>

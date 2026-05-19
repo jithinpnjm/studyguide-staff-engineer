@@ -468,6 +468,133 @@ Blameless means focus on system improvement, not avoiding accountability.
 
 ---
 
+## Observability Cost Optimization
+
+Telemetry is not free. At scale, metrics storage, log ingestion, and trace retention are significant infrastructure costs.
+
+### Metric Cost Controls
+
+```text
+Reduce scrape frequency for low-priority targets (30s -> 60s)
+Drop metrics that no team queries (metric_relabel_configs: action: drop)
+Set sample_limit per scrape config as a cardinality guardrail
+Use recording rules to precompute instead of re-querying at dashboard load
+Set shorter retention for raw metrics; keep aggregated recording rules longer
+```
+
+Prometheus `metric_relabel_configs` drop example:
+
+```yaml
+scrape_configs:
+  - job_name: 'verbose-service'
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'go_gc_.*|process_open_.*'
+        action: drop
+```
+
+### Log Cost Controls
+
+Log tiering approach:
+
+| Tier | Retention | Content |
+|---|---|---|
+| Hot (indexed) | 7-14 days | Errors, warnings, audit events |
+| Warm (queryable) | 30-90 days | All application logs |
+| Cold (archived) | 1+ year | Compliance, security audit |
+
+Log sampling — for high-volume debug logs:
+
+```yaml
+# Promtail pipeline stage to sample 10% of debug logs
+- match:
+    selector: '{level="debug"}'
+    stages:
+      - sampling:
+          rate: 10
+          drop_reason: "debug_log_sampling"
+```
+
+PII and secret scrubbing before ingestion:
+
+```yaml
+# Drop fields that may contain sensitive values
+- replace:
+    expression: '(\b\d{16}\b)'    # credit card pattern
+    replace: '[REDACTED]'
+```
+
+### Trace Cost Controls
+
+- Keep 100% of error traces
+- Keep 100% of traces exceeding p99 threshold
+- Sample 1-5% of healthy traces probabilistically
+- Use tail sampling to make keep/drop decisions after seeing the full trace
+
+---
+
+## Advanced PromQL Patterns
+
+### `without` — Aggregate Everything Except Specified Labels
+
+```promql
+# Sum by all labels except instance (aggregate across pods)
+sum without (instance) (rate(http_requests_total[5m]))
+
+# Equivalent with by: sum by (service, environment)
+# without is safer when label names are unknown in advance
+```
+
+### `on` — Restrict Vector Matching To Specific Labels
+
+```promql
+# Join two metrics that share only 'service' label
+method_call_duration_seconds
+  / on(service)
+  method_call_total
+```
+
+### Subqueries — Query a Range of Instant Queries
+
+```promql
+# Maximum of the 5-minute rate over the past hour (sampled every 30s)
+max_over_time(
+  rate(http_requests_total[5m])[1h:30s]
+)
+
+# Useful for: finding peak rates, detecting bursts that recording rules miss
+```
+
+### `predict_linear` — Forecast When a Metric Will Breach Threshold
+
+```promql
+# Predict disk full time (seconds from now)
+predict_linear(node_filesystem_avail_bytes[1h], 4 * 3600) < 0
+```
+
+Alert use: fire before disk is full, not after.
+
+### `absent` — Alert When a Metric Disappears
+
+```promql
+# Alert if the checkout service stops reporting metrics
+absent(up{job="checkout"})
+```
+
+Useful for detecting scrape gaps and dead services before users notice.
+
+### `topk` / `bottomk` — Find Hotspots
+
+```promql
+# Top 5 services by error rate
+topk(5, sum by (service) (rate(http_requests_total{status=~"5.."}[5m])))
+
+# Bottom 5 services by success ratio
+bottomk(5, sum by (service) (rate(http_requests_total{status="200"}[5m])) / sum by (service) (rate(http_requests_total[5m])))
+```
+
+---
+
 ## Expert Takeaways
 
 1. Observability is a production platform, not only dashboards.

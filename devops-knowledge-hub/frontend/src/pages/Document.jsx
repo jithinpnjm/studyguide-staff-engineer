@@ -100,7 +100,30 @@ export default function Document() {
   };
 
   if (loading) return <div style={styles.center}>Loading…</div>;
-  if (error) return <div style={styles.center}>Error: {error}</div>;
+  if (error) return (
+    <div style={styles.center}>
+      <div style={styles.offlineBox}>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
+        <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Backend offline</div>
+        <div style={{ fontSize: 13, color: '#666', marginBottom: 16 }}>
+          The local backend must be running to view documents.
+        </div>
+        <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>Start it with:</div>
+        <code style={styles.startCmd}>
+          cd devops-knowledge-hub/backend &amp;&amp; /opt/anaconda3/bin/python main.py
+        </code>
+        <button
+          style={styles.copyBtn}
+          onClick={() => navigator.clipboard.writeText('cd devops-knowledge-hub/backend && /opt/anaconda3/bin/python main.py')}
+        >
+          Copy command
+        </button>
+        <button style={{ ...styles.copyBtn, marginTop: 8, background: '#555' }} onClick={() => navigate('/library')}>
+          ← Back to Library
+        </button>
+      </div>
+    </div>
+  );
   if (!doc) return <div style={styles.center}>Document not found.</div>;
 
   const domainColor = DOMAIN_COLORS[doc.domain] || '#9e9e9e';
@@ -388,5 +411,22 @@ const styles = {
   center: {
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     height: '100vh', fontSize: 14, color: '#888',
+  },
+  offlineBox: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center',
+    background: '#fff', borderRadius: 12, border: '1px solid #e8e8e8',
+    padding: '32px 40px', maxWidth: 480, textAlign: 'center',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+  },
+  startCmd: {
+    display: 'block', background: '#1a1a2e', color: '#a8d8a8',
+    padding: '10px 16px', borderRadius: 8, fontSize: 12,
+    fontFamily: 'monospace', marginBottom: 10, wordBreak: 'break-all',
+    width: '100%', boxSizing: 'border-box',
+  },
+  copyBtn: {
+    padding: '8px 18px', fontSize: 12, fontWeight: 600,
+    background: '#0a66c2', color: '#fff', border: 'none',
+    borderRadius: 6, cursor: 'pointer', width: '100%',
   },
 };

@@ -282,3 +282,114 @@ kubectl run test-alert --rm -it --image=curlimages/curl -- curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"version":"4","status":"firing","receiver":"ai-enrichment","alerts":[{"status":"firing","labels":{"alertname":"TestAlert","severity":"warning","namespace":"production","service":"test","team":"platform"},"annotations":{"summary":"Test alert","business_impact":"None — this is a test"},"startsAt":"2025-01-01T00:00:00Z"}]}'
 ```
+
+---
+
+## GPU Platform Troubleshooting
+
+GPU workloads have a unique failure stack: hardware → driver → runtime → device plugin → scheduler → application. Identify the layer before diving into logs.
+
+### Command Interpretation Table
+
+| Command | What It Answers | Bad Signs |
+|---|---|---|
+| `nvidia-smi` | Driver and GPU visibility | No devices shown, errors |
+| `nvidia-smi topo -m` | GPU-to-GPU topology (NVLink vs PCIe) | Unexpected slow links for multi-GPU training |
+| `kubectl describe node NODE \| grep nvidia.com/gpu` | Advertised GPU count | Missing or 0 = device plugin not running |
+| `kubectl describe pod POD` | Scheduling reason | "insufficient nvidia.com/gpu", taint issues |
+| `kubectl get pods -n gpu-operator` | GPU Operator health | CrashLoop or validator failures |
+| `kubectl logs -n gpu-operator ds/nvidia-dcgm-exporter` | DCGM GPU health | XID errors, ECC memory failures, thermal throttle |
+| `kubectl get kueue` or Volcano status | Queue/admission state | Jobs waiting, partial resource allocation |
+
+### GPU Not Visible On Node
+
+```bash
+lspci | grep -i nvidia                          # is GPU physically present?
+nvidia-smi                                      # is driver loaded?
+kubectl describe node NODE | grep nvidia.com/gpu  # is device plugin advertising it?
+kubectl get pods -n gpu-operator -o wide        # is GPU Operator healthy?
+kubectl logs -n gpu-operator ds/nvidia-device-plugin-daemonset
+```
+
+Likely causes: driver not loaded, GPU Operator DaemonSet failed after node upgrade, device plugin not registered.
+
+### Pod Pending with GPU Request
+
+```bash
+kubectl describe pod POD | grep -A 20 "Events"
+# Look for: "0/N nodes are available: N insufficient nvidia.com/gpu"
+# Or: "node(s) had taints that the pod didn't tolerate"
+
+kubectl get nodes -l accelerator=nvidia -o wide  # check GPU node count
+kubectl describe node GPU_NODE | grep -E "Taints|nvidia|Allocatable"
+```
+
+Common causes: insufficient GPUs, wrong `nodeSelector` for GPU type, missing toleration for GPU node taint, queue admission holding the job.
+
+### Pod Starts But CUDA Fails
+
+```bash
+kubectl logs POD
+# Look for: "CUDA driver version is insufficient", "no CUDA-capable device is detected"
+
+kubectl exec POD -- nvidia-smi                  # can the pod see the GPU?
+kubectl exec POD -- python3 -c "import torch; print(torch.cuda.is_available())"
+```
+
+Likely causes: image CUDA version incompatible with node driver, NVIDIA container runtime not injecting devices, driver/toolkit version mismatch.
+
+**Rule:** Match CUDA version in the image (`nvidia/cuda:12.2-base`) to the driver on the node. Check driver version with `nvidia-smi` on the node.
+
+### Training Job Slow
+
+```bash
+# Check GPU utilization (should be >80% for compute-bound training)
+kubectl exec POD -- nvidia-smi dmon -s u -d 5   # GPU utilization every 5s
+
+# Check NCCL/communication
+kubectl logs POD | grep -i "nccl\|bandwidth\|warning"
+
+# Check if data pipeline is the bottleneck (GPU idle while CPU loads data)
+kubectl exec POD -- nvidia-smi | grep "Volatile GPU-Util"
+```
+
+Common causes: poor GPU topology (PCIe instead of NVLink for multi-GPU), slow network during all-reduce, data pipeline bottleneck (GPU starved for data), storage throughput bottleneck (checkpoints slow).
+
+### Inference Latency High
+
+```bash
+# Check model server queue
+kubectl exec POD -- curl localhost:8080/metrics | grep queue_size
+
+# Check GPU memory pressure
+kubectl exec POD -- nvidia-smi | grep "MiB"  # is VRAM full?
+kubectl top pod POD --containers               # is CPU bottleneck?
+```
+
+Common causes: cold model loads (scale-to-zero cold start too slow for large models), GPU memory pressure (KV cache eviction), batch size misconfigured, model server worker saturation.
+
+### Real Incident Patterns
+
+**GPUs missing after node upgrade:** Driver mismatch — new kernel doesn't match installed driver. GPU Operator DaemonSet may have failed to apply driver module for new kernel. Fix: check GPU Operator validator pod logs; trigger node re-validation.
+
+**Expensive training job idle for hours:** Gang scheduling not enabled — partial workers started without all required GPUs, training blocked waiting for all workers. Fix: use Kueue or Volcano with gang scheduling; job should wait until all resources are available before starting any worker.
+
+**Inference outage after scale-down:** Model scaled to zero, cold start takes minutes for large models (loading 70B parameter model from storage). Fix: maintain a minimum of 1 warm replica; use `minReplicas: 1` in KServe InferenceService.
+
+**Random training failures on one node:** Bad GPU hardware — check XID errors in DCGM (`field_id=69` in DCGM exporter metrics) and ECC memory errors. Thermal throttling also causes intermittent CUDA errors. Fix: drain the node, run GPU diagnostic, replace hardware.
+
+### Interview Questions — GPU Platforms
+
+**Q: How does Kubernetes know a node has GPUs?**
+> The NVIDIA device plugin runs as a DaemonSet on GPU nodes. It discovers GPUs via the NVML API, registers them as extended resources (`nvidia.com/gpu`), and reports count to the kubelet. The scheduler then uses these extended resources for Pod placement.
+
+**Q: What does the NVIDIA GPU Operator manage?**
+> The GPU Operator manages the entire GPU software stack as Kubernetes objects: NVIDIA drivers, CUDA toolkit, container runtime, device plugin, DCGM exporter (metrics), node feature discovery (labels nodes with GPU properties), and MIG configuration. Without it, each of these would need to be installed manually on every GPU node.
+
+**Q: Why is gang scheduling important for distributed training?**
+> Distributed training (e.g., PyTorch DDP with 8 GPUs across 4 nodes) requires all workers to start simultaneously. Without gang scheduling, the scheduler may start 3 of 4 workers (partial allocation). Those 3 workers block waiting for worker 4 indefinitely, consuming GPU resources without making progress. Gang scheduling ensures all-or-nothing allocation.
+
+**Q: What is MIG and when would you use it?**
+> Multi-Instance GPU (MIG) partitions a single large GPU (A100, H100) into up to 7 independent slices, each with dedicated compute and memory. Use MIG when: you have multiple small inference workloads that don't need a full GPU, you want strict memory isolation between tenants, or you need guaranteed memory bandwidth per workload. Trade-off: MIG instances cannot communicate via NVLink — don't use MIG for multi-GPU training.
+
+**Senior answer shape:** "I treat GPU platforms as scarce-resource scheduling systems. The device plugin advertises GPUs, the scheduler places Pods based on extended resources and constraints, the GPU Operator manages drivers and runtime integration. For training I care about gang scheduling, topology, checkpointing, and utilization. For inference I care about warm capacity, model load time, GPU memory/KV cache, batching, and latency SLOs. During incidents I separate hardware → driver → runtime → scheduling → application layers."

@@ -676,3 +676,218 @@ Common causes for health check failures during deployments:
 - Security group rule for health check port was not updated when port changed
 - Health check timeout too short for a slow initialization path
 - ALB security group not whitelisted in the target's security group for health check port
+
+---
+
+## HTTP/API Debugging — curl Timing Breakdown
+
+Use `curl -w` to get per-phase timing and pinpoint exactly where latency is introduced:
+
+```bash
+# Create timing format file
+cat > /tmp/curl-format.txt << 'EOF'
+time_namelookup:    %{time_namelookup}s
+time_connect:       %{time_connect}s
+time_appconnect:    %{time_appconnect}s  (TLS handshake)
+time_redirect:      %{time_redirect}s
+time_pretransfer:   %{time_pretransfer}s
+time_starttransfer: %{time_starttransfer}s  (TTFB)
+time_total:         %{time_total}s
+http_code:          %{http_code}
+EOF
+
+# Run with timing
+curl -w "@/tmp/curl-format.txt" -o /dev/null -s https://api.example.com/health
+```
+
+**Reading the output:**
+
+| Phase | High value means... |
+|---|---|
+| `time_namelookup` high | DNS slow or missing cache — check CoreDNS, ndots |
+| `time_connect` high | TCP SYN not reaching server — routing, firewall, or pod not listening |
+| `time_appconnect` high | TLS slow — certificate chain or cipher negotiation |
+| `time_starttransfer` (TTFB) high | Application processing slow — check app, DB, cache |
+| `time_total` high, others low | Large response body or connection reuse issue |
+
+```bash
+# Quick checks for common errors
+curl -v --head https://api.example.com 2>&1 | grep -E "SSL|certificate|expire"
+curl -vL https://api.example.com/old-path    # trace redirects
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"key": "value"}' https://api.example.com/endpoint
+```
+
+### NGINX Log Analysis
+
+```bash
+# Only 5xx errors
+grep '" 5' /var/log/nginx/access.log | tail -50
+
+# Slowest requests (requires JSON log format)
+jq -r '.request_time + " " + .uri' /var/log/nginx/access.log | sort -n -r | head -10
+
+# Error rate by minute
+grep '" 5' /var/log/nginx/access.log | awk '{print $4}' | cut -c2-17 | sort | uniq -c
+
+# NGINX error log — upstream failure patterns
+grep -E "no live upstreams|connect\(\) failed|recv\(\) failed|upstream timed out" \
+     /var/log/nginx/error.log | tail -30
+```
+
+**Common NGINX error patterns:**
+- `no live upstreams while connecting to upstream` → all backends in the upstream block are down or `max_fails` hit; increase `max_fails` or fix health checks
+- `upstream timed out (110: Connection timed out)` → `proxy_read_timeout` exceeded; scale backend or increase timeout
+- `connect() failed (111: Connection refused)` → backend pod not listening on the expected port; check `targetPort` matches container port
+- `X-Forwarded-For` missing → add `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for` to NGINX config
+
+---
+
+## Systematic Packet-Path Debugging Method
+
+Never say "CNI issue" until you prove where the path breaks. Work through these layers in order:
+
+```text
+1. Classify traffic type
+   - Pod to Pod (same node)
+   - Pod to Pod (cross-node)
+   - Pod to Service (ClusterIP)
+   - External to Ingress
+   - Pod to External
+
+2. Test DNS separately
+   kubectl exec POD -- nslookup kubernetes.default
+   kubectl exec POD -- cat /etc/resolv.conf
+
+3. Test backend Pod IP directly
+   kubectl exec POD -- curl -v http://POD_IP:PORT
+
+4. Test Service name and ClusterIP
+   kubectl exec POD -- curl -v http://SERVICE:PORT
+
+5. Inspect EndpointSlice
+   kubectl get endpointslice -l kubernetes.io/service-name=SERVICE
+
+6. Inspect NetworkPolicy
+   kubectl get networkpolicy -A
+
+7. Inspect node datapath
+   iptables-save | grep KUBE-SVC-<hash>
+   conntrack -S
+   ip route
+
+8. Inspect cloud path if traffic leaves cluster
+   (security groups, VPC routes, NAT gateway, firewall)
+```
+
+**Key split test:** If `curl POD_IP` works but `curl SERVICE` fails → Service/datapath problem (check EndpointSlice, iptables, IPVS). If both fail → backend problem (check app, policy, route, listener).
+
+---
+
+## Kubernetes Networking — Command Interpretation Table
+
+| Command | What It Answers | Bad Signs |
+|---|---|---|
+| `kubectl get pods -o wide` | Pod placement and IPs | Failures scoped to one node |
+| `kubectl get svc` | Service definition (port/type) | Wrong ports, unexpected ClusterIP |
+| `kubectl get endpointslice` | Ready backends list | Empty endpoints (selector mismatch or unready pods) |
+| `kubectl describe svc SERVICE` | Selector, ports, endpoints summary | "No endpoints" in Events |
+| `nslookup kubernetes.default` from Pod | DNS path working | Timeout or SERVFAIL |
+| `curl SERVICE` vs `curl POD_IP` | Service path vs backend path | Service fails, PodIP works = datapath bug |
+| `iptables-save \| grep KUBE-SVC` | iptables Service rules exist | Empty output = kube-proxy not syncing |
+| `hubble observe --verdict DROPPED` | Cilium policy drop visibility | Policy/drop reasons shown |
+| `conntrack -S` | Kernel flow tracking state | `insert_failed` count rising = conntrack exhaustion |
+| `tcpdump` | Packet truth | SYN with no SYN-ACK = packet dropped |
+| `ip route` | Node routing table | Missing pod CIDR route = CNI broken |
+
+---
+
+## Real Incident Patterns — Networking Root Causes
+
+### Service Has No Endpoints (Selector Mismatch)
+
+```bash
+# Check what the Service selector expects
+kubectl get svc api -o jsonpath='{.spec.selector}'
+# Output: {"app":"api","version":"v2"}
+
+# Check what labels your pods actually have
+kubectl get pods -l app=api --show-labels
+# If pods have version=v1 but Service expects version=v2 → no endpoints
+
+# Fix: correct the label on the deployment or remove the version selector
+kubectl label pods -l app=api version=v2 --overwrite
+```
+
+### DNS Fails Only In One Namespace
+
+Cause: egress NetworkPolicy in that namespace blocks DNS (UDP/TCP port 53 to CoreDNS).
+
+```bash
+# Confirm DNS fails in the namespace
+kubectl exec -n NAMESPACE POD -- nslookup kubernetes.default
+
+# Check NetworkPolicy for the namespace
+kubectl get networkpolicy -n NAMESPACE
+
+# Look for egress policies that don't explicitly allow DNS
+kubectl get networkpolicy -n NAMESPACE -o yaml | grep -A 10 "egress"
+
+# Fix: add egress rule allowing DNS
+```
+
+```yaml
+# Allow egress to CoreDNS
+- egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+```
+
+### New Connections Fail During Traffic Spike
+
+Cause: conntrack table exhaustion. Old established connections continue; new connection attempts fail silently.
+
+```bash
+# Check conntrack usage
+cat /proc/sys/net/netfilter/nf_conntrack_count    # current
+cat /proc/sys/net/netfilter/nf_conntrack_max      # limit
+
+# Check for insertion failures (the key metric)
+conntrack -S | grep insert_failed
+
+# Check dmesg for table full messages
+dmesg | grep "nf_conntrack: table full"
+
+# Temporary fix (survive the incident)
+sysctl -w net.netfilter.nf_conntrack_max=524288
+
+# Permanent fix: add to /etc/sysctl.d/99-conntrack.conf
+# net.netfilter.nf_conntrack_max = 524288
+# net.netfilter.nf_conntrack_tcp_timeout_established = 600  (reduce from 432000)
+```
+
+### Ingress Returns 502 After Deployment
+
+Systematic check order (fastest to slowest):
+
+```bash
+# 1. Are there ready endpoints?
+kubectl get endpointslice -l kubernetes.io/service-name=SERVICE
+
+# 2. Is the targetPort correct?
+kubectl get svc SERVICE -o jsonpath='{.spec.ports[*].targetPort}'
+
+# 3. Is the app actually listening on that port?
+kubectl exec POD -- ss -tlnp | grep PORT
+
+# 4. Check ingress controller logs for upstream errors
+kubectl logs -n ingress-nginx deploy/ingress-nginx-controller | grep -E "upstream|error" | tail -30
+
+# 5. Does the NetworkPolicy allow ingress controller → pod?
+kubectl get networkpolicy -n NAMESPACE
+```
+
+Most common cause: readiness probe passes before the app is truly ready to serve (e.g., cache not warmed, DB connection pool not established). Increase `initialDelaySeconds` or add a deeper `/readyz` endpoint.

@@ -397,3 +397,148 @@ DNS load balancing distributes traffic by returning different IP addresses per q
 - **Health-check integration:** Automatic failover when endpoint health check fails
 
 **SRE note:** DNS TTL limits how fast failover propagates. A TTL of 60 seconds means up to 60 seconds of traffic to a failed endpoint before all clients switch. Set low TTLs (30-60s) for critical failover scenarios.
+
+---
+
+## Kubernetes Service Types — Deep Comparison
+
+| Type | When to Use | What Happens |
+|---|---|---|
+| **ClusterIP** | Internal service-to-service | Virtual IP, only reachable within cluster |
+| **NodePort** | Testing, bare-metal LB | Exposes port on every node (30000–32767) |
+| **LoadBalancer** | Production external access | Provisions cloud LB (NLB/ALB/GLB) |
+| **ExternalName** | Alias to external hostname | CNAME returned by CoreDNS — no proxy |
+| **Headless** | StatefulSets, DNS-based discovery | No ClusterIP; DNS returns Pod IPs directly |
+
+### ExternalTrafficPolicy
+
+`externalTrafficPolicy` controls how external traffic is routed to pods and whether the source IP is preserved.
+
+```yaml
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local   # or Cluster (default)
+```
+
+| Mode | Behavior | Source IP Preserved? | Risk |
+|---|---|---|---|
+| `Cluster` (default) | Routes to any ready pod across nodes via kube-proxy | No (SNAT applied) | Extra hop, IP lost |
+| `Local` | Routes only to pods on the receiving node | Yes | Uneven load if pods not on all nodes |
+
+**When to use `Local`:** When your app needs the real client IP (audit logging, geo-IP, rate limiting by IP). Ensure pods are spread across all nodes (DaemonSet or `topologySpreadConstraints`) to avoid traffic black-holing on empty nodes.
+
+### Headless Services
+
+A headless Service has `clusterIP: None`. CoreDNS returns A records for each ready Pod IP instead of a single virtual ClusterIP.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: cassandra
+spec:
+  clusterIP: None           # headless
+  selector:
+    app: cassandra
+  ports:
+    - port: 9042
+```
+
+Use cases:
+- **StatefulSets** — Pods get stable DNS names (`cassandra-0.cassandra.default.svc.cluster.local`)
+- **DNS-based client-side load balancing** — client resolves DNS and chooses a backend itself
+- **Service discovery without kube-proxy** — direct pod-to-pod for databases that need stable identity
+
+### Topology-Aware Routing (Traffic Hints)
+
+Topology hints tell kube-proxy or Cilium to prefer backends in the same zone as the traffic origin, reducing cross-zone data transfer costs and latency.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  annotations:
+    service.kubernetes.io/topology-mode: "Auto"
+spec:
+  selector:
+    app: api
+```
+
+- Kubernetes allocates hints via the EndpointSlice controller based on node zone labels
+- `Auto` mode: kube-proxy routes to local-zone endpoints first; falls back to any zone if insufficient local endpoints
+- Check hints: `kubectl get endpointslice -l kubernetes.io/service-name=api -o yaml | grep hints`
+
+---
+
+## Kubernetes DNS Deep Dive
+
+### ndots:5 — The Hidden Latency Source
+
+Every pod's `/etc/resolv.conf` defaults to `ndots:5`. A name with fewer than 5 dots triggers search-domain expansion before trying the name as-is. For a pod resolving `api.stripe.com`:
+
+```text
+Try: api.stripe.com.default.svc.cluster.local  → NXDOMAIN
+Try: api.stripe.com.svc.cluster.local          → NXDOMAIN
+Try: api.stripe.com.cluster.local              → NXDOMAIN
+Try: api.stripe.com.                           → ANSWER (success)
+```
+
+That's 3 failed CoreDNS queries before reaching the external resolver. At scale (100K requests/sec), this triples CoreDNS load.
+
+**Mitigations:**
+```yaml
+# Option 1: Use trailing dot (FQDN) in code
+# curl("https://api.stripe.com./v1/charges")  # dot forces absolute lookup
+
+# Option 2: Tune per-pod dnsConfig
+spec:
+  dnsConfig:
+    options:
+      - name: ndots
+        value: "1"    # only names with 0 dots get search-domain expansion
+      - name: single-request-reopen   # prevents race condition on concurrent A/AAAA
+
+# Option 3: Node-local DNS cache (NodeLocal DNSCache daemonset)
+# Caches responses locally, eliminates cluster-wide CoreDNS lookup for repeated names
+```
+
+### CoreDNS Tuning
+
+```yaml
+# CoreDNS configmap tuning for high-traffic clusters
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health
+        ready
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+        }
+        hosts /etc/coredns/NodeHosts {
+            ttl 60
+            reload 15s
+            fallthrough
+        }
+        prometheus :9153
+        cache 30           # cache positive results for 30s (default: 0)
+        forward . 8.8.8.8 8.8.4.4 {
+            max_concurrent 1000
+        }
+        loop
+        reload
+        loadbalance
+    }
+```
+
+Key tuning knobs:
+- `cache 30` — reduces upstream queries by caching successful lookups 30s
+- `max_concurrent 1000` — limits parallel upstream forwarder connections (prevent overload)
+- `autopath @kubernetes` — reduces search-domain queries by pre-resolving them in CoreDNS (aggressive but effective)

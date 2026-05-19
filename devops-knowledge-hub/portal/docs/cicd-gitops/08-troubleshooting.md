@@ -1132,3 +1132,178 @@ histogram_quantile(0.95,
   by (le)
 ) / 3600   # hours
 ```
+
+---
+
+## Real CI/CD Incident Stories
+
+### Bad Deploy Caused Error Spike
+
+```bash
+# 1. Correlate deploy timestamp to error spike
+kubectl rollout history deploy/app -n production
+# Compare timestamp of last revision to when errors began in Grafana/DataDog
+
+# 2. Pause the rollout (stop adding new bad pods)
+kubectl rollout pause deploy/app -n production
+
+# 3. Rollback if confidence is high
+kubectl rollout undo deploy/app -n production
+
+# 4. Confirm recovery (watch error rate drop)
+# 5. Investigate root cause after mitigation (not during)
+```
+
+**Senior pattern:** Always correlate deploy time to metric change before blaming the deploy. Check: did error spike start exactly at deploy? Or 5 minutes after? (5 min delay often = warm-up issue, not logic bug.)
+
+### Pipeline Too Slow (Bypass Pressure)
+
+When pipelines are slow, developers bypass them — hotfix branches, direct pushes, skipped tests. This is a leading indicator of a trust breakdown between dev and platform.
+
+**Symptoms:** giant PRs to amortize pipeline wait, hotfix culture, feature flags used as rollback substitutes, teams running builds locally to check.
+
+**Fixes by category:**
+
+| Root Cause | Fix |
+|---|---|
+| All tests run in serial | Parallelize with `--parallel` flag or matrix jobs |
+| Unit + integration + e2e in one stage | Split into fast (<5 min) and slow suites; gate on fast first |
+| Docker builds not cached | Use BuildKit cache mounts; cache base layers in registry |
+| Dependency install every run | Cache `node_modules`, pip wheels, Go module cache |
+| Linting runs full repo every time | Run only on changed files (affected projects) |
+| Test suite is O(n) with service count | Break pipeline into per-service or affected-only runs |
+
+**Target:** <5 minutes to merge feedback, <10 minutes to staging deploy, <30 minutes to production.
+
+### Flaky Tests Blocking Releases
+
+Flaky tests are worse than no tests — they train engineers to blindly rerun until green, which defeats the purpose of testing.
+
+**Response process:**
+1. **Quarantine immediately:** Move the flaky test to a separate job that is not a merge gate; mark with `@flaky` or equivalent
+2. **Assign owner:** The team that owns the code owns the test
+3. **Measure:** Track flaky test rate as a platform metric; alert when >5% of runs fail due to flakiness
+4. **Fix root cause:** Most flakiness comes from timing assumptions, test order dependencies, shared state, or external service calls in unit tests
+5. **Stop normalizing reruns:** "Just rerun it" is how 6-hour release pipelines become normal
+
+### Wrong Image Deployed to Production
+
+**Root cause analysis:**
+
+```bash
+# What image is actually running?
+kubectl get pods -n production -o jsonpath='{.items[*].spec.containers[*].image}'
+
+# What was the last deployment?
+kubectl rollout history deploy/app -n production
+
+# Compare to expected — was it the right SHA?
+docker manifest inspect myregistry/myapp:latest  # 'latest' is the problem
+```
+
+**Root cause:** Mutable tag (`latest`, `main`, `stable`) pointed to a different image than expected. Two concurrent builds both pushed to the same tag — one overwrote the other.
+
+**Fix:**
+- Never deploy using mutable tags in production
+- Tag every image with the git SHA: `myapp:a3f8b2c`
+- Pin deployments to digest: `myapp@sha256:abc123...`
+- Use release metadata: image label + SBOM + provenance attestation
+
+### Rollback Failed
+
+Rollback is not free — it must be designed and rehearsed. The most common reasons rollback fails in production:
+
+| Failure Mode | Cause | Prevention |
+|---|---|---|
+| DB schema incompatible | New code added a column; old code doesn't know about it | Additive-only migrations; never drop/rename in same deploy as code change |
+| Old artifact missing | CI purged old images to save storage | Retain last N production images with `immutable: true` tag |
+| Config drift | Old code needs an env var that was removed | Feature-flag-based config changes; validate old code still starts |
+| Rollback path never tested | Only forward path was rehearsed | Quarterly rollback fire drills in staging |
+| Stateful data migration | Data was transformed by new code | Design dual-write compatibility before cutover |
+
+```bash
+# Check if previous image still exists in registry
+aws ecr describe-images --repository-name myapp \
+  --image-ids imageTag=a3f8b2c
+
+# Verify the rollback deploy succeeds in staging first
+kubectl set image deploy/app app=myregistry/myapp:PREVIOUS_SHA -n staging
+kubectl rollout status deploy/app -n staging
+
+# Only then roll back production
+kubectl set image deploy/app app=myregistry/myapp:PREVIOUS_SHA -n production
+```
+
+---
+
+## CI/CD Troubleshooting Flows
+
+### CI Fails
+
+```bash
+git diff LAST_PASSING_SHA..HEAD   # what changed?
+# Check:
+# - recent dependency version changes (lockfile diff)
+# - test logs for specific failure message
+# - environment variable changes (secrets rotation?)
+# - credentials expiry (API tokens, registry auth)
+# - flaky test (did it pass on rerun?)
+```
+
+### Deploy Fails
+
+```bash
+# Check artifact exists
+docker manifest inspect myregistry/myapp:TAG
+
+# Check manifest correctness
+kubectl apply --dry-run=server -f manifests/
+
+# Check RBAC/permissions
+kubectl auth can-i create deployments -n production \
+  --as=system:serviceaccount:cicd:deploy-sa
+
+# Check cluster events
+kubectl get events -n production --sort-by='.lastTimestamp' | tail -20
+
+# Check health check passes
+kubectl describe deploy/app -n production | grep -A 10 "Readiness"
+```
+
+### Production Degraded After Deploy
+
+```bash
+# Compare metrics version-by-version
+# In Grafana: annotate deploy times and compare error rates before/after
+
+# Check logs by release version label
+kubectl logs -l app=myapp,version=v2.3.1 -n production --since=10m
+
+# Check if it's a dependency issue, not the app
+kubectl exec deploy/myapp -- curl -s http://downstream-service/health
+
+# Check rollback readiness
+kubectl rollout history deploy/myapp -n production
+kubectl rollout undo deploy/myapp -n production --dry-run=client
+
+# Key questions:
+# - Is the degradation on all pods or a subset? (canary vs full rollout)
+# - Does it affect all requests or a specific path? (routing/feature flag issue)
+# - Did it start immediately at deploy or gradually? (memory leak vs bad config)
+```
+
+---
+
+## Strong Interview Answers — CI/CD
+
+**Why separate build from deploy?**
+> Build once to produce a trusted immutable artifact, then promote the same artifact across environments. This eliminates environment-specific build variance and guarantees that what you tested in staging is exactly what runs in production.
+
+**Why use short-lived credentials?**
+> Short-lived credentials (OIDC-based, Vault dynamic secrets) reduce long-term secret exposure. They automatically expire, can be scoped to a specific repo/branch/workflow, and leave an audit trail. Leaked short-lived credentials are self-healing. Leaked long-lived credentials require manual rotation.
+
+**Why are mutable tags risky?**
+> The same tag can point to different image content over time. Two concurrent CI runs can both push `latest` and one overwrites the other. Rollback to `latest` is ambiguous — you don't know what you're rolling back to. Always deploy by SHA or digest.
+
+**How do you design safe delivery?**
+> Fast CI feedback (split test suites, cache aggressively, run only affected), trusted immutable artifacts (SHA-tagged, signed, SBOM-attached), least-privilege credentials (OIDC, short-lived), progressive rollout (canary with metric gates), strong observability (annotated dashboards, version-correlated logs), and rehearsed rollback paths. Safety and speed should increase together — slow pipelines create bypass culture that makes delivery less safe.
