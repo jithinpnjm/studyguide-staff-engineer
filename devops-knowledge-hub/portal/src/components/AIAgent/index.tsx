@@ -3,21 +3,34 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import { useLocation } from '@docusaurus/router';
 import styles from './styles.module.css';
 
-const SYSTEM_PROMPT = `You are a Staff SRE (Site Reliability Engineer) with 15+ years of production experience across Linux, Kubernetes, AWS, observability, incident response, platform engineering, CI/CD, databases, and networking.
+const SYSTEM_PROMPT_TEXT = `You are a Staff SRE with 15+ years of production experience across Linux, Kubernetes, AWS, observability, incident response, CI/CD, databases, networking, and platform engineering.
 
-Your teaching style:
-- Direct and precise — no filler words, no hedging
+Answer from your full expertise. If the question relates to the current page, you may reference it — but never limit yourself to it. Answer any SRE, DevOps, cloud, or engineering question the user has.
+
+Style:
 - Give the mental model first, then the detail
-- Use concrete production examples: real failure modes, exact commands, actual tradeoffs
-- Challenge the learner: ask a follow-up question after explaining something
-- Treat the learner as a peer engineer who wants depth, not a tutorial
+- Concrete production examples: real failure modes, exact commands, actual tradeoffs
+- Be direct. No filler phrases like "Great question!" or "Certainly!"
+- Use markdown freely — code blocks, bullet lists, headers are all fine in text mode
 
-When the user asks about something on the page they are reading, reference that content directly.
-
-Current page content:
+Current page (reference only if relevant):
 ---
 {PAGE_CONTEXT}
 ---`;
+
+const SYSTEM_PROMPT_VOICE = `You are a Staff SRE having a real conversation. The user is speaking to you and you must speak back naturally.
+
+Rules for voice responses:
+- Respond in plain spoken sentences only. No bullet points, no numbered lists, no headers, no code blocks, no markdown.
+- Keep responses to 2–4 sentences unless the user explicitly asks for more detail.
+- Sound like a senior engineer explaining something over Slack — casual, confident, clear.
+- If you need to mention a command, say it in plain English like "run kubectl get pods" not a code block.
+- Never start with "Great question" or "Certainly" or "Of course".
+- After answering, ask one short follow-up question to keep the conversation going.
+
+Answer from your full SRE expertise. Do not limit yourself to the page content.
+
+Current page topic (for context only): {PAGE_CONTEXT}`;
 
 interface Message {
   role: 'user' | 'assistant';
@@ -43,14 +56,17 @@ function getPageContext(): string {
 
 function stripMarkdown(text: string): string {
   return text
-    .replace(/```[\s\S]*?```/g, 'code block omitted.')
-    .replace(/`[^`]+`/g, '')
+    .replace(/```[\s\S]*?```/g, 'See the code in the chat.')
+    .replace(/`([^`]+)`/g, '$1')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/#{1,6}\s/g, '')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/#{1,6}\s+/g, '')
     .replace(/\|[^\n]+\|/g, '')
-    .replace(/[-*]\s/g, '')
+    .replace(/^[-*]\s+/gm, '')
+    .replace(/^\d+\.\s+/gm, '')
     .replace(/\n{2,}/g, '. ')
     .replace(/\n/g, ' ')
+    .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
@@ -112,16 +128,20 @@ export default function AIAgent(): JSX.Element {
     window.speechSynthesis.cancel();
     const clean = stripMarkdown(text);
     const utter = new SpeechSynthesisUtterance(clean);
-    utter.rate = 1.05;
+    utter.rate = 0.93;
     utter.pitch = 1.0;
     utter.lang = 'en-US';
 
-    // Pick best available voice
+    // Prefer natural-sounding voices: Mac built-ins first, then Google/Neural
     const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(
-      (v) => v.lang.startsWith('en') &&
-        (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Neural')),
-    );
+    const priority = ['Samantha', 'Karen', 'Moira', 'Daniel', 'Google US English', 'Google UK English Female'];
+    const preferred =
+      priority.reduce<SpeechSynthesisVoice | null>((found, name) => {
+        if (found) return found;
+        return voices.find((v) => v.name === name) || null;
+      }, null) ||
+      voices.find((v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Neural'))) ||
+      voices.find((v) => v.lang === 'en-US');
     if (preferred) utter.voice = preferred;
 
     utter.onstart = () => setStatus('speaking');
@@ -148,16 +168,22 @@ export default function AIAgent(): JSX.Element {
   // ── Gemini API ──────────────────────────────────────────────────────────
 
   const buildSystemPrompt = useCallback(
-    () => SYSTEM_PROMPT.replace('{PAGE_CONTEXT}', pageContext || 'No page context loaded yet.'),
+    (isVoice: boolean) => {
+      const template = isVoice ? SYSTEM_PROMPT_VOICE : SYSTEM_PROMPT_TEXT;
+      const ctx = isVoice
+        ? (pageContext ? pageContext.slice(0, 300) : 'general SRE/DevOps')
+        : (pageContext || 'No page context loaded yet.');
+      return template.replace('{PAGE_CONTEXT}', ctx);
+    },
     [pageContext],
   );
 
-  const callGemini = useCallback(async (userMessage: string): Promise<string> => {
+  const callGemini = useCallback(async (userMessage: string, isVoice = false): Promise<string> => {
     if (!apiKey) return 'No Gemini API key. Add GEMINI_API_KEY to GitHub secrets and redeploy.';
 
     const history = messagesRef.current;
     const body = {
-      system_instruction: { parts: [{ text: buildSystemPrompt() }] },
+      system_instruction: { parts: [{ text: buildSystemPrompt(isVoice) }] },
       contents: [
         ...history.map((m) => ({
           role: m.role === 'assistant' ? 'model' : 'user',
@@ -195,7 +221,7 @@ export default function AIAgent(): JSX.Element {
     setStatus('thinking');
 
     try {
-      const reply = await callGemini(trimmed);
+      const reply = await callGemini(trimmed, voiceModeRef.current);
       const assistantMsg: Message = { role: 'assistant', content: reply };
       setMessages((prev) => [...prev, assistantMsg]);
 
@@ -415,9 +441,9 @@ export default function AIAgent(): JSX.Element {
           <div className={styles.messages}>
             {messages.length === 0 && (
               <div className={styles.empty}>
-                <p>Ask me anything about the page you're reading.</p>
+                <p>Ask me anything — Kubernetes, Linux, AWS, incident response, or anything SRE.</p>
                 <p className={styles.hint}>
-                  Press <strong>🎙 Start Conversation</strong> for hands-free voice mode — it listens, responds, and keeps listening automatically.
+                  <strong>🎙 Start Conversation</strong> for hands-free voice mode. In voice mode I keep responses short and conversational.
                 </p>
               </div>
             )}
