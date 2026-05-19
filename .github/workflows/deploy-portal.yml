@@ -71,7 +71,11 @@ jobs:
 
       # Place admin UI inside the portal build at /admin/
       - name: Copy admin UI into portal build
-        run: cp -r devops-knowledge-hub/frontend/dist devops-knowledge-hub/portal/build/admin
+        run: |
+          mkdir -p devops-knowledge-hub/portal/build/admin
+          cp -r devops-knowledge-hub/frontend/dist/. devops-knowledge-hub/portal/build/admin/
+          echo "Admin UI files:"
+          ls devops-knowledge-hub/portal/build/admin/
 
       - name: Upload build artifact
         uses: actions/upload-pages-artifact@v3

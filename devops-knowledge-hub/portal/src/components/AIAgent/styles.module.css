@@ -264,6 +264,17 @@
 .iconBtn.active {
   background: #fee2e2;
   border-color: #ef4444;
+  animation: pulse-border 1s ease-in-out infinite;
+}
+
+.iconBtn.interrupt {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
 }
 
 .sendBtn {
