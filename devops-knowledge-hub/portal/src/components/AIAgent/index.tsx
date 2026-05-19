@@ -263,7 +263,7 @@ export default function AIAgent(): React.ReactElement {
           // ── Step 3: Start sending mic audio — captureCtx already running ──
           const source = captureCtx.createMediaStreamSource(stream);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const processor = (captureCtx as any).createScriptProcessor(2048, 1, 1);
+          const processor = (captureCtx as any).createScriptProcessor(4096, 1, 1);
           processorRef.current = processor;
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -278,9 +278,13 @@ export default function AIAgent(): React.ReactElement {
             }
           };
 
-          // Connect source → processor only (NOT to destination — avoids mic echo)
+          // Must route through a 0-gain node connected to destination — keeps processor
+          // alive (Chrome GCs unconnected nodes) while preventing mic echo.
+          const silentGain = captureCtx.createGain();
+          silentGain.gain.value = 0;
           source.connect(processor);
-          processor.connect(captureCtx.createGain()); // silent sink to keep processor alive
+          processor.connect(silentGain);
+          silentGain.connect(captureCtx.destination);
           setLiveStatus('listening');
           return;
         }
@@ -367,7 +371,7 @@ export default function AIAgent(): React.ReactElement {
           })),
           { role: 'user', parts: [{ text: trimmed }] },
         ],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 },
       };
 
       const res = await fetch(
@@ -406,7 +410,7 @@ export default function AIAgent(): React.ReactElement {
           <div className={styles.header}>
             <div className={styles.headerTitle}>
               <span>🤖 Staff SRE Tutor</span>
-              <span className={styles.model}>Gemini 2.5</span>
+              <span className={styles.model}>{tab === 'voice' ? 'Live 3.1' : 'Gemini 2.5'}</span>
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               <button className={styles.clearBtn} onClick={() => { setMessages([]); setTextError(''); }} title="Clear chat">
@@ -524,14 +528,30 @@ export default function AIAgent(): React.ReactElement {
 
               {liveError && <div className={styles.errorMsg}>{liveError}</div>}
 
-              <button
-                className={`${styles.voiceStartBtn} ${isLiveActive ? styles.voiceStopBtn : ''}`}
-                onClick={isLiveActive ? stopLiveSession : startLiveSession}
-                disabled={liveStatus === 'connecting'}
-              >
-                {liveStatus === 'connecting' ? 'Connecting...' :
-                 isLiveActive ? '⏹ End Session' : '🎙 Start Voice Session'}
-              </button>
+              <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+                {liveStatus === 'listening' && (
+                  <button
+                    className={styles.voiceStartBtn}
+                    style={{ flex: 1, background: '#2563eb' }}
+                    onClick={() => {
+                      if (wsRef.current?.readyState === WebSocket.OPEN) {
+                        wsRef.current.send(JSON.stringify({ realtimeInput: { turnComplete: true } }));
+                      }
+                    }}
+                  >
+                    ✓ Done speaking
+                  </button>
+                )}
+                <button
+                  className={`${styles.voiceStartBtn} ${isLiveActive ? styles.voiceStopBtn : ''}`}
+                  style={{ flex: liveStatus === 'listening' ? 0 : 1 }}
+                  onClick={isLiveActive ? stopLiveSession : startLiveSession}
+                  disabled={liveStatus === 'connecting'}
+                >
+                  {liveStatus === 'connecting' ? 'Connecting...' :
+                   isLiveActive ? '⏹ End' : '🎙 Start Voice Session'}
+                </button>
+              </div>
 
               <p className={styles.voiceHint}>
                 Gemini Live — real-time neural audio, no backend needed
