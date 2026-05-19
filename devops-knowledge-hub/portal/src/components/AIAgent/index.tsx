@@ -128,19 +128,27 @@ export default function AIAgent(): JSX.Element {
     window.speechSynthesis.cancel();
     const clean = stripMarkdown(text);
     const utter = new SpeechSynthesisUtterance(clean);
-    utter.rate = 0.93;
+    utter.rate = 1.0;
     utter.pitch = 1.0;
     utter.lang = 'en-US';
 
-    // Prefer natural-sounding voices: Mac built-ins first, then Google/Neural
+    // Google voices are best in Chrome; Mac enhanced voices are best in Safari
     const voices = window.speechSynthesis.getVoices();
-    const priority = ['Samantha', 'Karen', 'Moira', 'Daniel', 'Google US English', 'Google UK English Female'];
+    const priority = [
+      'Google US English',
+      'Google UK English Female',
+      'Samantha (Enhanced)',
+      'Karen (Enhanced)',
+      'Daniel (Enhanced)',
+      'Samantha',
+    ];
     const preferred =
       priority.reduce<SpeechSynthesisVoice | null>((found, name) => {
         if (found) return found;
         return voices.find((v) => v.name === name) || null;
       }, null) ||
-      voices.find((v) => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Neural'))) ||
+      voices.find((v) => v.lang.startsWith('en') && v.name.toLowerCase().includes('enhanced')) ||
+      voices.find((v) => v.lang === 'en-US' && v.name.toLowerCase().includes('google')) ||
       voices.find((v) => v.lang === 'en-US');
     if (preferred) utter.voice = preferred;
 
