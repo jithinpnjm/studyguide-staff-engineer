@@ -303,6 +303,71 @@
   cursor: not-allowed;
 }
 
+/* Voice conversation row */
+.voiceRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  flex-shrink: 0;
+  background: var(--ifm-background-surface-color);
+}
+
+.voiceBtn {
+  flex: 1;
+  padding: 9px 16px;
+  border-radius: 20px;
+  border: 2px solid var(--ifm-color-primary);
+  background: transparent;
+  color: var(--ifm-color-primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.voiceBtn:hover:not(:disabled) {
+  background: var(--ifm-color-primary);
+  color: #fff;
+}
+
+.voiceBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.voiceBtnActive {
+  background: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: #fff !important;
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+.interruptBtn {
+  padding: 9px 14px;
+  border-radius: 20px;
+  border: 2px solid #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.interruptBtn:hover {
+  background: #fde68a;
+}
+
+/* Status bar variants */
+.statusListening {
+  color: #ef4444;
+  background: #fef2f2;
+  border-top-color: #fecaca;
+}
+
 /* Mobile adjustments */
 @media (max-width: 480px) {
   .panel {

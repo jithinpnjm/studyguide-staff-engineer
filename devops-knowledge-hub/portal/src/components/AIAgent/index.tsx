@@ -10,11 +10,9 @@ Your teaching style:
 - Give the mental model first, then the detail
 - Use concrete production examples: real failure modes, exact commands, actual tradeoffs
 - Challenge the learner: ask a follow-up question after explaining something
-- When multiple root causes exist, enumerate them and help narrow down
 - Treat the learner as a peer engineer who wants depth, not a tutorial
 
 When the user asks about something on the page they are reading, reference that content directly.
-If they say "explain this section" or "teach me this", use the page context below.
 
 Current page content:
 ---
@@ -26,11 +24,10 @@ interface Message {
   content: string;
 }
 
-// Use 'any' to avoid conflicts with lib.dom.d.ts SpeechRecognition definitions
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyClass = new (...args: any[]) => any;
+type AnyInstance = any;
 
-function getSpeechRecognition(): AnyClass | null {
+function getSpeechRecognitionClass(): (new () => AnyInstance) | null {
   if (typeof window === 'undefined') return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const w = window as any;
@@ -44,6 +41,19 @@ function getPageContext(): string {
   return text.slice(0, 3000).trim();
 }
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/```[\s\S]*?```/g, 'code block omitted.')
+    .replace(/`[^`]+`/g, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/#{1,6}\s/g, '')
+    .replace(/\|[^\n]+\|/g, '')
+    .replace(/[-*]\s/g, '')
+    .replace(/\n{2,}/g, '. ')
+    .replace(/\n/g, ' ')
+    .trim();
+}
+
 export default function AIAgent(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   const apiKey = (siteConfig.customFields?.geminiApiKey as string) || '';
@@ -53,142 +63,157 @@ export default function AIAgent(): JSX.Element {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
-  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [muteSpeak, setMuteSpeak] = useState(false);
   const [error, setError] = useState('');
   const [pageContext, setPageContext] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<AnyInstance>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalTranscriptRef = useRef('');
+  // Refs so callbacks always see current values without re-creating functions
+  const voiceModeRef = useRef(false);
+  const muteSpeakRef = useRef(false);
+  const messagesRef = useRef<Message[]>([]);
 
-  // Update page context on route change
+  // Keep refs in sync
+  useEffect(() => { voiceModeRef.current = voiceMode; }, [voiceMode]);
+  useEffect(() => { muteSpeakRef.current = muteSpeak; }, [muteSpeak]);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
+
   useEffect(() => {
     const t = setTimeout(() => setPageContext(getPageContext()), 600);
     return () => clearTimeout(t);
   }, [location.pathname]);
 
-  // Scroll to bottom on new message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // ── Speech synthesis ────────────────────────────────────────────────────
+
+  const stopSpeaking = useCallback(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
+  // Forward-declared so speak can reference startListeningCore
+  const startListeningCoreRef = useRef<() => void>(() => {});
+
+  const speak = useCallback((text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      // No TTS: if voice mode, restart listening directly
+      if (voiceModeRef.current) setTimeout(() => startListeningCoreRef.current(), 300);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const clean = stripMarkdown(text);
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.rate = 1.05;
+    utter.pitch = 1.0;
+    utter.lang = 'en-US';
+
+    // Pick best available voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(
+      (v) => v.lang.startsWith('en') &&
+        (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Neural')),
+    );
+    if (preferred) utter.voice = preferred;
+
+    utter.onstart = () => setStatus('speaking');
+
+    utter.onend = () => {
+      setStatus('idle');
+      // Auto-restart listening in voice conversation mode
+      if (voiceModeRef.current) {
+        setTimeout(() => startListeningCoreRef.current(), 400);
+      }
+    };
+
+    utter.onerror = () => {
+      setStatus('idle');
+      if (voiceModeRef.current) {
+        setTimeout(() => startListeningCoreRef.current(), 400);
+      }
+    };
+
+    setStatus('speaking');
+    window.speechSynthesis.speak(utter);
+  }, []);
+
+  // ── Gemini API ──────────────────────────────────────────────────────────
 
   const buildSystemPrompt = useCallback(
     () => SYSTEM_PROMPT.replace('{PAGE_CONTEXT}', pageContext || 'No page context loaded yet.'),
     [pageContext],
   );
 
-  const speak = useCallback((text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
+  const callGemini = useCallback(async (userMessage: string): Promise<string> => {
+    if (!apiKey) return 'No Gemini API key. Add GEMINI_API_KEY to GitHub secrets and redeploy.';
 
-    // Strip markdown symbols for cleaner speech
-    const clean = text
-      .replace(/```[\s\S]*?```/g, 'code block omitted.')
-      .replace(/`[^`]+`/g, '')
-      .replace(/\*\*([^*]+)\*\*/g, '$1')
-      .replace(/#{1,6}\s/g, '')
-      .replace(/\|[^\n]+\|/g, '')
-      .replace(/[-*]\s/g, '')
-      .replace(/\n{2,}/g, '. ')
-      .replace(/\n/g, ' ')
-      .trim();
-
-    const utter = new SpeechSynthesisUtterance(clean);
-    utter.rate = 1.05;
-    utter.pitch = 1.0;
-    utter.lang = 'en-US';
-
-    // Pick a natural-sounding voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(
-      (v) =>
-        v.lang.startsWith('en') &&
-        (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Neural')),
-    );
-    if (preferred) utter.voice = preferred;
-
-    utter.onend = () => setStatus('idle');
-    utter.onerror = () => setStatus('idle');
-
-    setStatus('speaking');
-    window.speechSynthesis.speak(utter);
-  }, []);
-
-  const stopSpeaking = useCallback(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-    setStatus('idle');
-  }, []);
-
-  const callGemini = useCallback(
-    async (userMessage: string, currentMessages: Message[]): Promise<string> => {
-      if (!apiKey) {
-        return 'Gemini API key not configured. Add GEMINI_API_KEY to your GitHub repository secrets and redeploy.';
-      }
-
-      const allMessages: Message[] = [...currentMessages, { role: 'user', content: userMessage }];
-
-      const body = {
-        system_instruction: { parts: [{ text: buildSystemPrompt() }] },
-        contents: allMessages.map((m) => ({
+    const history = messagesRef.current;
+    const body = {
+      system_instruction: { parts: [{ text: buildSystemPrompt() }] },
+      contents: [
+        ...history.map((m) => ({
           role: m.role === 'assistant' ? 'model' : 'user',
           parts: [{ text: m.content }],
         })),
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
-      };
+        { role: 'user', parts: [{ text: userMessage }] },
+      ],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+    };
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-      );
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+    );
 
-      if (!res.ok) {
-        const errText = await res.text().catch(() => '');
-        throw new Error(`Gemini API error ${res.status}: ${errText}`);
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`Gemini API error ${res.status}: ${errText}`);
+    }
+
+    const data = await res.json();
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+  }, [apiKey, buildSystemPrompt]);
+
+  // ── Core send logic ─────────────────────────────────────────────────────
+
+  const sendMessage = useCallback(async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    const userMsg: Message = { role: 'user', content: trimmed };
+    setMessages((prev) => [...prev, userMsg]);
+    setInput('');
+    setError('');
+    setStatus('thinking');
+
+    try {
+      const reply = await callGemini(trimmed);
+      const assistantMsg: Message = { role: 'assistant', content: reply };
+      setMessages((prev) => [...prev, assistantMsg]);
+
+      if (!muteSpeakRef.current) {
+        speak(reply); // speak sets status to 'speaking', then restarts listening on end
+      } else {
+        setStatus('idle');
+        if (voiceModeRef.current) setTimeout(() => startListeningCoreRef.current(), 300);
       }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setError(msg);
+      setStatus('idle');
+      if (voiceModeRef.current) setTimeout(() => startListeningCoreRef.current(), 500);
+    }
+  }, [callGemini, speak]);
 
-      const data = await res.json();
-      return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
-    },
-    [apiKey, buildSystemPrompt],
-  );
-
-  const sendMessage = useCallback(
-    async (text: string) => {
-      if (!text.trim()) return;
-      const trimmed = text.trim();
-
-      setMessages((prev) => {
-        const next = [...prev, { role: 'user' as const, content: trimmed }];
-        setInput('');
-        setError('');
-        setStatus('thinking');
-
-        // Use the snapshot of messages at send time for the API call
-        callGemini(trimmed, prev)
-          .then((reply) => {
-            setMessages((m) => [...m, { role: 'assistant' as const, content: reply }]);
-            setStatus('idle');
-            if (autoSpeak) speak(reply);
-          })
-          .catch((err: unknown) => {
-            const msg = err instanceof Error ? err.message : 'Unknown error';
-            setError(msg);
-            setStatus('idle');
-          });
-
-        return next;
-      });
-    },
-    [callGemini, speak, autoSpeak],
-  );
+  // ── Speech recognition ──────────────────────────────────────────────────
 
   const stopListening = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -196,38 +221,34 @@ export default function AIAgent(): JSX.Element {
       silenceTimerRef.current = null;
     }
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try { recognitionRef.current.abort(); } catch {}
       recognitionRef.current = null;
     }
   }, []);
 
-  const startListening = useCallback(() => {
-    // If speaking, stop and start listening (interrupt)
-    stopSpeaking();
+  // The core listen function — used both manually and for auto-restart
+  const startListeningCore = useCallback(() => {
+    stopListening();
 
-    // Toggle off if already listening
-    if (recognitionRef.current) {
-      stopListening();
-      setStatus('idle');
-      return;
-    }
-
-    const SpeechRecognitionClass = getSpeechRecognition();
+    const SpeechRecognitionClass = getSpeechRecognitionClass();
     if (!SpeechRecognitionClass) {
       setError('Voice input not supported. Use Chrome or Edge.');
       return;
     }
 
     finalTranscriptRef.current = '';
-    const recognition = new SpeechRecognitionClass();
-    recognition.continuous = true;      // don't stop on pauses
-    recognition.interimResults = true;  // show words as you speak
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recognition: AnyInstance = new (SpeechRecognitionClass as any)();
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 1;
     recognitionRef.current = recognition;
     setStatus('listening');
+    setInput('');
 
-    recognition.onresult = (event: {results: {isFinal: boolean; [n: number]: {transcript: string}}[]; resultIndex: number}) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -238,41 +259,89 @@ export default function AIAgent(): JSX.Element {
           interim = transcript;
         }
       }
-      setInput((finalTranscriptRef.current + interim).trim());
+      const displayed = (finalTranscriptRef.current + interim).trim();
+      setInput(displayed);
 
-      // Reset the silence timer — auto-send 2s after user stops speaking
+      // Reset silence timer — send 2s after last word
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = setTimeout(() => {
         const captured = finalTranscriptRef.current.trim();
         stopListening();
         if (captured) {
           sendMessage(captured);
-          setInput('');
         } else {
           setStatus('idle');
+          // In voice mode, try again
+          if (voiceModeRef.current) setTimeout(() => startListeningCoreRef.current(), 400);
         }
       }, 2000);
     };
 
-    recognition.onerror = (event: {error: string}) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onerror = (event: any) => {
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
         setError(`Voice error: ${event.error}`);
       }
       stopListening();
       setStatus('idle');
-    };
-
-    recognition.onend = () => {
-      // Only called when recognition stops naturally (e.g. network error)
-      // The silence timer handles intentional stops
-      if (recognitionRef.current) {
-        recognitionRef.current = null;
-        setStatus('idle');
+      // Auto-retry in voice mode (except for fatal errors)
+      if (voiceModeRef.current && event.error !== 'not-allowed' && event.error !== 'service-not-allowed') {
+        setTimeout(() => startListeningCoreRef.current(), 500);
       }
     };
 
-    recognition.start();
-  }, [stopSpeaking, stopListening, sendMessage]);
+    recognition.onend = () => {
+      // Recognition stopped without onerror — can happen on Chrome due to inactivity
+      if (recognitionRef.current) {
+        recognitionRef.current = null;
+        // In voice mode, auto-restart unless we're about to send
+        if (voiceModeRef.current && !silenceTimerRef.current) {
+          setStatus('idle');
+          setTimeout(() => startListeningCoreRef.current(), 300);
+        }
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch {
+      setStatus('idle');
+    }
+  }, [stopListening, sendMessage]);
+
+  // Keep the ref current
+  useEffect(() => {
+    startListeningCoreRef.current = startListeningCore;
+  }, [startListeningCore]);
+
+  // ── Voice mode toggle (the big mic button) ──────────────────────────────
+
+  const toggleVoiceMode = useCallback(() => {
+    if (voiceMode) {
+      // Turn off
+      setVoiceMode(false);
+      voiceModeRef.current = false;
+      stopListening();
+      stopSpeaking();
+      setStatus('idle');
+      setInput('');
+    } else {
+      // Turn on — start the continuous loop
+      setVoiceMode(true);
+      voiceModeRef.current = true;
+      setError('');
+      startListeningCore();
+    }
+  }, [voiceMode, stopListening, stopSpeaking, startListeningCore]);
+
+  // Interrupt: stop speaking, start listening immediately
+  const interrupt = useCallback(() => {
+    stopSpeaking();
+    stopListening();
+    startListeningCore();
+  }, [stopSpeaking, stopListening, startListeningCore]);
+
+  // ── Text input ──────────────────────────────────────────────────────────
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -284,22 +353,27 @@ export default function AIAgent(): JSX.Element {
   const clearChat = () => {
     setMessages([]);
     setError('');
-    stopSpeaking();
     stopListening();
+    stopSpeaking();
     setInput('');
     setStatus('idle');
+    if (voiceMode) {
+      setVoiceMode(false);
+      voiceModeRef.current = false;
+    }
   };
 
+  // ── Status labels ───────────────────────────────────────────────────────
+
   const statusLabel: Record<typeof status, string> = {
-    idle: '',
-    listening: '🎙 Listening — pause 2 s to send',
+    idle: voiceMode ? '⏳ Starting...' : '',
+    listening: '🎙 Listening — pause to send',
     thinking: '💭 Thinking...',
-    speaking: '🔊 Speaking — click 🎙 to interrupt',
+    speaking: '🔊 Speaking — click interrupt to cut in',
   };
 
   return (
     <>
-      {/* Floating toggle button */}
       <button
         className={styles.fab}
         onClick={() => setIsOpen((o) => !o)}
@@ -311,6 +385,7 @@ export default function AIAgent(): JSX.Element {
 
       {isOpen && (
         <div className={styles.panel}>
+          {/* Header */}
           <div className={styles.header}>
             <div className={styles.headerTitle}>
               <span>🤖 Staff SRE Tutor</span>
@@ -319,10 +394,10 @@ export default function AIAgent(): JSX.Element {
             <div style={{ display: 'flex', gap: 4 }}>
               <button
                 className={styles.clearBtn}
-                onClick={() => setAutoSpeak((v) => !v)}
-                title={autoSpeak ? 'Mute voice responses' : 'Enable voice responses'}
+                onClick={() => setMuteSpeak((v) => !v)}
+                title={muteSpeak ? 'Enable voice responses' : 'Mute voice responses'}
               >
-                {autoSpeak ? '🔊' : '🔇'}
+                {muteSpeak ? '🔇' : '🔊'}
               </button>
               <button className={styles.clearBtn} onClick={clearChat} title="Clear chat">
                 🗑
@@ -336,12 +411,13 @@ export default function AIAgent(): JSX.Element {
             </div>
           )}
 
+          {/* Messages */}
           <div className={styles.messages}>
             {messages.length === 0 && (
               <div className={styles.empty}>
                 <p>Ask me anything about the page you're reading.</p>
                 <p className={styles.hint}>
-                  Click 🎙 to speak. Pause 2 s to auto-send. Click again to interrupt.
+                  Press <strong>🎙 Start Conversation</strong> for hands-free voice mode — it listens, responds, and keeps listening automatically.
                 </p>
               </div>
             )}
@@ -354,19 +430,38 @@ export default function AIAgent(): JSX.Element {
             {status === 'thinking' && (
               <div className={styles.assistantMsg}>
                 <div className={styles.msgRole}>SRE Tutor</div>
-                <div className={styles.msgContent}>
-                  <span className={styles.dots}>●●●</span>
-                </div>
+                <div className={styles.msgContent}><span className={styles.dots}>●●●</span></div>
               </div>
             )}
             {error && <div className={styles.errorMsg}>{error}</div>}
             <div ref={messagesEndRef} />
           </div>
 
-          {status !== 'idle' && (
-            <div className={styles.statusBar}>{statusLabel[status]}</div>
+          {/* Status */}
+          {(status !== 'idle' || voiceMode) && (
+            <div className={`${styles.statusBar} ${status === 'listening' ? styles.statusListening : ''}`}>
+              {statusLabel[status]}
+            </div>
           )}
 
+          {/* Voice conversation button */}
+          <div className={styles.voiceRow}>
+            <button
+              className={`${styles.voiceBtn} ${voiceMode ? styles.voiceBtnActive : ''}`}
+              onClick={toggleVoiceMode}
+              disabled={status === 'thinking'}
+              title={voiceMode ? 'End voice conversation' : 'Start voice conversation'}
+            >
+              {voiceMode ? '⏹ End Conversation' : '🎙 Start Conversation'}
+            </button>
+            {status === 'speaking' && (
+              <button className={styles.interruptBtn} onClick={interrupt} title="Interrupt">
+                ✋ Interrupt
+              </button>
+            )}
+          </div>
+
+          {/* Text input (always available) */}
           <div className={styles.inputRow}>
             <input
               className={styles.textInput}
@@ -374,24 +469,14 @@ export default function AIAgent(): JSX.Element {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={
-                status === 'listening' ? '🎙 Listening...' : 'Ask a question...'
+                status === 'listening'
+                  ? '🎙 Listening...'
+                  : status === 'speaking'
+                  ? '🔊 Agent speaking...'
+                  : 'Or type a question...'
               }
               disabled={status === 'thinking'}
             />
-            <button
-              className={`${styles.iconBtn} ${status === 'listening' ? styles.active : ''} ${status === 'speaking' ? styles.interrupt : ''}`}
-              onClick={startListening}
-              title={
-                status === 'listening'
-                  ? 'Stop listening'
-                  : status === 'speaking'
-                  ? 'Interrupt and speak'
-                  : 'Voice input'
-              }
-              disabled={status === 'thinking'}
-            >
-              🎙
-            </button>
             <button
               className={styles.sendBtn}
               onClick={() => sendMessage(input)}
