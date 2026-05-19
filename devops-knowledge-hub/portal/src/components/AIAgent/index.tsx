@@ -535,7 +535,7 @@ export default function AIAgent(): React.ReactElement {
                     style={{ flex: 1, background: '#2563eb' }}
                     onClick={() => {
                       if (wsRef.current?.readyState === WebSocket.OPEN) {
-                        wsRef.current.send(JSON.stringify({ realtimeInput: { turnComplete: true } }));
+                        wsRef.current.send(JSON.stringify({ clientContent: { turnComplete: true } }));
                       }
                     }}
                   >
