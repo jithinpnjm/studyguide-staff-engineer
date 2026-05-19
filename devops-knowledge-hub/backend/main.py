@@ -797,7 +797,7 @@ async def websocket_live(websocket: WebSocket):
 
     try:
         async with client.aio.live.connect(
-            model="gemini-2.5-flash",
+            model="gemini-2.4-flash",
             config=live_config,
         ) as session:
             log.info("Gemini Live session established")
