@@ -780,7 +780,8 @@ async def websocket_live(websocket: WebSocket):
         await websocket.close()
         return
 
-    client = gai.Client(api_key=api_key)
+    # Force GEMINI_API_KEY — prevent SDK from picking up GOOGLE_API_KEY from env
+    client = gai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
 
     # Gemini Live expects 16kHz for input audio and streams 24kHz for output audio.
     INPUT_SAMPLE_RATE = 16000
@@ -801,7 +802,7 @@ async def websocket_live(websocket: WebSocket):
 
     try:
         async with client.aio.live.connect(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.0-flash-live-001",
             config=live_config,
         ) as session:
             log.info("Gemini Live session established")
