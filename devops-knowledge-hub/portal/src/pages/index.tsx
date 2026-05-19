@@ -37,7 +37,7 @@ export default function Home() {
             <Link className="button button--primary" to="/docs/intro">
               Browse Knowledge Base
             </Link>
-            <Link className="button button--secondary" to="/docs/interview-prep">
+            <Link className="button button--secondary" to="/docs/interview-prep/linux-kubernetes-troubleshooting">
               Interview Prep
             </Link>
             <Link className="button button--secondary" to="/docs/aws-deep-dive/beginner">
