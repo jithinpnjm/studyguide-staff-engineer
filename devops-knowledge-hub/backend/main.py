@@ -14,7 +14,7 @@ from typing import AsyncGenerator, Optional
 import fitz  # PyMuPDF
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response, StreamingResponse, FileResponse
 
@@ -750,6 +750,106 @@ li{{margin:4px 0}}
 <h1>{_html.escape(title)}</h1>
 {body}
 </body></html>"""
+
+
+LIVE_SYSTEM_PROMPT = """You are a Staff SRE with 15+ years of production experience in Linux, Kubernetes, AWS, observability, incident response, CI/CD, databases, and platform engineering.
+
+You are having a real-time voice conversation. Rules:
+- Respond in plain spoken sentences only — no bullet points, no markdown, no code blocks
+- Keep answers to 2-4 sentences unless the user asks for more
+- Sound like a senior engineer explaining something on a call — casual, confident, clear
+- If you reference a command, say it in plain English: "run kubectl get pods"
+- Never start with "Great question" or "Certainly"
+- End with a short follow-up question to keep the conversation going
+- Answer ANY SRE or DevOps question the user has"""
+
+@app.websocket("/ws/live")
+async def websocket_live(websocket: WebSocket):
+    await websocket.accept()
+    log.info("Live voice WebSocket connected")
+
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    if not api_key:
+        await websocket.send_text(json.dumps({"type": "error", "message": "GEMINI_API_KEY not set on backend"}))
+        await websocket.close()
+        return
+
+    try:
+        from google import genai as gai
+        from google.genai import types as gai_types
+    except ImportError:
+        await websocket.send_text(json.dumps({"type": "error", "message": "google-genai not installed. Run: pip install google-genai"}))
+        await websocket.close()
+        return
+
+    client = gai.Client(api_key=api_key)
+    SAMPLE_RATE = 24000
+
+    live_config = {
+        "response_modalities": ["AUDIO"],
+        "speech_config": {
+            "voice_config": {"prebuilt_voice_config": {"voice_name": "Puck"}}
+        },
+        "system_instruction": LIVE_SYSTEM_PROMPT,
+        "output_audio_transcription": {},
+        "input_audio_transcription": {},
+    }
+
+    try:
+        async with client.aio.live.connect(
+            model="gemini-live-2.5-flash-preview",
+            config=live_config,
+        ) as session:
+            log.info("Gemini Live session established")
+
+            async def gemini_to_browser():
+                async for response in session.receive():
+                    sc = getattr(response, "server_content", None)
+                    if sc:
+                        if getattr(sc, "interrupted", False):
+                            await websocket.send_text(json.dumps({"type": "interrupted"}))
+                        mt = getattr(sc, "model_turn", None)
+                        if mt:
+                            for part in (mt.parts or []):
+                                # Audio
+                                idata = getattr(part, "inline_data", None)
+                                if idata and idata.data:
+                                    raw = idata.data
+                                    b64 = base64.b64encode(raw).decode("ascii") if isinstance(raw, (bytes, bytearray)) else raw
+                                    await websocket.send_text(json.dumps({"type": "audio", "audio": b64}))
+                                # Transcription
+                                if getattr(part, "text", None):
+                                    await websocket.send_text(json.dumps({"type": "transcription", "text": part.text}))
+                    # Output transcription (separate field in some SDK versions)
+                    ot = getattr(response, "output_transcription", None)
+                    if ot and getattr(ot, "text", None):
+                        await websocket.send_text(json.dumps({"type": "transcription", "text": ot.text}))
+
+            async def browser_to_gemini():
+                async for data in websocket.iter_text():
+                    try:
+                        msg = json.loads(data)
+                        if msg.get("type") == "audio" and msg.get("audio"):
+                            audio_bytes = base64.b64decode(msg["audio"])
+                            await session.send_realtime_input(
+                                media=gai_types.Blob(
+                                    data=audio_bytes,
+                                    mime_type=f"audio/pcm;rate={SAMPLE_RATE}",
+                                )
+                            )
+                    except Exception as e:
+                        log.debug(f"browser_to_gemini error: {e}")
+
+            await asyncio.gather(gemini_to_browser(), browser_to_gemini())
+
+    except WebSocketDisconnect:
+        log.info("Live voice WebSocket disconnected")
+    except Exception as e:
+        log.error(f"Live session error: {e}")
+        try:
+            await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

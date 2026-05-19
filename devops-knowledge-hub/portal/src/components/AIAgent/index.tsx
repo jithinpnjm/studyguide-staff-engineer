@@ -120,8 +120,7 @@ export default function AIAgent(): React.ReactElement {
   const [outputTranscript, setOutputTranscript] = useState('');
 
   // Live session refs
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sessionRef = useRef<any>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const streamRef = useRef<MediaStream | null>(null);
@@ -144,7 +143,7 @@ export default function AIAgent(): React.ReactElement {
 
   // Clean up live session when panel closes
   useEffect(() => {
-    if (!isOpen && sessionRef.current) stopLiveSession();
+    if (!isOpen && wsRef.current) stopLiveSession();
   }, [isOpen]);
 
   // ── Audio playback ───────────────────────────────────────────────────────────
@@ -177,12 +176,12 @@ export default function AIAgent(): React.ReactElement {
     if (audioCtxRef.current) nextStartTimeRef.current = audioCtxRef.current.currentTime;
   }, []);
 
-  // ── Live voice session ───────────────────────────────────────────────────────
+  // ── Live voice session (WebSocket proxy via local backend) ──────────────────
 
   const stopLiveSession = useCallback(() => {
-    if (sessionRef.current) {
-      try { sessionRef.current.close(); } catch {}
-      sessionRef.current = null;
+    if (wsRef.current) {
+      try { wsRef.current.close(); } catch {}
+      wsRef.current = null;
     }
     if (processorRef.current) {
       try { processorRef.current.disconnect(); } catch {}
@@ -202,71 +201,60 @@ export default function AIAgent(): React.ReactElement {
   }, [stopAllPlayback]);
 
   const startLiveSession = useCallback(async () => {
-    if (!apiKey) {
-      setLiveError('No API key configured.');
-      return;
-    }
     setLiveError('');
     setOutputTranscript('');
     setInputTranscript('');
     setLiveStatus('connecting');
 
     try {
-      const { GoogleGenAI, Modality } = await import('@google/genai');
-      const ai = new GoogleGenAI({ apiKey });
       const SAMPLE_RATE = 24000;
 
+      // Derive WebSocket URL from the configured backend URL
+      const httpBase =
+        (typeof window !== 'undefined' && localStorage.getItem('devopshub_backend_url')) ||
+        'http://localhost:8765';
+      const wsUrl = httpBase.replace(/^http/, 'ws') + '/ws/live';
+
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => setLiveStatus('listening');
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'audio' && msg.audio) {
+          playAudioChunk(msg.audio, SAMPLE_RATE);
+          setLiveStatus('speaking');
+        } else if (msg.type === 'interrupted') {
+          stopAllPlayback();
+          setLiveStatus('listening');
+        } else if (msg.type === 'transcription' && msg.text) {
+          setOutputTranscript((prev) => prev + ' ' + msg.text);
+        } else if (msg.type === 'error') {
+          setLiveError(msg.message || 'Backend error');
+          stopLiveSession();
+        }
+      };
+
+      ws.onclose = () => stopLiveSession();
+      ws.onerror = () => {
+        setLiveError('Cannot connect to backend. Start the backend first.');
+        stopLiveSession();
+      };
+
+      // Wait for connection
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Connection timeout')), 8000);
+        ws.addEventListener('open', () => { clearTimeout(timeout); resolve(); }, { once: true });
+        ws.addEventListener('error', () => { clearTimeout(timeout); reject(new Error('WebSocket error')); }, { once: true });
+      });
+
+      // Set up mic capture
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
       const audioCtx: AudioContext = new AudioCtxClass({ sampleRate: SAMPLE_RATE });
       audioCtxRef.current = audioCtx;
       nextStartTimeRef.current = audioCtx.currentTime + 0.1;
-
-      const session = await ai.live.connect({
-        model: 'gemini-2.0-flash-live',
-        callbacks: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onmessage: (message: any) => {
-            const parts = message.serverContent?.modelTurn?.parts;
-            if (parts) {
-              const audioPart = parts.find((p: any) => p.inlineData);
-              if (audioPart?.inlineData?.data) {
-                playAudioChunk(audioPart.inlineData.data, SAMPLE_RATE);
-                setLiveStatus('speaking');
-              }
-              const textPart = parts.find((p: any) => p.text);
-              if (textPart?.text) {
-                setOutputTranscript((prev) => prev + ' ' + textPart.text);
-              }
-            }
-            if (message.serverContent?.interrupted) {
-              stopAllPlayback();
-              setLiveStatus('listening');
-            }
-            // Input transcription (what the user said)
-            if (message.inputTranscription?.text) {
-              setInputTranscript(message.inputTranscription.text);
-            }
-          },
-          onclose: () => stopLiveSession(),
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onerror: (err: any) => {
-            setLiveError(err?.message || 'Live session error');
-            stopLiveSession();
-          },
-        },
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Puck' } },
-          },
-          systemInstruction: SYSTEM_PROMPT_VOICE,
-          outputAudioTranscription: {},
-          inputAudioTranscription: {},
-        },
-      });
-
-      sessionRef.current = session;
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
@@ -278,24 +266,21 @@ export default function AIAgent(): React.ReactElement {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       processor.onaudioprocess = (e: any) => {
-        if (sessionRef.current) {
+        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           const pcm = floatTo16BitPCM(e.inputBuffer.getChannelData(0));
           const b64 = arrayBufferToBase64(pcm);
-          sessionRef.current.sendRealtimeInput({
-            audio: { data: b64, mimeType: `audio/pcm;rate=${SAMPLE_RATE}` },
-          });
+          wsRef.current.send(JSON.stringify({ type: 'audio', audio: b64 }));
         }
       };
 
       source.connect(processor);
       processor.connect(audioCtx.destination);
-      setLiveStatus('listening');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to start session';
       setLiveError(msg);
       stopLiveSession();
     }
-  }, [apiKey, playAudioChunk, stopAllPlayback, stopLiveSession]);
+  }, [playAudioChunk, stopAllPlayback, stopLiveSession]);
 
   // ── Text chat ────────────────────────────────────────────────────────────────
 
