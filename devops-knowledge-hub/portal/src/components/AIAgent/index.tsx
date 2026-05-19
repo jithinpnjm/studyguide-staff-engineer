@@ -207,7 +207,7 @@ export default function AIAgent(): React.ReactElement {
     setLiveStatus('connecting');
 
     try {
-      const SAMPLE_RATE = 24000;
+      const SAMPLE_RATE = 16000; // Gemini Live input expects 16kHz
 
       // Derive WebSocket URL from the configured backend URL
       const httpBase =
@@ -223,7 +223,7 @@ export default function AIAgent(): React.ReactElement {
       ws.onmessage = (event) => {
         const msg = JSON.parse(event.data);
         if (msg.type === 'audio' && msg.audio) {
-          playAudioChunk(msg.audio, SAMPLE_RATE);
+          playAudioChunk(msg.audio, 24000); // Gemini outputs 24kHz
           setLiveStatus('speaking');
         } else if (msg.type === 'interrupted') {
           stopAllPlayback();

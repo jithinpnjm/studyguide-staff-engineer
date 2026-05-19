@@ -408,7 +408,6 @@ async def chat_endpoint(body: dict):
     if not message:
         raise HTTPException(400, "message is required")
 
-    # accept both doc_id (single) and doc_ids (array from portal chat widget)
     doc_id = body.get("doc_id") or (body.get("doc_ids") or [None])[0]
     domain = body.get("domain")
     history = body.get("history", [])
@@ -776,28 +775,33 @@ async def websocket_live(websocket: WebSocket):
 
     try:
         from google import genai as gai
-        from google.genai import types as gai_types
     except ImportError:
         await websocket.send_text(json.dumps({"type": "error", "message": "google-genai not installed. Run: pip install google-genai"}))
         await websocket.close()
         return
 
     client = gai.Client(api_key=api_key)
-    SAMPLE_RATE = 24000
+
+    # Gemini Live expects 16kHz for input audio and streams 24kHz for output audio.
+    INPUT_SAMPLE_RATE = 16000
 
     live_config = {
         "response_modalities": ["AUDIO"],
         "speech_config": {
-            "voice_config": {"prebuilt_voice_config": {"voice_name": "Puck"}}
+            "voice_config": {
+                "prebuilt_voice_config": {
+                    "voice_name": "Puck"
+                }
+            }
         },
-        "system_instruction": LIVE_SYSTEM_PROMPT,
-        "output_audio_transcription": {},
-        "input_audio_transcription": {},
+        "system_instruction": {
+            "parts": [{"text": LIVE_SYSTEM_PROMPT}]
+        }
     }
 
     try:
         async with client.aio.live.connect(
-            model="gemini-2.4-flash",
+            model="gemini-2.0-flash-exp",
             config=live_config,
         ) as session:
             log.info("Gemini Live session established")
@@ -811,16 +815,14 @@ async def websocket_live(websocket: WebSocket):
                         mt = getattr(sc, "model_turn", None)
                         if mt:
                             for part in (mt.parts or []):
-                                # Audio
                                 idata = getattr(part, "inline_data", None)
                                 if idata and idata.data:
                                     raw = idata.data
                                     b64 = base64.b64encode(raw).decode("ascii") if isinstance(raw, (bytes, bytearray)) else raw
                                     await websocket.send_text(json.dumps({"type": "audio", "audio": b64}))
-                                # Transcription
                                 if getattr(part, "text", None):
                                     await websocket.send_text(json.dumps({"type": "transcription", "text": part.text}))
-                    # Output transcription (separate field in some SDK versions)
+
                     ot = getattr(response, "output_transcription", None)
                     if ot and getattr(ot, "text", None):
                         await websocket.send_text(json.dumps({"type": "transcription", "text": ot.text}))
@@ -831,11 +833,11 @@ async def websocket_live(websocket: WebSocket):
                         msg = json.loads(data)
                         if msg.get("type") == "audio" and msg.get("audio"):
                             audio_bytes = base64.b64decode(msg["audio"])
-                            await session.send_realtime_input(
-                                media=gai_types.Blob(
-                                    data=audio_bytes,
-                                    mime_type=f"audio/pcm;rate={SAMPLE_RATE}",
-                                )
+                            await session.send(
+                                input={
+                                    "data": audio_bytes,
+                                    "mime_type": f"audio/pcm;rate={INPUT_SAMPLE_RATE}"
+                                }
                             )
                     except Exception as e:
                         log.debug(f"browser_to_gemini error: {e}")
