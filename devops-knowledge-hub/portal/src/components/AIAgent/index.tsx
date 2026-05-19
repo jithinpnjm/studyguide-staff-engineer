@@ -272,7 +272,7 @@ export default function AIAgent(): React.ReactElement {
               const b64 = arrayBufferToBase64(floatTo16BitPCM(e.inputBuffer.getChannelData(0)));
               ws.send(JSON.stringify({
                 realtimeInput: {
-                  mediaChunks: [{ mimeType: `audio/pcm;rate=${INPUT_RATE}`, data: b64 }],
+                  audio: { data: b64, mimeType: `audio/pcm;rate=${INPUT_RATE}` },
                 },
               }));
             }
